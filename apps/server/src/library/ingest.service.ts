@@ -13,6 +13,8 @@ import { toCapturedDay } from '../media/captured-day';
 import { classifyMediaFile, MediaTypeInfo } from '../media/media-types';
 import { ExtractedMetadata, MetadataExtractorService } from '../media/metadata-extractor.service';
 import { ThumbnailService } from '../media/thumbnail.service';
+import { DETECT_EVENTS_JOB } from '../memories/handlers/detect-events.handler';
+import { JobQueueService } from '../jobs/job-queue.service';
 import { IngestFilePayload } from './scanner.service';
 
 /**
@@ -28,6 +30,7 @@ export class IngestService {
     @Inject(DATABASE) private readonly db: Database,
     private readonly extractor: MetadataExtractorService,
     private readonly thumbnails: ThumbnailService,
+    private readonly queue: JobQueueService,
   ) {}
 
   async ingestFile(payload: IngestFilePayload): Promise<void> {
@@ -47,6 +50,8 @@ export class IngestService {
     if (!existing) {
       await this.runThumbnailStage(assetId, absolutePath, typeInfo);
     }
+    // Debounced by dedupe: many ingests collapse into one low-priority detection run.
+    await this.queue.enqueue(DETECT_EVENTS_JOB, {}, { dedupeKey: DETECT_EVENTS_JOB, priority: 200 });
   }
 
   private async resolveAbsolutePath(payload: IngestFilePayload): Promise<string> {

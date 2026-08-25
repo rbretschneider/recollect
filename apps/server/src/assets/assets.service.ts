@@ -1,10 +1,10 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, desc, eq, lt, or, sql } from 'drizzle-orm';
 import { access } from 'fs/promises';
-import { resolve } from 'path';
+import { join, resolve } from 'path';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
-import { asset } from '../database/schema';
+import { asset, assetFile, libraryRoot } from '../database/schema';
 import { ThumbnailSize, ThumbnailStore } from '../media/thumbnail-store';
 import { decodeTimelineCursor, encodeTimelineCursor } from './timeline-cursor';
 
@@ -24,6 +24,24 @@ export interface TimelineAsset {
 export interface TimelinePage {
   items: TimelineAsset[];
   nextCursor: string | null;
+}
+
+/** Full detail for a single asset (viewer info sheet). */
+export interface AssetDetail {
+  id: string;
+  mediaType: 'image' | 'video';
+  mime: string;
+  capturedAt: string;
+  width: number | null;
+  height: number | null;
+  durationMs: number | null;
+  cameraMake: string | null;
+  cameraModel: string | null;
+  lensModel: string | null;
+  gpsLat: number | null;
+  gpsLon: number | null;
+  relPath: string | null;
+  sizeBytes: number | null;
 }
 
 const DEFAULT_PAGE_SIZE = 100;
@@ -79,6 +97,57 @@ export class AssetsService {
       nextCursor:
         hasMore && last ? encodeTimelineCursor({ capturedAt: last.capturedAt, id: last.id }) : null,
     };
+  }
+
+  /** Detail for one asset: metadata plus camera info for the viewer's info sheet. */
+  async getDetail(assetId: string): Promise<AssetDetail> {
+    const [row] = await this.db.select().from(asset).where(eq(asset.id, assetId)).limit(1);
+    if (!row) {
+      throw new NotFoundException('That photo does not exist.');
+    }
+    const [file] = await this.db
+      .select({ relPath: assetFile.relPath, sizeBytes: assetFile.sizeBytes })
+      .from(assetFile)
+      .where(and(eq(assetFile.assetId, assetId), eq(assetFile.state, 'present')))
+      .limit(1);
+    return {
+      id: row.id,
+      mediaType: row.mediaType as 'image' | 'video',
+      mime: row.mime,
+      capturedAt: row.capturedAt.toISOString(),
+      width: row.width,
+      height: row.height,
+      durationMs: row.durationMs,
+      cameraMake: row.cameraMake,
+      cameraModel: row.cameraModel,
+      lensModel: row.lensModel,
+      gpsLat: row.gpsLat,
+      gpsLon: row.gpsLon,
+      relPath: file?.relPath ?? null,
+      sizeBytes: file?.sizeBytes ?? null,
+    };
+  }
+
+  /** Absolute path + mime of the original file, for streaming to the viewer. */
+  async getOriginalFile(assetId: string): Promise<{ path: string; mime: string }> {
+    const [row] = await this.db
+      .select({
+        mime: asset.mime,
+        relPath: assetFile.relPath,
+        rootPath: libraryRoot.path,
+      })
+      .from(asset)
+      .innerJoin(
+        assetFile,
+        and(eq(assetFile.assetId, asset.id), eq(assetFile.state, 'present')),
+      )
+      .innerJoin(libraryRoot, eq(libraryRoot.id, assetFile.rootId))
+      .where(eq(asset.id, assetId))
+      .limit(1);
+    if (!row) {
+      throw new NotFoundException('The original file is not available.');
+    }
+    return { path: resolve(join(row.rootPath, row.relPath)), mime: row.mime };
   }
 
   /** Returns the absolute on-disk path of a generated thumbnail, verifying it exists. */

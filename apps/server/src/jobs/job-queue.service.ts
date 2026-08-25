@@ -33,7 +33,7 @@ const WORKER_LEASE_MINUTES = 10;
 export class JobQueueService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
-  /** Enqueues a job; silently no-ops when an identical dedupeKey is already queued. */
+  /** Enqueues a job; silently no-ops when an identical dedupeKey is already queued or running. */
   async enqueue(type: string, payload: unknown, options: EnqueueOptions = {}): Promise<void> {
     await this.db
       .insert(job)
@@ -45,7 +45,10 @@ export class JobQueueService {
         priority: options.priority ?? DEFAULT_PRIORITY,
         maxAttempts: options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
       })
-      .onConflictDoNothing({ target: job.dedupeKey });
+      .onConflictDoNothing({
+        target: job.dedupeKey,
+        where: sql`status in ('queued', 'running')`,
+      });
   }
 
   /** Atomically claims the next runnable job for a worker, or returns null when idle. */

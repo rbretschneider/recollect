@@ -1,0 +1,2 @@
+ALTER TABLE "job" DROP CONSTRAINT "job_dedupe_key_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "job_dedupe_live_unique" ON "job" USING btree ("dedupe_key") WHERE "job"."status" in ('queued', 'running');

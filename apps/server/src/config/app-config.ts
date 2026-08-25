@@ -6,6 +6,9 @@ const configSchema = z.object({
   authTokenSecret: z.string().min(32),
   appDataDir: z.string().min(1).default('./data'),
   workerConcurrency: z.coerce.number().int().positive().default(2),
+  clusterMaxGapHours: z.coerce.number().positive().default(3),
+  clusterMaxJumpKm: z.coerce.number().positive().default(50),
+  clusterMinSize: z.coerce.number().int().positive().default(3),
 });
 
 /** Validated application configuration, loaded once from the environment at startup. */
@@ -25,6 +28,9 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     authTokenSecret: env.AUTH_TOKEN_SECRET,
     appDataDir: env.APP_DATA_DIR,
     workerConcurrency: env.WORKER_CONCURRENCY,
+    clusterMaxGapHours: env.CLUSTER_MAX_GAP_HOURS,
+    clusterMaxJumpKm: env.CLUSTER_MAX_JUMP_KM,
+    clusterMinSize: env.CLUSTER_MIN_SIZE,
   });
   if (!parsed.success) {
     throw new Error(`Invalid configuration: ${parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ')}`);

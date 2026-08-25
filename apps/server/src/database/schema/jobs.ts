@@ -7,6 +7,7 @@ import {
   smallint,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -18,7 +19,7 @@ export const job = pgTable(
     type: text('type').notNull(),
     payload: jsonb('payload').notNull(),
     /** Prevents duplicate enqueues of the same unit of work, e.g. `ingest_file:<rootId>:<relPath>`. */
-    dedupeKey: text('dedupe_key').unique(),
+    dedupeKey: text('dedupe_key'),
     priority: smallint('priority').notNull().default(100),
     status: text('status').notNull().default('queued'),
     attempts: smallint('attempts').notNull().default(0),
@@ -33,6 +34,10 @@ export const job = pgTable(
   },
   (table) => [
     index('job_claim_idx').on(table.status, table.runAt, table.priority),
+    // Dedupe applies only to live jobs; finished work may be enqueued again.
+    uniqueIndex('job_dedupe_live_unique')
+      .on(table.dedupeKey)
+      .where(sql`${table.status} in ('queued', 'running')`),
     check(
       'job_status_check',
       sql`${table.status} in ('queued', 'running', 'done', 'failed', 'cancelled')`,
