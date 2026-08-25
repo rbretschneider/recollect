@@ -1,0 +1,183 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+  padding-bottom: 4.5rem;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+
+  h1 {
+    margin: 0;
+    font-size: 1.15rem;
+    letter-spacing: -0.02em;
+  }
+}
+
+.memories {
+  padding: 1rem;
+  max-width: 42rem;
+  margin: 0 auto;
+}
+
+.inbox {
+  margin-bottom: 2rem;
+
+  h2 {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin: 0 0 0.75rem;
+  }
+}
+
+.suggestion {
+  display: flex;
+  gap: 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  padding: 0.9rem;
+  margin-bottom: 0.75rem;
+
+  .mosaic {
+    flex: 0 0 6.5rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    align-self: start;
+
+    &.single {
+      grid-template-columns: 1fr;
+    }
+
+    img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      display: block;
+    }
+  }
+
+  .body {
+    flex: 1;
+    min-width: 0;
+
+    h3 {
+      margin: 0 0 0.15rem;
+      font-size: 1rem;
+    }
+
+    p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+  }
+
+  .actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+
+    button {
+      min-height: 40px;
+      padding: 0 0.9rem;
+      border-radius: 0.5rem;
+      border: none;
+      font-size: 0.9rem;
+      cursor: pointer;
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+    }
+
+    .primary {
+      background: var(--accent);
+      color: var(--accent-contrast);
+      font-weight: 600;
+    }
+
+    .ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+  }
+}
+
+.year {
+  font-size: 1.6rem;
+  margin: 1.5rem 0 0.75rem;
+  letter-spacing: -0.02em;
+}
+
+.memory-card {
+  position: relative;
+  display: block;
+  border-radius: 1rem;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  text-decoration: none;
+  color: inherit;
+  background: var(--surface);
+
+  .cover {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+
+    &.placeholder {
+      background: var(--surface-raised);
+    }
+  }
+
+  .overlay {
+    position: absolute;
+    inset: auto 0 0;
+    padding: 2.25rem 1rem 0.9rem;
+    background: linear-gradient(transparent, rgb(0 0 0 / 78%));
+
+    h3 {
+      margin: 0;
+      color: white;
+      font-size: 1.15rem;
+      text-shadow: 0 1px 3px rgb(0 0 0 / 50%);
+    }
+
+    p {
+      margin: 0.15rem 0 0;
+      color: rgb(255 255 255 / 82%);
+      font-size: 0.85rem;
+    }
+
+    .snippet {
+      font-style: italic;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+.empty {
+  text-align: center;
+  padding: 4rem 1.5rem;
+  color: var(--text-muted);
+
+  h2 {
+    color: var(--text);
+    margin-bottom: 0.25rem;
+  }
+}

@@ -69,6 +69,16 @@
   overflow: hidden;
   background: var(--surface);
 
+  .tile-button {
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+  }
+
   img {
     width: 100%;
     height: 100%;
@@ -121,34 +131,3 @@
   }
 }
 
-.bottomnav {
-  position: fixed;
-  inset: auto 0 0;
-  display: flex;
-  justify-content: space-around;
-  padding: 0.5rem max(0.5rem, env(safe-area-inset-left)) max(0.5rem, env(safe-area-inset-bottom));
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
-  backdrop-filter: blur(8px);
-  border-top: 1px solid var(--border);
-
-  button {
-    flex: 1;
-    min-height: 44px;
-    border: none;
-    background: none;
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    border-radius: 0.5rem;
-    cursor: pointer;
-
-    &.active {
-      color: var(--accent);
-      font-weight: 600;
-    }
-
-    &:disabled {
-      opacity: 0.45;
-      cursor: default;
-    }
-  }
-}

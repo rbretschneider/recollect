@@ -15,5 +15,16 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./features/photos/photos-page').then((m) => m.PhotosPage),
   },
+  {
+    path: 'memories',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/memories/memories-page').then((m) => m.MemoriesPage),
+  },
+  {
+    path: 'memories/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/memories/memory-detail-page').then((m) => m.MemoryDetailPage),
+  },
   { path: '**', redirectTo: '' },
 ];

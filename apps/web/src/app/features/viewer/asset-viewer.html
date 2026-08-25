@@ -1,0 +1,64 @@
+<div
+  class="viewer"
+  role="dialog"
+  aria-label="Photo viewer"
+  (touchstart)="onTouchStart($event)"
+  (touchend)="onTouchEnd($event)"
+>
+  <header class="controls">
+    <button type="button" class="icon" aria-label="Close" (click)="close()">✕</button>
+    <span class="spacer"></span>
+    <button type="button" class="icon" aria-label="Info" (click)="toggleInfo()">ⓘ</button>
+  </header>
+
+  @if (current(); as asset) {
+    <div class="stage" (click)="showInfo() && toggleInfo()">
+      @if (asset.mediaType === 'image') {
+        <img [src]="imageUrl(asset.id)" [alt]="'Photo taken ' + formatDate(asset.capturedAt)" />
+      } @else {
+        <video [src]="originalUrl(asset.id)" controls autoplay playsinline></video>
+      }
+    </div>
+
+    @if (index() > 0) {
+      <button type="button" class="nav prev" aria-label="Previous" (click)="previous()">‹</button>
+    }
+    @if (index() < assets().length - 1) {
+      <button type="button" class="nav next" aria-label="Next" (click)="next()">›</button>
+    }
+
+    @if (showInfo()) {
+      <aside class="info" aria-label="Photo details">
+        <h3>{{ formatDate(asset.capturedAt) }}</h3>
+        @if (detail(); as info) {
+          <dl>
+            @if (info.cameraMake || info.cameraModel) {
+              <div>
+                <dt>Camera</dt>
+                <dd>{{ info.cameraMake }} {{ info.cameraModel }}</dd>
+              </div>
+            }
+            @if (info.width && info.height) {
+              <div>
+                <dt>Dimensions</dt>
+                <dd>{{ info.width }} × {{ info.height }} · {{ formatSize(info.sizeBytes) }}</dd>
+              </div>
+            }
+            @if (info.relPath) {
+              <div>
+                <dt>File</dt>
+                <dd class="path">{{ info.relPath }}</dd>
+              </div>
+            }
+            @if (info.gpsLat !== null) {
+              <div>
+                <dt>Location</dt>
+                <dd>{{ info.gpsLat?.toFixed(4) }}, {{ info.gpsLon?.toFixed(4) }}</dd>
+              </div>
+            }
+          </dl>
+        }
+      </aside>
+    }
+  }
+</div>

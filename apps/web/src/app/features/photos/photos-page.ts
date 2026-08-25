@@ -13,6 +13,8 @@ import { LibraryApiService } from '../../core/api/library-api.service';
 import { PhotosApiService } from '../../core/api/photos-api.service';
 import { LibraryStatus, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
+import { BottomNav } from '../../shared/bottom-nav';
+import { AssetViewer } from '../viewer/asset-viewer';
 
 /** One day's worth of photos in the grid. */
 interface DayGroup {
@@ -27,7 +29,7 @@ const STATUS_POLL_MS = 4000;
 /** The main photo timeline: grid grouped by day with infinite scroll. */
 @Component({
   selector: 'app-photos-page',
-  imports: [],
+  imports: [AssetViewer, BottomNav],
   templateUrl: './photos-page.html',
   styleUrl: './photos-page.scss',
 })
@@ -44,6 +46,7 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
   private hasLoadedFirstPage = false;
 
   readonly items = signal<TimelineAsset[]>([]);
+  readonly viewerIndex = signal<number | null>(null);
   readonly isLoading = signal(false);
   readonly isComplete = signal(false);
   readonly status = signal<LibraryStatus | null>(null);
@@ -80,6 +83,17 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
 
   thumbUrl(asset: TimelineAsset): string {
     return this.photosApi.thumbnailUrl(asset.id, 240);
+  }
+
+  openViewer(asset: TimelineAsset): void {
+    const index = this.items().findIndex((item) => item.id === asset.id);
+    if (index >= 0) {
+      this.viewerIndex.set(index);
+    }
+  }
+
+  closeViewer(): void {
+    this.viewerIndex.set(null);
   }
 
   async loadMore(): Promise<void> {

@@ -1,0 +1,76 @@
+@if (detail(); as memory) {
+  <main class="detail">
+    <header class="hero">
+      @if (coverUrl(memory); as cover) {
+        <img [src]="cover" alt="" />
+      }
+      <a class="back" routerLink="/memories" aria-label="Back to memories">‹</a>
+      <div class="hero-text">
+        @if (isEditingTitle()) {
+          <input
+            class="title-input"
+            name="title"
+            [(ngModel)]="titleDraft"
+            (blur)="saveTitle()"
+            (keydown.enter)="saveTitle()"
+            autofocus
+          />
+        } @else {
+          <h1 (click)="startEditingTitle()" [class.editable]="canWrite">{{ memory.title }}</h1>
+        }
+        <p>{{ formatSpan(memory) }} · {{ memory.assetIds.length }} photos</p>
+      </div>
+    </header>
+
+    <section class="journal" aria-label="Journal">
+      @if (canWrite) {
+        <div class="mine">
+          <label for="journal-editor">
+            Your journal
+            @if (saveState() === 'saving') {
+              <span class="save-state">Saving…</span>
+            } @else if (saveState() === 'saved') {
+              <span class="save-state">Saved</span>
+            }
+          </label>
+          <textarea
+            id="journal-editor"
+            rows="4"
+            placeholder="What do you want to remember about this?"
+            [value]="journalDraft()"
+            (input)="onJournalInput($any($event.target).value)"
+          ></textarea>
+        </div>
+      }
+      @for (entry of othersJournalEntries(); track entry.id) {
+        <article class="entry">
+          <h3>{{ entry.authorName }}</h3>
+          <p>{{ entry.bodyMd }}</p>
+        </article>
+      }
+    </section>
+
+    <section class="grid" aria-label="Photos in this memory">
+      @for (assetId of memory.assetIds; track assetId) {
+        <button
+          type="button"
+          class="tile"
+          aria-label="Open photo"
+          (click)="openViewer(assetId)"
+        >
+          <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
+        </button>
+      }
+    </section>
+  </main>
+}
+
+@if (viewerIndex() !== null) {
+  <app-asset-viewer
+    [assets]="viewerAssets()"
+    [startIndex]="viewerIndex()!"
+    (closed)="closeViewer()"
+  />
+}
+
+<app-bottom-nav />

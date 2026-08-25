@@ -1,0 +1,75 @@
+<header class="topbar">
+  <h1>Memories</h1>
+</header>
+
+<main class="memories">
+  @if (suggestions().length > 0) {
+    <section class="inbox" aria-label="Suggested memories">
+      <h2>Looks like something happened</h2>
+      @for (suggestion of suggestions(); track suggestion.id) {
+        <article class="suggestion">
+          <div class="mosaic" [class.single]="suggestion.previewAssetIds.length === 1">
+            @for (assetId of suggestion.previewAssetIds; track assetId) {
+              <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
+            }
+          </div>
+          <div class="body">
+            <h3>{{ suggestion.seedTitle }}</h3>
+            <p>{{ suggestion.assetCount }} photos · {{ formatSpan(suggestion) }}</p>
+            @if (canWrite) {
+              <div class="actions">
+                <button
+                  type="button"
+                  class="primary"
+                  [disabled]="busySuggestionId() === suggestion.id"
+                  (click)="accept(suggestion)"
+                >
+                  Create Memory
+                </button>
+                <button
+                  type="button"
+                  class="ghost"
+                  [disabled]="busySuggestionId() === suggestion.id"
+                  (click)="dismiss(suggestion)"
+                >
+                  Not an event
+                </button>
+              </div>
+            }
+          </div>
+        </article>
+      }
+    </section>
+  }
+
+  @if (isLoaded() && memories().length === 0 && suggestions().length === 0) {
+    <section class="empty">
+      <h2>No memories yet</h2>
+      <p>As photos are indexed, Recollect will suggest moments that look like events.</p>
+    </section>
+  }
+
+  <section class="timeline" aria-label="Memory timeline">
+    @for (memory of memories(); track memory.id; let index = $index) {
+      @if (isFirstOfYear(index)) {
+        <h2 class="year">{{ yearOf(memory) }}</h2>
+      }
+      <a class="memory-card" [routerLink]="['/memories', memory.id]">
+        @if (coverUrl(memory); as cover) {
+          <img class="cover" [src]="cover" alt="" loading="lazy" />
+        } @else {
+          <div class="cover placeholder"></div>
+        }
+        <div class="overlay">
+          <h3>{{ memory.title }}</h3>
+          <p>{{ formatSpan(memory) }} · {{ memory.assetCount }} photos</p>
+          @if (memory.journalPreview) {
+            <p class="snippet">{{ memory.journalPreview }}</p>
+          }
+        </div>
+      </a>
+    }
+  </section>
+</main>
+
+<app-bottom-nav />

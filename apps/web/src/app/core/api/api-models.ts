@@ -36,6 +36,69 @@ export interface LibraryRootView {
   lastScanCompletedAt: string | null;
 }
 
+/** Mirrors the server's AssetDetail. */
+export interface AssetDetail {
+  id: string;
+  mediaType: 'image' | 'video';
+  mime: string;
+  capturedAt: string;
+  width: number | null;
+  height: number | null;
+  durationMs: number | null;
+  cameraMake: string | null;
+  cameraModel: string | null;
+  lensModel: string | null;
+  gpsLat: number | null;
+  gpsLon: number | null;
+  relPath: string | null;
+  sizeBytes: number | null;
+}
+
+/** Mirrors the server's InboxSuggestion. */
+export interface InboxSuggestion {
+  id: string;
+  seedTitle: string;
+  startAt: string;
+  endAt: string;
+  assetCount: number;
+  previewAssetIds: string[];
+  score: number;
+}
+
+/** Mirrors the server's MemorySummary. */
+export interface MemorySummary {
+  id: string;
+  title: string;
+  startAt: string;
+  endAt: string;
+  coverAssetId: string | null;
+  assetCount: number;
+  journalPreview: string | null;
+}
+
+/** Mirrors the server's JournalEntryView. */
+export interface JournalEntryView {
+  id: string;
+  authorName: string;
+  authorUserId: string;
+  bodyMd: string;
+  updatedAt: string;
+}
+
+/** Mirrors the server's MemoryDetail. */
+export interface MemoryDetail {
+  id: string;
+  title: string;
+  description: string | null;
+  startAt: string;
+  endAt: string;
+  datePrecision: string;
+  locationLabel: string | null;
+  coverAssetId: string | null;
+  assetIds: string[];
+  journal: JournalEntryView[];
+}
+
 /** Mirrors the server's LibraryStatus. */
 export interface LibraryStatus {
   totalAssets: number;
