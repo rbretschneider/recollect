@@ -1,1 +1,35 @@
-/* You can add global styles to this file, and also import other style files */
+/* Recollect global theme. Dark-first: photos look best on a dark canvas. */
+
+:root {
+  --bg: #101014;
+  --surface: #1a1a20;
+  --surface-raised: #24242c;
+  --border: #2e2e38;
+  --text: #ececf1;
+  --text-muted: #9a9aa6;
+  --accent: #7aa2f7;
+  --accent-contrast: #0d1117;
+  --danger: #f7768e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}

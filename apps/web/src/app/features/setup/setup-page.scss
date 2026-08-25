@@ -1,0 +1,87 @@
+.setup {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.card {
+  width: min(26rem, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 2rem;
+
+  h1 {
+    margin: 0 0 0.5rem;
+    font-size: 1.75rem;
+    letter-spacing: -0.02em;
+  }
+}
+
+.lead {
+  margin: 0 0 1rem;
+  color: var(--text);
+  font-size: 1.05rem;
+}
+
+.hint {
+  margin: 0 0 1rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+form {
+  display: grid;
+  gap: 1rem;
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+input {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text);
+  font-size: 1rem;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+}
+
+button {
+  padding: 0.8rem;
+  border-radius: 0.5rem;
+  border: none;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  &.ghost {
+    background: transparent;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+}
+
+.error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.9rem;
+}

@@ -1,0 +1,59 @@
+<main class="setup">
+  <section class="card">
+    <h1>Recollect</h1>
+
+    @if (step() === 1) {
+      <p class="lead">Welcome! Let's create your account.</p>
+      <form (ngSubmit)="createAccount()">
+        <label>
+          Your name
+          <input name="displayName" [(ngModel)]="displayName" required autocomplete="name" />
+        </label>
+        <label>
+          Email
+          <input name="email" type="email" [(ngModel)]="email" required autocomplete="email" />
+        </label>
+        <label>
+          Password
+          <input
+            name="password"
+            type="password"
+            [(ngModel)]="password"
+            required
+            minlength="8"
+            autocomplete="new-password"
+          />
+        </label>
+        @if (error(); as message) {
+          <p class="error" role="alert">{{ message }}</p>
+        }
+        <button type="submit" [disabled]="busy()">
+          {{ busy() ? 'Creating…' : 'Create account' }}
+        </button>
+      </form>
+    } @else {
+      <p class="lead">Where do your photos live?</p>
+      <p class="hint">
+        Recollect indexes this folder in place — nothing is copied or moved.
+      </p>
+      <form (ngSubmit)="addLibrary()">
+        <label>
+          Folder path
+          <input
+            name="libraryPath"
+            [(ngModel)]="libraryPath"
+            required
+            placeholder="\\nas\Photos or D:\Photos"
+          />
+        </label>
+        @if (error(); as message) {
+          <p class="error" role="alert">{{ message }}</p>
+        }
+        <button type="submit" [disabled]="busy()">
+          {{ busy() ? 'Adding…' : 'Start indexing' }}
+        </button>
+        <button type="button" class="ghost" (click)="skipLibrary()">Skip for now</button>
+      </form>
+    }
+  </section>
+</main>

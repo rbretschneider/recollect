@@ -1,0 +1,58 @@
+<header class="topbar">
+  <h1>Recollect</h1>
+  @if (pendingCount() > 0) {
+    <span class="chip" aria-live="polite">Indexing · {{ pendingCount() }} left</span>
+  }
+  <span class="spacer"></span>
+  <span class="user">{{ userName() }}</span>
+</header>
+
+<main class="timeline">
+  @if (showEmptyState) {
+    <section class="empty">
+      <h2>No photos yet</h2>
+      <p>Once a library folder is indexed, your photos will appear here automatically.</p>
+    </section>
+  }
+
+  @for (group of groups(); track group.day) {
+    <section class="day">
+      <h2>{{ group.label }}</h2>
+      <div class="grid">
+        @for (asset of group.items; track asset.id) {
+          <figure class="tile">
+            @if (asset.hasThumbnail) {
+              <img
+                [src]="thumbUrl(asset)"
+                [alt]="'Photo from ' + group.label"
+                loading="lazy"
+                decoding="async"
+              />
+            } @else {
+              <div class="placeholder" aria-label="Photo still processing"></div>
+            }
+            @if (asset.mediaType === 'video') {
+              <span class="badge" aria-label="Video">▶</span>
+            }
+          </figure>
+        }
+      </div>
+    </section>
+  }
+
+  @if (isLoading()) {
+    <div class="grid skeleton-grid" aria-hidden="true">
+      @for (slot of [0, 1, 2, 3, 4, 5, 6, 7]; track slot) {
+        <div class="tile placeholder"></div>
+      }
+    </div>
+  }
+
+  <div #sentinel class="sentinel" aria-hidden="true"></div>
+</main>
+
+<nav class="bottomnav" aria-label="Main">
+  <button class="active" type="button">Photos</button>
+  <button type="button" disabled title="Coming soon">Memories</button>
+  <button type="button" disabled title="Coming soon">Search</button>
+</nav>
