@@ -1,0 +1,46 @@
+name: recollect
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-recollect}
+      POSTGRES_USER: ${DB_USER:-recollect}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-recollect} -d ${DB_NAME:-recollect}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Core API + library engine + web (single container in production).
+  # During development run `npm run dev` on the host instead; this service
+  # is the deployment target and stays commented out until the first build.
+  #
+  # server:
+  #   build: .
+  #   restart: unless-stopped
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   environment:
+  #     DATABASE_URL: postgres://${DB_USER:-recollect}:${DB_PASSWORD}@db:5432/${DB_NAME:-recollect}
+  #   volumes:
+  #     - app-data:/app/data          # thumbnails, caches — never originals
+  #     - ${LIBRARY_PATH}:/library    # the NAS photo library, indexed in place
+  #   ports:
+  #     - "8080:8080"
+
+  # ML sidecar (Phase 2+): faces + CLIP embeddings.
+  # ml:
+  #   build: apps/ml
+  #   restart: unless-stopped
+
+volumes:
+  db-data:
+  app-data:

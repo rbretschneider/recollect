@@ -1,0 +1,24 @@
+{
+  "name": "recollect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A mobile-first, self-hosted PWA that turns your existing photo library into a timeline of Memories.",
+  "workspaces": [
+    "apps/web",
+    "apps/server"
+  ],
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:server dev:web",
+    "dev:web": "npm run start --workspace @recollect/web",
+    "dev:server": "npm run start:dev --workspace @recollect/server",
+    "build": "npm run build --workspace @recollect/server && npm run build --workspace @recollect/web",
+    "test": "npm run test --workspace @recollect/server && npm run test --workspace @recollect/web -- --watch=false",
+    "lint": "npm run lint --workspace @recollect/server"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.5"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
