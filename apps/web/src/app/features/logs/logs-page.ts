@@ -23,6 +23,7 @@ export class LogsPage implements OnInit, AfterViewInit {
   readonly lines = signal<string[]>([]);
   readonly isLoaded = signal(false);
   readonly isFollowing = signal(true);
+  readonly error = signal<string | null>(null);
 
   get downloadUrl(): string {
     return this.api.logDownloadUrl;
@@ -54,11 +55,22 @@ export class LogsPage implements OnInit, AfterViewInit {
   }
 
   async refresh(): Promise<void> {
-    const { lines } = await this.api.tailLogs(TAIL_LINES);
-    this.lines.set(lines);
-    this.isLoaded.set(true);
-    if (this.isFollowing()) {
-      queueMicrotask(() => this.scrollToEnd());
+    try {
+      const { lines } = await this.api.tailLogs(TAIL_LINES);
+      this.lines.set(lines ?? []);
+      this.error.set(null);
+      if (this.isFollowing()) {
+        queueMicrotask(() => this.scrollToEnd());
+      }
+    } catch (caught) {
+      const status = (caught as { status?: number }).status;
+      this.error.set(
+        status === 403 || status === 401
+          ? 'Logs are only available to admins.'
+          : `Couldn't load logs${status ? ` (HTTP ${status})` : ''}. Retrying…`,
+      );
+    } finally {
+      this.isLoaded.set(true);
     }
   }
 

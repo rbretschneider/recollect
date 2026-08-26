@@ -10,9 +10,12 @@
 </header>
 
 <main class="logs">
+  @if (error(); as message) {
+    <p class="hint error" role="alert">{{ message }}</p>
+  }
   <pre #scroller class="tail" aria-live="off">@for (line of lines(); track $index) {{{ line }}
 }</pre>
-  @if (isLoaded() && lines().length === 0) {
+  @if (isLoaded() && !error() && lines().length === 0) {
     <p class="hint">No log entries yet.</p>
   }
 </main>
