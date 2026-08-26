@@ -1,13 +1,25 @@
 import { Component, inject, input, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { SharingApiService } from '../core/api/sharing-api.service';
+import { ShareLinkView } from '../core/api/api-models';
+
+/** Expiration choices offered when making something public. */
+const EXPIRY_OPTIONS = [
+  { label: '24 hours', hours: 24 },
+  { label: '7 days', hours: 24 * 7 },
+  { label: '30 days', hours: 24 * 30 },
+  { label: 'Until turned off', hours: null },
+] as const;
 
 /**
- * Creates (or reuses) a public share link for a memory or album and presents
- * the URL with one-tap copy. Anyone with the link can view — no account.
+ * Sharing control. Everything is private until the user explicitly creates a
+ * public link here — choosing an expiration first. Existing links are listed
+ * with their expiry and view count, and can be turned off at any time.
+ * All public views are read-only.
  */
 @Component({
   selector: 'app-share-button',
-  imports: [],
+  imports: [FormsModule],
   templateUrl: './share-button.html',
   styleUrl: './share-button.scss',
 })
@@ -19,34 +31,64 @@ export class ShareButton {
   /** For memories: whether the shared page includes journal text. */
   readonly includeJournal = input<boolean>(false);
 
-  readonly shareUrl = signal<string | null>(null);
-  readonly copied = signal(false);
+  readonly isOpen = signal(false);
+  readonly links = signal<ShareLinkView[]>([]);
   readonly isBusy = signal(false);
+  readonly copiedLinkId = signal<string | null>(null);
 
-  async share(): Promise<void> {
+  readonly expiryOptions = EXPIRY_OPTIONS;
+  selectedExpiryHours: number | null = 24 * 7;
+
+  async open(): Promise<void> {
+    this.isOpen.set(true);
+    const { links } = await this.api.listFor(this.targetType(), this.targetId());
+    this.links.set(links);
+  }
+
+  close(): void {
+    this.isOpen.set(false);
+  }
+
+  urlFor(link: ShareLinkView): string {
+    return `${location.origin}/s/${link.token}`;
+  }
+
+  expiryLabel(link: ShareLinkView): string {
+    if (link.expiresAt === null) {
+      return 'No expiration';
+    }
+    const remaining = new Date(link.expiresAt).getTime() - Date.now();
+    if (remaining <= 0) {
+      return 'Expired';
+    }
+    const hours = Math.round(remaining / (60 * 60 * 1000));
+    return hours < 48 ? `Expires in ${hours}h` : `Expires in ${Math.round(hours / 24)} days`;
+  }
+
+  /** The single, deliberate action that makes this content public. */
+  async createLink(): Promise<void> {
     this.isBusy.set(true);
     try {
-      const { links } = await this.api.listFor(this.targetType(), this.targetId());
-      const link =
-        links.find((existing) => existing.includeJournal === this.includeJournal()) ??
-        (await this.api.createLink(this.targetType(), this.targetId(), this.includeJournal())).link;
-      this.shareUrl.set(`${location.origin}/s/${link.token}`);
+      const { link } = await this.api.createLink(
+        this.targetType(),
+        this.targetId(),
+        this.includeJournal(),
+        this.selectedExpiryHours,
+      );
+      this.links.update((existing) => [link, ...existing]);
     } finally {
       this.isBusy.set(false);
     }
   }
 
-  async copy(): Promise<void> {
-    const url = this.shareUrl();
-    if (!url) {
-      return;
-    }
-    await navigator.clipboard.writeText(url);
-    this.copied.set(true);
-    setTimeout(() => this.copied.set(false), 2000);
+  async turnOff(link: ShareLinkView): Promise<void> {
+    await this.api.revoke(link.id);
+    this.links.update((existing) => existing.filter((item) => item.id !== link.id));
   }
 
-  dismiss(): void {
-    this.shareUrl.set(null);
+  async copy(link: ShareLinkView): Promise<void> {
+    await navigator.clipboard.writeText(this.urlFor(link));
+    this.copiedLinkId.set(link.id);
+    setTimeout(() => this.copiedLinkId.set(null), 2000);
   }
 }

@@ -22,6 +22,8 @@ export interface ShareLinkView {
   token: string;
   includeJournal: boolean;
   createdAt: string;
+  expiresAt: string | null;
+  viewCount: number;
 }
 
 /** The public payload rendered for anyone opening a share link. */
@@ -46,12 +48,13 @@ export class SharingService {
     private readonly albums: AlbumsService,
   ) {}
 
-  /** Creates a link after verifying the target exists. */
+  /** Creates a link after verifying the target exists. Expiry is the caller's explicit choice. */
   async createLink(
     targetType: ShareTargetType,
     targetId: string,
     userId: string,
     includeJournal: boolean,
+    expiresAt: Date | null,
   ): Promise<ShareLinkView> {
     await this.loadTargetAssetIds(targetType, targetId);
     const [row] = await this.db
@@ -62,6 +65,7 @@ export class SharingService {
         targetType,
         targetId,
         includeJournal,
+        expiresAt,
         createdBy: userId,
       })
       .returning();
@@ -160,6 +164,8 @@ export class SharingService {
       token: row.token,
       includeJournal: row.includeJournal,
       createdAt: row.createdAt.toISOString(),
+      expiresAt: row.expiresAt?.toISOString() ?? null,
+      viewCount: row.viewCount,
     };
   }
 }

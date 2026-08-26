@@ -12,12 +12,14 @@ export class SharingApiService {
     targetType: 'memory' | 'album',
     targetId: string,
     includeJournal: boolean,
+    expiresInHours: number | null,
   ): Promise<{ link: ShareLinkView }> {
     return firstValueFrom(
       this.http.post<{ link: ShareLinkView }>('/api/v1/sharing', {
         targetType,
         targetId,
         includeJournal,
+        ...(expiresInHours === null ? {} : { expiresInHours }),
       }),
     );
   }

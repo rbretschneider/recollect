@@ -127,6 +127,8 @@ export interface ShareLinkView {
   token: string;
   includeJournal: boolean;
   createdAt: string;
+  expiresAt: string | null;
+  viewCount: number;
 }
 
 /** Mirrors the server's SharedView. */

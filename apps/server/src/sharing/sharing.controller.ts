@@ -26,11 +26,16 @@ export class SharingController {
     @Body() body: CreateShareRequestDto,
     @CurrentUser() user: UserProfile,
   ): Promise<{ link: ShareLinkView }> {
+    const expiresAt =
+      body.expiresInHours === undefined
+        ? null
+        : new Date(Date.now() + body.expiresInHours * 60 * 60 * 1000);
     const link = await this.sharing.createLink(
       body.targetType,
       body.targetId,
       user.id,
       body.includeJournal ?? false,
+      expiresAt,
     );
     return { link };
   }
