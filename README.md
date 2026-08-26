@@ -26,6 +26,18 @@ It's also a genuinely good day-to-day photo app — grid, viewer, search, and sa
 - **PostgreSQL + pgvector** — metadata, memories, journal, vectors
 - **Docker Compose** — deployment target (NAS / mini-PC class hardware)
 
+## Run it (Docker)
+
+Point Recollect at any folder of photos — it indexes in place and never copies your library.
+
+```
+cp .env.example .env    # set DB_PASSWORD, AUTH_TOKEN_SECRET, LIBRARY_PATH
+docker compose --profile app up -d --build
+```
+
+Open http://localhost:8080, create the first (admin) account, and indexing of the
+mounted folder starts automatically. New files are picked up by the daily rescan.
+
 ## Development
 
 Prerequisites: Node **22 LTS**, Docker, Python 3.12+ (ML sidecar only).
@@ -33,7 +45,8 @@ Prerequisites: Node **22 LTS**, Docker, Python 3.12+ (ML sidecar only).
 ```
 npm install
 docker compose up -d db
-npm run dev          # server + web
+npm run dev          # server (8080) + web (4200, proxied)
 ```
 
-*(Scaffolding in progress — commands land as the apps are created.)*
+Database migrations: `npx drizzle-kit generate && npx drizzle-kit migrate` from
+`apps/server` (the container applies them automatically at boot).

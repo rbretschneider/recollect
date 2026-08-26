@@ -18,23 +18,25 @@ services:
       timeout: 5s
       retries: 5
 
-  # Core API + library engine + web (single container in production).
-  # During development run `npm run dev` on the host instead; this service
-  # is the deployment target and stays commented out until the first build.
-  #
-  # server:
-  #   build: .
-  #   restart: unless-stopped
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
-  #   environment:
-  #     DATABASE_URL: postgres://${DB_USER:-recollect}:${DB_PASSWORD}@db:5432/${DB_NAME:-recollect}
-  #   volumes:
-  #     - app-data:/app/data          # thumbnails, caches — never originals
-  #     - ${LIBRARY_PATH}:/library    # the NAS photo library, indexed in place
-  #   ports:
-  #     - "8080:8080"
+  # Core API + library engine + built web app, one container.
+  # During development run `npm run dev` on the host instead (profile gate).
+  server:
+    build: .
+    restart: unless-stopped
+    profiles: ["app"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${DB_USER:-recollect}:${DB_PASSWORD}@db:5432/${DB_NAME:-recollect}
+      AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:?set AUTH_TOKEN_SECRET in .env}
+      TRASH_RETENTION_DAYS: ${TRASH_RETENTION_DAYS:-7}
+      SCAN_INTERVAL_HOURS: ${SCAN_INTERVAL_HOURS:-24}
+    volumes:
+      - app-data:/app/data              # thumbnails, caches — never originals
+      - ${LIBRARY_PATH:?set LIBRARY_PATH in .env}:/library   # photo folder, indexed in place
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
 
   # ML sidecar (Phase 2+): faces + CLIP embeddings.
   # ml:

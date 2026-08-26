@@ -11,6 +11,10 @@ const configSchema = z.object({
   clusterMinSize: z.coerce.number().int().positive().default(3),
   trashRetentionDays: z.coerce.number().int().positive().default(7),
   scanIntervalHours: z.coerce.number().positive().default(24),
+  /** Directory of the built web app to serve; empty disables static serving (dev). */
+  webDistDir: z.string().default(''),
+  /** Directory of SQL migrations to apply at boot; empty disables (dev uses drizzle-kit). */
+  migrationsDir: z.string().default(''),
 });
 
 /** Validated application configuration, loaded once from the environment at startup. */
@@ -35,6 +39,8 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     clusterMinSize: env.CLUSTER_MIN_SIZE,
     trashRetentionDays: env.TRASH_RETENTION_DAYS,
     scanIntervalHours: env.SCAN_INTERVAL_HOURS,
+    webDistDir: env.WEB_DIST_DIR,
+    migrationsDir: env.MIGRATIONS_DIR,
   });
   if (!parsed.success) {
     throw new Error(`Invalid configuration: ${parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ')}`);
