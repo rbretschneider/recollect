@@ -2,52 +2,67 @@
 
 The living short-list. The exhaustive backlog with acceptance criteria stays in
 [plan.md](plan.md); this is what's actually next, in rough order. Updated as
-real-library testing (30k items on the prod server) teaches us things.
+real-library testing (~18.5k assets on hawaii) teaches us things.
 
 ## Shipped (highlights)
 
-- Photo timeline, viewer (zoom/pan/gestures, back-button-safe), folders view,
-  albums, trash with holding period, multi-user grants, settings, live activity
-  + logs, Docker single-container deploy with GHCR auto-publish
-- Memories: Tier-1 event detection (≥7 photos, tunable), inspectable inbox,
-  journal-as-story, embedded map, share links
+- Photo timeline, viewer (zoom/pan/gestures, back-button-safe, Info toggle),
+  folders view, albums, trash with holding period, multi-user grants, settings,
+  live activity + logs, Docker deploy with GHCR auto-publish
+- Memories: Tier-1 detection (≥7 photos, tunable), suggestion review grid with
+  per-photo curation + naming, journal-as-story, embedded map, sharing
+  (private-until-explicit-link, expiration, revoke)
 - Video: orientation-safe playback, background HEVC→H.264 transcoding
 - Self-healing pipelines: thumbnail repair sweeps, single-file reprocess
+- ML sidecar built (FastAPI + InsightFace antelopev2 + open_clip ViT-L-14,
+  GPU 1 on hawaii, env-configurable down to CPU) — not yet wired to the server
+
+## In progress
+
+- **ML wiring (E12/E15)**: server jobs `detect_faces` / `embed_clip`,
+  face/person/embedding schema (specced in data-model.md), backfill →
+  face clustering → People UI (name/merge/ignore) → CLIP semantic search UI
 
 ## Next up
 
-1. **Search v1** — one box: text, dates ("July 2025"), filename/folder,
-   filters. The biggest daily-use gap vs PhotoPrism.
-2. **Album share-link management (PhotoPrism-parity)** — per-album panel
-   listing its links: create with optional **expiration**, toggle
-   on/off (revoke/re-enable), copy, view counts, and **short URLs**
-   (`/s/<short-token>`). Backend fields already exist (expiry, revoke);
-   this is the management UX + short tokens.
-3. **Settings completeness** — edit/disable members, change password
+1. **Search v1** — one box: text, dates, filename/folder, filters. Biggest
+   daily-use gap; CLIP search lands on top of it later.
+2. **Grid view options** — keep today's uniform grid, add PhotoPrism-style
+   alternatives with a view switcher: **mosaic tiling** (fills dead space,
+   their default), **cards** (photo + metadata block), **small squares**.
+3. **Edit-mode app-wide** — read-only by default across Photos/Albums/Memories;
+   destructive/curation controls appear only in an explicit edit mode
+   (kills the stray per-image ✕). *(Decision locked: full scope.)*
+4. **Album QOL** — creation via typeahead select-list; auto cover thumbnail
+   from a member photo (user-selectable later).
+5. **Wait-state sweep** — audit every async action against the three-signal
+   standard; includes a viewer spinner while the full image loads.
+6. **Settings completeness** — edit/disable members, change password
    (incl. forced first-login change), remove/re-enable library roots.
-4. **Favorites** (per-user hearts + view).
-5. **Live Photos pairing** — needs a couple of real iPhone HEIC+MOV pairs
-   to test honestly.
+7. **Favorites**; **Live Photos pairing** (needs real iPhone HEIC+MOV pairs).
 
 ## The big design pass
 
-6. **Memory as a written story ("flowy journalistic" redesign)** — the memory
-   page becomes a composed piece, not a page of sections: inline photos woven
-   between paragraphs, day-by-day chapters for multi-day memories, pull-quote
-   covers, print-worthy typography. Deliberately parked until the current
-   journal shape has survived a week of real family use; its lessons feed
-   the design.
+8. **Memory as a written story ("flowy journalistic" redesign)** — inline
+   photos between paragraphs, day-by-day chapters, pull-quote covers,
+   print-worthy typography. Parked until the current journal shape survives
+   a week of real family use.
 
-## Phase 2+ (unchanged from plan.md)
+## Later
 
-- People & faces (ML sidecar), Places view, semantic search (CLIP),
-  smarter clustering, On This Day / year-in-review.
+- **ML auto-tagging** (zero-shot CLIP over a tag vocabulary) + a download
+  button that names files from tags + original name (yearly family book flow)
+- Places view, smarter clustering, On This Day / year-in-review
+- Housekeeping: hawaii doc (`hawaii/docs/recollect.md`), delete unused
+  `production` GitHub environment, fix red CI (Linux lockfile / `npm ci`)
 
 ## Last, deliberately
 
-7. **Guest uploads for an event** — a share link that accepts photos from
-   guests ("drop your photos from the party here") into a review queue.
-   The only path where files enter by upload; lands in a configurable
-   library folder. Powerful, but it touches trust boundaries (public
-   write endpoint), so it ships after everything above is boring and
-   stable.
+- **Guest uploads for an event** — the only public write path; ships after
+  everything above is boring and stable.
+
+## Decisions locked
+
+GPU 1 for inference · antelopev2 faces + CLIP search · edit-mode app-wide ·
+suggestions as a grid · sharing private-until-explicit with expiration ·
+modularity via env vars · guest uploads last.
