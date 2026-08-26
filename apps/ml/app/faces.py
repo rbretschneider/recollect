@@ -1,6 +1,9 @@
 """Face detection + ArcFace embeddings via InsightFace / ONNX Runtime."""
 
 import base64
+import glob
+import os
+import shutil
 
 import cv2
 import numpy as np
@@ -19,12 +22,30 @@ class FaceEngine:
             else ["CPUExecutionProvider"]
         )
         self.model_name = Config.face_model
-        self._app = FaceAnalysis(name=Config.face_model, providers=providers)
+        self._app = self._load(providers)
         # ctx_id 0 selects the (single, container-visible) GPU; -1 is CPU.
         self._app.prepare(
             ctx_id=0 if Config.use_cuda() else -1,
             det_size=(Config.face_det_size, Config.face_det_size),
         )
+
+    def _load(self, providers: list[str]) -> FaceAnalysis:
+        try:
+            return FaceAnalysis(name=Config.face_model, providers=providers)
+        except AssertionError:
+            # antelopev2's release zip extracts one directory too deep, so
+            # insightface's first construction downloads it and then finds no
+            # models. Flatten the pack and retry once.
+            self._flatten_pack()
+            return FaceAnalysis(name=Config.face_model, providers=providers)
+
+    @staticmethod
+    def _flatten_pack() -> None:
+        base = os.path.expanduser(f"~/.insightface/models/{Config.face_model}")
+        if not os.path.isdir(base) or glob.glob(os.path.join(base, "*.onnx")):
+            return
+        for onnx in glob.glob(os.path.join(base, "*", "*.onnx")):
+            shutil.move(onnx, os.path.join(base, os.path.basename(onnx)))
 
     def detect(self, image_b64: str) -> list[dict]:
         """Detect faces in one base64 image; empty list when none are found."""
