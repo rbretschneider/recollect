@@ -1,5 +1,6 @@
 <header class="topbar">
   <h1>Albums</h1>
+  <a class="topbar-action" routerLink="/folders">📁 Folders</a>
   <span class="spacer"></span>
   @if (canWrite && !isCreating()) {
     <button type="button" class="topbar-action" (click)="startCreating()">New album</button>

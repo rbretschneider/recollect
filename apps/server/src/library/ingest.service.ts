@@ -47,6 +47,8 @@ export class IngestService {
       existing?.id ??
       (await this.createAsset(contentHash, typeInfo, absolutePath, stats.mtime));
     await this.linkFile(payload, assetId, stats);
+    // A file moved on disk re-links here; restore the asset if a scan marked it missing.
+    await this.recomputeAssetStatus(assetId);
     if (!existing) {
       await this.runThumbnailStage(assetId, absolutePath, typeInfo);
     }
@@ -205,17 +207,20 @@ export class IngestService {
     }
   }
 
+  /** Full status derivation (data-model.md §3.2): present → active, else trashed → trashed, else missing. */
   private async recomputeAssetStatus(assetId: string): Promise<void> {
     const files = await this.db
       .select({ state: assetFile.state })
       .from(assetFile)
       .where(eq(assetFile.assetId, assetId));
-    const hasPresent = files.some((file) => file.state === 'present');
-    if (!hasPresent) {
-      await this.db
-        .update(asset)
-        .set({ status: 'missing', updatedAt: new Date() })
-        .where(eq(asset.id, assetId));
-    }
+    const status = files.some((file) => file.state === 'present')
+      ? 'active'
+      : files.some((file) => file.state === 'trashed')
+        ? 'trashed'
+        : 'missing';
+    await this.db
+      .update(asset)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(asset.id, assetId));
   }
 }

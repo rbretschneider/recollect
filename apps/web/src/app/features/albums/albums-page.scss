@@ -27,6 +27,8 @@
 }
 
 .topbar-action {
+  display: grid;
+  place-items: center;
   min-height: 40px;
   padding: 0 0.8rem;
   border: 1px solid var(--border);
@@ -34,6 +36,7 @@
   background: var(--surface);
   color: var(--text);
   font-size: 0.85rem;
+  text-decoration: none;
   cursor: pointer;
 }
 

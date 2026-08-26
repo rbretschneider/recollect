@@ -38,6 +38,11 @@ export const routes: Routes = [
       import('./features/albums/album-detail-page').then((m) => m.AlbumDetailPage),
   },
   {
+    path: 'folders',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/folders/folders-page').then((m) => m.FoldersPage),
+  },
+  {
     path: 'trash',
     canActivate: [authGuard],
     loadComponent: () => import('./features/trash/trash-page').then((m) => m.TrashPage),

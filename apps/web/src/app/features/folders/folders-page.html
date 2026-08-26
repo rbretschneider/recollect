@@ -1,0 +1,87 @@
+<header class="topbar">
+  <a class="back" routerLink="/albums" aria-label="Back to albums">‹</a>
+  <h1>Folders</h1>
+</header>
+
+<main class="folders">
+  @if (crumbs().length > 0) {
+    <nav class="crumbs" aria-label="Folder path">
+      @for (crumb of crumbs(); track crumb.path; let isLast = $last) {
+        @if (isLast) {
+          <span class="current">{{ crumb.label }}</span>
+        } @else {
+          <button type="button" (click)="openFolder(crumb.path)">{{ crumb.label }}</button>
+          <span class="sep">/</span>
+        }
+      }
+    </nav>
+  }
+
+  @if (!listing() && roots().length > 0) {
+    <div class="folder-grid">
+      @for (root of roots(); track root.rootId) {
+        <button type="button" class="folder-card" (click)="openRoot(root)">
+          @if (coverUrl(root.coverAssetId); as cover) {
+            <img [src]="cover" alt="" loading="lazy" />
+          } @else {
+            <div class="folder-icon">📁</div>
+          }
+          <h3>{{ root.name }}</h3>
+          <p>{{ root.assetCount }} photos</p>
+        </button>
+      }
+    </div>
+  }
+
+  @if (listing(); as level) {
+    @if (level.folders.length > 0) {
+      <div class="folder-grid">
+        @for (folder of level.folders; track folder.path) {
+          <button type="button" class="folder-card" (click)="openFolder(folder.path)">
+            @if (coverUrl(folder.coverAssetId); as cover) {
+              <img [src]="cover" alt="" loading="lazy" />
+            } @else {
+              <div class="folder-icon">📁</div>
+            }
+            <h3>{{ folder.name }}</h3>
+            <p>{{ folder.assetCount }} photos</p>
+          </button>
+        }
+      </div>
+    }
+
+    @if (level.assets.length > 0) {
+      <div class="grid">
+        @for (asset of level.assets; track asset.id; let index = $index) {
+          <button type="button" class="tile" [attr.aria-label]="asset.fileName" (click)="openViewer(index)">
+            @if (asset.hasThumbnail) {
+              <img [src]="thumbUrl(asset.id)" [alt]="asset.fileName" loading="lazy" />
+            } @else {
+              <div class="placeholder"></div>
+            }
+            @if (asset.mediaType === 'video') {
+              <span class="badge">▶</span>
+            }
+          </button>
+        }
+      </div>
+    }
+
+    @if (isLoaded() && level.folders.length === 0 && level.assets.length === 0) {
+      <section class="empty">
+        <h2>Nothing here</h2>
+        <p>This folder has no photos or videos.</p>
+      </section>
+    }
+  }
+</main>
+
+@if (viewerIndex() !== null) {
+  <app-asset-viewer
+    [assets]="viewerAssets()"
+    [startIndex]="viewerIndex()!"
+    (closed)="closeViewer()"
+  />
+}
+
+<app-bottom-nav />
