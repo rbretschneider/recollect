@@ -16,6 +16,7 @@
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
   transition: background-color 0.2s ease, border-color 0.2s ease;
+  min-width: 0; // Flex children may shrink; the bar never widens the page.
 
   // Selection mode is a different place; the bar says so.
   &.selecting {

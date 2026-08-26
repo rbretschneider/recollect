@@ -20,6 +20,14 @@ html {
   color-scheme: dark;
 }
 
+// The page never scrolls horizontally; anything wide scrolls inside its own
+// container. A crowded flex row must shrink, not push the viewport.
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 /* Motion is decoration here, never information — honor the OS setting wholesale. */
 @media (prefers-reduced-motion: reduce) {
   *,
