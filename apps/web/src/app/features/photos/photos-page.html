@@ -4,8 +4,10 @@
     <span class="chip" aria-live="polite">Indexing · {{ pendingCount() }} left</span>
   }
   <span class="spacer"></span>
-  @if (canDelete && !isSelecting()) {
+  @if (canWrite && !isSelecting()) {
     <button type="button" class="topbar-action" (click)="startSelecting()">Select</button>
+  }
+  @if (canDelete && !isSelecting()) {
     <a class="topbar-action" routerLink="/trash" aria-label="Trash">🗑</a>
   }
   @if (isSelecting()) {
@@ -70,8 +72,15 @@
 @if (isSelecting() && selectedIds().size > 0) {
   <div class="action-bar" role="toolbar" aria-label="Selection actions">
     <span>{{ selectedIds().size }} selected</span>
-    <button type="button" class="danger" (click)="deleteSelected()">Move to Trash</button>
+    <button type="button" (click)="startAlbumPick()">Add to album</button>
+    @if (canDelete) {
+      <button type="button" class="danger" (click)="deleteSelected()">Move to Trash</button>
+    }
   </div>
+}
+
+@if (isPickingAlbum()) {
+  <app-album-picker (picked)="addSelectionToAlbum($event)" (cancelled)="cancelAlbumPick()" />
 }
 
 @if (undoIds().length > 0) {

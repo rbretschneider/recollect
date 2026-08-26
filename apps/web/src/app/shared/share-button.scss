@@ -1,0 +1,59 @@
+.share {
+  min-height: 40px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.share-sheet {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.9rem;
+
+  .hint {
+    margin: 0 0 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+
+    input {
+      flex: 1;
+      min-width: 0;
+      padding: 0.5rem 0.6rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      background: var(--surface-raised);
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+  }
+
+  button {
+    min-height: 40px;
+    padding: 0 0.9rem;
+    border-radius: 0.5rem;
+    border: none;
+    cursor: pointer;
+
+    &.primary {
+      background: var(--accent);
+      color: var(--accent-contrast);
+      font-weight: 600;
+    }
+
+    &.ghost {
+      background: none;
+      color: var(--text-muted);
+    }
+  }
+}

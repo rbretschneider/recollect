@@ -11,6 +11,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
         Photos
       </a>
       <a routerLink="/memories" routerLinkActive="active">Memories</a>
+      <a routerLink="/albums" routerLinkActive="active">Albums</a>
       <button type="button" disabled title="Coming soon">Search</button>
     </nav>
   `,

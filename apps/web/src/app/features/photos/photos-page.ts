@@ -14,6 +14,8 @@ import { PhotosApiService } from '../../core/api/photos-api.service';
 import { LibraryStatus, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { TrashApiService } from '../../core/api/trash-api.service';
+import { AlbumsApiService } from '../../core/api/albums-api.service';
+import { AlbumPicker } from '../../shared/album-picker';
 import { BottomNav } from '../../shared/bottom-nav';
 import { AssetViewer } from '../viewer/asset-viewer';
 import { RouterLink } from '@angular/router';
@@ -31,7 +33,7 @@ const STATUS_POLL_MS = 4000;
 /** The main photo timeline: grid grouped by day with infinite scroll. */
 @Component({
   selector: 'app-photos-page',
-  imports: [AssetViewer, BottomNav, RouterLink],
+  imports: [AlbumPicker, AssetViewer, BottomNav, RouterLink],
   templateUrl: './photos-page.html',
   styleUrl: './photos-page.scss',
 })
@@ -39,6 +41,7 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
   private readonly photosApi = inject(PhotosApiService);
   private readonly libraryApi = inject(LibraryApiService);
   private readonly trashApi = inject(TrashApiService);
+  private readonly albumsApi = inject(AlbumsApiService);
   private readonly auth = inject(AuthStateService);
   private readonly destroyRef = inject(DestroyRef);
   private undoTimer: ReturnType<typeof setTimeout> | null = null;
@@ -53,6 +56,7 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
   readonly viewerIndex = signal<number | null>(null);
   readonly isSelecting = signal(false);
   readonly selectedIds = signal<ReadonlySet<string>>(new Set());
+  readonly isPickingAlbum = signal(false);
   readonly undoIds = signal<string[]>([]);
   readonly isLoading = signal(false);
   readonly isComplete = signal(false);
@@ -106,6 +110,29 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
   /** Whether the signed-in user holds the delete grant. */
   get canDelete(): boolean {
     return this.auth.user()?.permission === 'delete';
+  }
+
+  /** Whether the signed-in user can change shared state (write or delete grant). */
+  get canWrite(): boolean {
+    const permission = this.auth.user()?.permission;
+    return permission === 'write' || permission === 'delete';
+  }
+
+  startAlbumPick(): void {
+    this.isPickingAlbum.set(true);
+  }
+
+  cancelAlbumPick(): void {
+    this.isPickingAlbum.set(false);
+  }
+
+  async addSelectionToAlbum(albumId: string): Promise<void> {
+    const ids = [...this.selectedIds()];
+    this.isPickingAlbum.set(false);
+    this.cancelSelecting();
+    if (ids.length > 0) {
+      await this.albumsApi.addAssets(albumId, ids);
+    }
   }
 
   onTileClick(asset: TimelineAsset): void {

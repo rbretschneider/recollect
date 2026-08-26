@@ -1,0 +1,16 @@
+<div class="scrim" (click)="cancelled.emit()"></div>
+<div class="picker" role="dialog" aria-label="Add to album">
+  <h2>Add to album</h2>
+  <div class="list">
+    @for (album of albums(); track album.id) {
+      <button type="button" (click)="choose(album.id)">
+        <span class="title">{{ album.title }}</span>
+        <span class="count">{{ album.assetCount }}</span>
+      </button>
+    }
+  </div>
+  <form class="create" (ngSubmit)="createAndChoose()">
+    <input name="newTitle" [(ngModel)]="newTitle" placeholder="New album name" />
+    <button type="submit">Create</button>
+  </form>
+</div>

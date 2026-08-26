@@ -7,6 +7,7 @@ import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { MemoryDetail, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { BottomNav } from '../../shared/bottom-nav';
+import { ShareButton } from '../../shared/share-button';
 import { AssetViewer } from '../viewer/asset-viewer';
 
 const JOURNAL_AUTOSAVE_MS = 1500;
@@ -14,7 +15,7 @@ const JOURNAL_AUTOSAVE_MS = 1500;
 /** One Memory: hero, editable title, media grid, and the journal. */
 @Component({
   selector: 'app-memory-detail-page',
-  imports: [AssetViewer, BottomNav, FormsModule, RouterLink],
+  imports: [AssetViewer, BottomNav, FormsModule, RouterLink, ShareButton],
   templateUrl: './memory-detail-page.html',
   styleUrl: './memory-detail-page.scss',
 })

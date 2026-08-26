@@ -31,6 +31,10 @@ export class AssetViewer {
   /** The list being browsed and the index to start at. */
   readonly assets = input.required<TimelineAsset[]>();
   readonly startIndex = input.required<number>();
+  /** Base URL for media routes; share pages point this at their token scope. */
+  readonly mediaBase = input<string>('/api/v1/assets');
+  /** Info sheet requires the authed detail endpoint; share pages disable it. */
+  readonly allowInfo = input<boolean>(true);
   readonly closed = output<void>();
 
   readonly index = signal(0);
@@ -55,11 +59,11 @@ export class AssetViewer {
   }
 
   imageUrl(assetId: string): string {
-    return `/api/v1/assets/${assetId}/thumb/1440`;
+    return `${this.mediaBase()}/${assetId}/thumb/1440`;
   }
 
   originalUrl(assetId: string): string {
-    return `/api/v1/assets/${assetId}/original`;
+    return `${this.mediaBase()}/${assetId}/original`;
   }
 
   next(): void {

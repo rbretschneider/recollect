@@ -1,0 +1,47 @@
+@if (isUnavailable()) {
+  <main class="unavailable">
+    <h1>This link is no longer available</h1>
+    <p>It may have been turned off by whoever shared it.</p>
+  </main>
+}
+
+@if (view(); as shared) {
+  <main class="shared">
+    <header>
+      <h1>{{ shared.title }}</h1>
+      @if (formatSpan(shared); as span) {
+        <p class="span">{{ span }}</p>
+      }
+      @if (shared.description) {
+        <p class="description">{{ shared.description }}</p>
+      }
+    </header>
+
+    @for (entry of shared.journal; track entry.authorName + entry.bodyMd) {
+      <article class="entry">
+        <h3>{{ entry.authorName }}</h3>
+        <p>{{ entry.bodyMd }}</p>
+      </article>
+    }
+
+    <div class="grid">
+      @for (assetId of shared.assetIds; track assetId; let index = $index) {
+        <button type="button" class="tile" aria-label="Open photo" (click)="openViewer(index)">
+          <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
+        </button>
+      }
+    </div>
+
+    <footer>Shared with Recollect</footer>
+  </main>
+}
+
+@if (viewerIndex() !== null) {
+  <app-asset-viewer
+    [assets]="viewerAssets()"
+    [startIndex]="viewerIndex()!"
+    [mediaBase]="mediaBase"
+    [allowInfo]="false"
+    (closed)="closeViewer()"
+  />
+}

@@ -9,5 +9,6 @@ import { MemoriesService } from './memories.service';
 @Module({
   controllers: [InboxController, MemoriesController],
   providers: [EventDetectionService, DetectEventsHandler, InboxService, MemoriesService],
+  exports: [MemoriesService],
 })
 export class MemoriesModule {}

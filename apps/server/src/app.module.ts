@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AlbumsModule } from './albums/albums.module';
 import { AssetsModule } from './assets/assets.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from './config/config.module';
@@ -7,6 +8,7 @@ import { HealthController } from './health/health.controller';
 import { JobsModule } from './jobs/jobs.module';
 import { LibraryModule } from './library/library.module';
 import { MemoriesModule } from './memories/memories.module';
+import { SharingModule } from './sharing/sharing.module';
 import { TrashModule } from './trash/trash.module';
 import { UsersModule } from './users/users.module';
 
@@ -20,6 +22,8 @@ import { UsersModule } from './users/users.module';
     LibraryModule,
     AssetsModule,
     MemoriesModule,
+    AlbumsModule,
+    SharingModule,
     TrashModule,
   ],
   controllers: [HealthController],

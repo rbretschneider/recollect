@@ -99,6 +99,43 @@ export interface MemoryDetail {
   journal: JournalEntryView[];
 }
 
+/** Mirrors the server's AlbumSummary. */
+export interface AlbumSummary {
+  id: string;
+  title: string;
+  coverAssetId: string | null;
+  assetCount: number;
+  updatedAt: string;
+}
+
+/** Mirrors the server's AlbumDetail. */
+export interface AlbumDetail {
+  id: string;
+  title: string;
+  description: string | null;
+  coverAssetId: string | null;
+  assetIds: string[];
+}
+
+/** Mirrors the server's ShareLinkView. */
+export interface ShareLinkView {
+  id: string;
+  token: string;
+  includeJournal: boolean;
+  createdAt: string;
+}
+
+/** Mirrors the server's SharedView. */
+export interface SharedView {
+  targetType: 'memory' | 'album';
+  title: string;
+  description: string | null;
+  startAt: string | null;
+  endAt: string | null;
+  assetIds: string[];
+  journal: Array<{ authorName: string; bodyMd: string }>;
+}
+
 /** Mirrors the server's LibraryStatus. */
 export interface LibraryStatus {
   totalAssets: number;

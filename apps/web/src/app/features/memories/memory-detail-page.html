@@ -22,6 +22,12 @@
       </div>
     </header>
 
+    @if (canWrite) {
+      <div class="share-row">
+        <app-share-button targetType="memory" [targetId]="memory.id" [includeJournal]="true" />
+      </div>
+    }
+
     <section class="journal" aria-label="Journal">
       @if (canWrite) {
         <div class="mine">

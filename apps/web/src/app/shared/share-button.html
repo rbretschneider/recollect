@@ -1,0 +1,14 @@
+@if (shareUrl(); as url) {
+  <div class="share-sheet" role="dialog" aria-label="Share link">
+    <p class="hint">Anyone with this link can view.</p>
+    <div class="row">
+      <input type="text" readonly [value]="url" aria-label="Share link URL" />
+      <button type="button" class="primary" (click)="copy()">
+        {{ copied() ? 'Copied!' : 'Copy' }}
+      </button>
+    </div>
+    <button type="button" class="ghost" (click)="dismiss()">Done</button>
+  </div>
+} @else {
+  <button type="button" class="share" [disabled]="isBusy()" (click)="share()">Share</button>
+}

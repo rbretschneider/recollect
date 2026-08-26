@@ -8,7 +8,9 @@
   <header class="controls">
     <button type="button" class="icon" aria-label="Close" (click)="close()">✕</button>
     <span class="spacer"></span>
-    <button type="button" class="icon" aria-label="Info" (click)="toggleInfo()">ⓘ</button>
+    @if (allowInfo()) {
+      <button type="button" class="icon" aria-label="Info" (click)="toggleInfo()">ⓘ</button>
+    }
   </header>
 
   @if (current(); as asset) {

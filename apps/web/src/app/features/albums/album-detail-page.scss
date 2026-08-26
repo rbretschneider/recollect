@@ -1,0 +1,119 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+  padding-bottom: 4.5rem;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+
+  h1 {
+    margin: 0;
+    font-size: 1.15rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .spacer {
+    flex: 1;
+  }
+
+  .back {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: var(--text);
+    font-size: 1.4rem;
+    text-decoration: none;
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  .danger-link {
+    border: none;
+    background: none;
+    color: var(--danger);
+    font-size: 0.9rem;
+    min-height: 40px;
+    cursor: pointer;
+  }
+}
+
+.album {
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.description {
+  padding: 0.75rem 1rem 0;
+  color: var(--text-muted);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 2px;
+  padding: 0.5rem 0.25rem;
+}
+
+.tile {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--surface);
+
+  .tile-button {
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+  }
+
+  .remove {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.3rem;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background: rgb(0 0 0 / 55%);
+    color: white;
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+}
+
+.empty {
+  text-align: center;
+  padding: 4rem 1.5rem;
+  color: var(--text-muted);
+
+  h2 {
+    color: var(--text);
+    margin-bottom: 0.25rem;
+  }
+}

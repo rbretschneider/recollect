@@ -1,0 +1,52 @@
+@if (detail(); as album) {
+  <header class="topbar">
+    <a class="back" routerLink="/albums" aria-label="Back to albums">‹</a>
+    <h1>{{ album.title }}</h1>
+    <span class="spacer"></span>
+    @if (canWrite) {
+      <app-share-button targetType="album" [targetId]="album.id" />
+      <button type="button" class="danger-link" (click)="deleteAlbum()">Delete</button>
+    }
+  </header>
+
+  <main class="album">
+    @if (album.description) {
+      <p class="description">{{ album.description }}</p>
+    }
+    @if (album.assetIds.length === 0) {
+      <section class="empty">
+        <h2>This album is empty</h2>
+        <p>Select photos in the grid, then "Add to album".</p>
+      </section>
+    }
+    <div class="grid">
+      @for (assetId of album.assetIds; track assetId) {
+        <figure class="tile">
+          <button type="button" class="tile-button" aria-label="Open photo" (click)="openViewer(assetId)">
+            <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
+          </button>
+          @if (canWrite) {
+            <button
+              type="button"
+              class="remove"
+              aria-label="Remove from album"
+              (click)="removeFromAlbum(assetId)"
+            >
+              ✕
+            </button>
+          }
+        </figure>
+      }
+    </div>
+  </main>
+}
+
+@if (viewerIndex() !== null) {
+  <app-asset-viewer
+    [assets]="viewerAssets()"
+    [startIndex]="viewerIndex()!"
+    (closed)="closeViewer()"
+  />
+}
+
+<app-bottom-nav />

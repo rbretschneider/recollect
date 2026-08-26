@@ -27,9 +27,26 @@ export const routes: Routes = [
       import('./features/memories/memory-detail-page').then((m) => m.MemoryDetailPage),
   },
   {
+    path: 'albums',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/albums/albums-page').then((m) => m.AlbumsPage),
+  },
+  {
+    path: 'albums/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/albums/album-detail-page').then((m) => m.AlbumDetailPage),
+  },
+  {
     path: 'trash',
     canActivate: [authGuard],
     loadComponent: () => import('./features/trash/trash-page').then((m) => m.TrashPage),
+  },
+  {
+    // Public share links — deliberately outside the auth guard.
+    path: 's/:token',
+    loadComponent: () =>
+      import('./features/share/shared-view-page').then((m) => m.SharedViewPage),
   },
   { path: '**', redirectTo: '' },
 ];

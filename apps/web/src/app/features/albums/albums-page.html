@@ -1,0 +1,46 @@
+<header class="topbar">
+  <h1>Albums</h1>
+  <span class="spacer"></span>
+  @if (canWrite && !isCreating()) {
+    <button type="button" class="topbar-action" (click)="startCreating()">New album</button>
+  }
+</header>
+
+<main class="albums">
+  @if (isCreating()) {
+    <form class="create" (ngSubmit)="create()">
+      <input
+        name="title"
+        [(ngModel)]="newTitle"
+        placeholder="Album name"
+        required
+        autofocus
+      />
+      <button type="submit" class="primary">Create</button>
+      <button type="button" class="ghost" (click)="isCreating.set(false)">Cancel</button>
+    </form>
+  }
+
+  @if (isLoaded() && albums().length === 0 && !isCreating()) {
+    <section class="empty">
+      <h2>No albums yet</h2>
+      <p>Select photos in the grid and add them to an album, or create one here.</p>
+    </section>
+  }
+
+  <div class="grid">
+    @for (album of albums(); track album.id) {
+      <a class="album-card" [routerLink]="['/albums', album.id]">
+        @if (coverUrl(album); as cover) {
+          <img [src]="cover" alt="" loading="lazy" />
+        } @else {
+          <div class="placeholder"></div>
+        }
+        <h3>{{ album.title }}</h3>
+        <p>{{ album.assetCount }} photos</p>
+      </a>
+    }
+  </div>
+</main>
+
+<app-bottom-nav />
