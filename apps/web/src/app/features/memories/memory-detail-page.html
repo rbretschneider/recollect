@@ -16,7 +16,7 @@
             autofocus
           />
         } @else {
-          <h1 (click)="startEditingTitle()" [class.editable]="canWrite">{{ memory.title }}</h1>
+          <h1 (click)="startEditingTitle()" [class.editable]="editMode.isEditing()">{{ memory.title }}</h1>
         }
         <p>{{ formatSpan(memory) }} · {{ memory.assetIds.length }} photos</p>
       </div>
@@ -78,6 +78,9 @@
     <section class="manage">
       @if (canWrite) {
         <app-share-button targetType="memory" [targetId]="memory.id" [includeJournal]="true" />
+        <app-edit-toggle />
+      }
+      @if (editMode.isEditing()) {
         <button type="button" class="danger-link" (click)="deleteMemory()">Delete memory</button>
       }
     </section>

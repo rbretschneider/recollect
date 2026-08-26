@@ -3,6 +3,7 @@ import { AuthStateService } from '../core/auth/auth-state.service';
 import { ActivitySpinner } from './activity-spinner';
 import { AppDrawer } from './app-drawer';
 import { Brand } from './brand';
+import { EditToggle } from './edit-toggle';
 
 /**
  * The persistent app header: brand (taps home), live activity, projected
@@ -11,13 +12,14 @@ import { Brand } from './brand';
  */
 @Component({
   selector: 'app-topbar',
-  imports: [ActivitySpinner, AppDrawer, Brand],
+  imports: [ActivitySpinner, AppDrawer, Brand, EditToggle],
   template: `
     <header class="topbar">
       <app-brand />
       <app-activity-spinner />
       <span class="spacer"></span>
       <ng-content />
+      <app-edit-toggle />
       <button type="button" class="avatar" aria-label="Menu" (click)="isDrawerOpen.set(true)">
         {{ userInitial }}
       </button>

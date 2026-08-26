@@ -12,6 +12,7 @@
     <app-brand />
     <app-activity-spinner />
     <span class="spacer"></span>
+    <app-edit-toggle />
     <div class="view-switch" role="group" aria-label="Grid style">
       <button
         type="button"
@@ -32,7 +33,7 @@
         (click)="setViewMode('small')"
       >▩</button>
     </div>
-    @if (canWrite) {
+    @if (editMode.isEditing()) {
       <button type="button" class="topbar-action" (click)="startSelecting()">Select</button>
     }
     <button type="button" class="avatar" aria-label="Menu" (click)="isDrawerOpen.set(true)">

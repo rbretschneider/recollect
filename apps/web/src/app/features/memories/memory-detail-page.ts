@@ -15,7 +15,9 @@ import { HttpClient } from '@angular/common/http';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { MemoryDetail, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
+import { EditModeService } from '../../core/edit-mode.service';
 import { BottomNav } from '../../shared/bottom-nav';
+import { EditToggle } from '../../shared/edit-toggle';
 import { SafeResourcePipe } from '../../shared/safe-resource.pipe';
 import { ShareButton } from '../../shared/share-button';
 import { AssetViewer } from '../viewer/asset-viewer';
@@ -25,7 +27,15 @@ const JOURNAL_AUTOSAVE_MS = 1500;
 /** One Memory: hero, editable title, media grid, and the journal. */
 @Component({
   selector: 'app-memory-detail-page',
-  imports: [AssetViewer, BottomNav, FormsModule, RouterLink, SafeResourcePipe, ShareButton],
+  imports: [
+    AssetViewer,
+    BottomNav,
+    EditToggle,
+    FormsModule,
+    RouterLink,
+    SafeResourcePipe,
+    ShareButton,
+  ],
   templateUrl: './memory-detail-page.html',
   styleUrl: './memory-detail-page.scss',
 })
@@ -36,6 +46,7 @@ export class MemoryDetailPage implements OnInit {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStateService);
   private readonly destroyRef = inject(DestroyRef);
+  protected readonly editMode = inject(EditModeService);
 
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly editor = viewChild<ElementRef<HTMLTextAreaElement>>('editor');
@@ -91,7 +102,7 @@ export class MemoryDetailPage implements OnInit {
   }
 
   startEditingTitle(): void {
-    if (!this.canWrite) {
+    if (!this.editMode.isEditing()) {
       return;
     }
     this.titleDraft = this.detail()?.title ?? '';

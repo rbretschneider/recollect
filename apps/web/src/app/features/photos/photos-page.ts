@@ -15,11 +15,13 @@ import { LibraryStatus, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { TrashApiService } from '../../core/api/trash-api.service';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
+import { EditModeService } from '../../core/edit-mode.service';
 import { formatDuration } from '../../core/format-duration';
 import { AlbumPicker } from '../../shared/album-picker';
 import { AppDrawer } from '../../shared/app-drawer';
 import { ActivitySpinner } from '../../shared/activity-spinner';
 import { Brand } from '../../shared/brand';
+import { EditToggle } from '../../shared/edit-toggle';
 import { BottomNav } from '../../shared/bottom-nav';
 import { LongPressDirective } from '../../shared/long-press.directive';
 import { AssetViewer } from '../viewer/asset-viewer';
@@ -59,6 +61,7 @@ const STATUS_POLL_MS = 4000;
     AssetViewer,
     BottomNav,
     Brand,
+    EditToggle,
     LongPressDirective,
     RouterLink,
   ],
@@ -72,6 +75,7 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
   private readonly albumsApi = inject(AlbumsApiService);
   private readonly auth = inject(AuthStateService);
   private readonly destroyRef = inject(DestroyRef);
+  protected readonly editMode = inject(EditModeService);
   private undoTimer: ReturnType<typeof setTimeout> | null = null;
 
   private readonly sentinel = viewChild.required<ElementRef<HTMLElement>>('sentinel');
@@ -174,9 +178,9 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
     }
   }
 
-  /** PhotoPrism-PWA gesture: press-and-hold a tile starts selection with it. */
+  /** PhotoPrism-PWA gesture: press-and-hold a tile starts selection with it (edit mode only). */
   onTileLongPress(asset: TimelineAsset): void {
-    if (!this.canWrite || this.isSelecting()) {
+    if (!this.editMode.isEditing() || this.isSelecting()) {
       return;
     }
     this.isSelecting.set(true);

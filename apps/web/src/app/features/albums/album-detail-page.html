@@ -5,6 +5,9 @@
     <span class="spacer"></span>
     @if (canWrite) {
       <app-share-button targetType="album" [targetId]="album.id" />
+      <app-edit-toggle />
+    }
+    @if (editMode.isEditing()) {
       <button type="button" class="danger-link" (click)="deleteAlbum()">Delete</button>
     }
   </header>
@@ -25,7 +28,7 @@
           <button type="button" class="tile-button" aria-label="Open photo" (click)="openViewer(assetId)">
             <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
           </button>
-          @if (canWrite) {
+          @if (editMode.isEditing()) {
             <button
               type="button"
               class="remove"

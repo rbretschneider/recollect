@@ -5,14 +5,16 @@ import { firstValueFrom } from 'rxjs';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
 import { AlbumDetail, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
+import { EditModeService } from '../../core/edit-mode.service';
 import { BottomNav } from '../../shared/bottom-nav';
+import { EditToggle } from '../../shared/edit-toggle';
 import { ShareButton } from '../../shared/share-button';
 import { AssetViewer } from '../viewer/asset-viewer';
 
 /** One album: grid, viewer, share, remove-from-album. */
 @Component({
   selector: 'app-album-detail-page',
-  imports: [AssetViewer, BottomNav, RouterLink, ShareButton],
+  imports: [AssetViewer, BottomNav, EditToggle, RouterLink, ShareButton],
   templateUrl: './album-detail-page.html',
   styleUrl: './album-detail-page.scss',
 })
@@ -22,6 +24,7 @@ export class AlbumDetailPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStateService);
+  protected readonly editMode = inject(EditModeService);
 
   readonly detail = signal<AlbumDetail | null>(null);
   readonly viewerAssets = signal<TimelineAsset[]>([]);
