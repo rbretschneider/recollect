@@ -20,6 +20,8 @@ export interface EnqueueOptions {
   dedupeKey?: string;
   /** Lower runs sooner. User-visible work should outrank background ML. */
   priority?: number;
+  /** Earliest execution time — a dedupe key plus a delay debounces bursts. */
+  runAt?: Date;
   maxAttempts?: number;
 }
 
@@ -43,6 +45,7 @@ export class JobQueueService {
         payload,
         dedupeKey: options.dedupeKey ?? null,
         priority: options.priority ?? DEFAULT_PRIORITY,
+        runAt: options.runAt ?? new Date(),
         maxAttempts: options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
       })
       .onConflictDoNothing({

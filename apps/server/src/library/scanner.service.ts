@@ -8,6 +8,7 @@ import type { Database } from '../database/database.module';
 import { asset, assetFile, libraryRoot } from '../database/schema';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { classifyMediaFile } from '../media/media-types';
+import { DETECT_EVENTS_JOB } from '../memories/handlers/detect-events.handler';
 import { PURGE_TRASH_JOB } from '../trash/handlers/purge-trash.handler';
 import { INGEST_FILE_JOB } from './library-job-types';
 import { classifyScannedFile, isExcludedDirectory, KnownFileState } from './scan-classifier';
@@ -51,6 +52,8 @@ export class ScannerService {
       .where(eq(libraryRoot.id, rootId));
     // Scans run on a schedule, so this keeps the holding period enforced daily.
     await this.queue.enqueue(PURGE_TRASH_JOB, {}, { dedupeKey: PURGE_TRASH_JOB, priority: 250 });
+    // A prompt detection pass once the scan itself is done.
+    await this.queue.enqueue(DETECT_EVENTS_JOB, {}, { dedupeKey: DETECT_EVENTS_JOB, priority: 100 });
     this.logger.log(`Scan of ${root.path}: ${enqueued} enqueued, ${missing} missing.`);
     return { enqueued, missing };
   }

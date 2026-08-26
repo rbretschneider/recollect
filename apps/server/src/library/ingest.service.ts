@@ -52,8 +52,18 @@ export class IngestService {
     if (!existing) {
       await this.runThumbnailStage(assetId, absolutePath, typeInfo);
     }
-    // Debounced by dedupe: many ingests collapse into one low-priority detection run.
-    await this.queue.enqueue(DETECT_EVENTS_JOB, {}, { dedupeKey: DETECT_EVENTS_JOB, priority: 200 });
+    // Same priority as ingest with a short delay: during a large import,
+    // detection interleaves every ~90s so suggestions appear while indexing
+    // runs, instead of being starved until the whole queue drains.
+    await this.queue.enqueue(
+      DETECT_EVENTS_JOB,
+      {},
+      {
+        dedupeKey: DETECT_EVENTS_JOB,
+        priority: 100,
+        runAt: new Date(Date.now() + 90 * 1000),
+      },
+    );
   }
 
   private async resolveAbsolutePath(payload: IngestFilePayload): Promise<string> {

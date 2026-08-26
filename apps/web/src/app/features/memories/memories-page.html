@@ -44,8 +44,16 @@
 
   @if (isLoaded() && memories().length === 0 && suggestions().length === 0) {
     <section class="empty">
-      <h2>No memories yet</h2>
-      <p>As photos are indexed, Recollect will suggest moments that look like events.</p>
+      @if (pendingCount() > 0) {
+        <h2>Still indexing your library</h2>
+        <p aria-live="polite">
+          {{ pendingCount() }} items to go. Suggestions appear here every couple of
+          minutes as events are found — no need to wait for the whole library.
+        </p>
+      } @else {
+        <h2>No memories yet</h2>
+        <p>As photos are indexed, Recollect will suggest moments that look like events.</p>
+      }
     </section>
   }
 

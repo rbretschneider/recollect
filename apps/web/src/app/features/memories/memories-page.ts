@@ -1,7 +1,8 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { LibraryApiService } from '../../core/api/library-api.service';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
-import { InboxSuggestion, MemorySummary } from '../../core/api/api-models';
+import { InboxSuggestion, LibraryStatus, MemorySummary } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { BottomNav } from '../../shared/bottom-nav';
 
@@ -14,12 +15,21 @@ import { BottomNav } from '../../shared/bottom-nav';
 })
 export class MemoriesPage implements OnInit {
   private readonly api = inject(MemoriesApiService);
+  private readonly libraryApi = inject(LibraryApiService);
   private readonly auth = inject(AuthStateService);
+  private readonly destroyRef = inject(DestroyRef);
+  private statusTimer: ReturnType<typeof setInterval> | null = null;
 
   readonly suggestions = signal<InboxSuggestion[]>([]);
   readonly memories = signal<MemorySummary[]>([]);
   readonly isLoaded = signal(false);
   readonly busySuggestionId = signal<string | null>(null);
+  readonly status = signal<LibraryStatus | null>(null);
+
+  readonly pendingCount = computed(() => {
+    const status = this.status();
+    return status ? status.queuedJobs + status.runningJobs : 0;
+  });
 
   /** Read-only users see the timeline but no accept/dismiss actions. */
   get canWrite(): boolean {
@@ -29,6 +39,13 @@ export class MemoriesPage implements OnInit {
 
   ngOnInit(): void {
     void this.reload();
+    void this.pollWhileIndexing();
+    this.statusTimer = setInterval(() => void this.pollWhileIndexing(), 5000);
+    this.destroyRef.onDestroy(() => {
+      if (this.statusTimer !== null) {
+        clearInterval(this.statusTimer);
+      }
+    });
   }
 
   thumbUrl(assetId: string): string {
@@ -88,5 +105,18 @@ export class MemoriesPage implements OnInit {
     this.suggestions.set(inbox.suggestions);
     this.memories.set(memories.memories);
     this.isLoaded.set(true);
+  }
+
+  /** While indexing runs, keep the page live: fresh suggestions surface as found. */
+  private async pollWhileIndexing(): Promise<void> {
+    try {
+      this.status.set(await this.libraryApi.getStatus());
+    } catch {
+      return;
+    }
+    if (this.pendingCount() > 0) {
+      const { suggestions } = await this.api.listInbox();
+      this.suggestions.set(suggestions);
+    }
   }
 }
