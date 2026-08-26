@@ -18,6 +18,7 @@ import { AlbumsApiService } from '../../core/api/albums-api.service';
 import { formatDuration } from '../../core/format-duration';
 import { AlbumPicker } from '../../shared/album-picker';
 import { AppDrawer } from '../../shared/app-drawer';
+import { ActivitySpinner } from '../../shared/activity-spinner';
 import { Brand } from '../../shared/brand';
 import { BottomNav } from '../../shared/bottom-nav';
 import { LongPressDirective } from '../../shared/long-press.directive';
@@ -37,7 +38,16 @@ const STATUS_POLL_MS = 4000;
 /** The main photo timeline: grid grouped by day with infinite scroll. */
 @Component({
   selector: 'app-photos-page',
-  imports: [AlbumPicker, AppDrawer, AssetViewer, BottomNav, Brand, LongPressDirective, RouterLink],
+  imports: [
+    ActivitySpinner,
+    AlbumPicker,
+    AppDrawer,
+    AssetViewer,
+    BottomNav,
+    Brand,
+    LongPressDirective,
+    RouterLink,
+  ],
   templateUrl: './photos-page.html',
   styleUrl: './photos-page.scss',
 })

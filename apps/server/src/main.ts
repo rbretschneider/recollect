@@ -9,6 +9,7 @@ import { join, resolve } from 'path';
 import { Pool } from 'pg';
 import { AppModule } from './app.module';
 import { APP_CONFIG, AppConfig, loadAppConfig } from './config/app-config';
+import { RotatingFileLogger } from './logging/rotating-file-logger';
 
 /** Loads the nearest .env (cwd, then repo root) without overriding real env vars. */
 function loadEnvironment(): void {
@@ -52,8 +53,11 @@ function serveWebApp(app: NestExpressApplication, config: AppConfig): void {
 
 async function bootstrap(): Promise<void> {
   loadEnvironment();
-  await runMigrations(loadAppConfig());
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const bootConfig = loadAppConfig();
+  await runMigrations(bootConfig);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: new RotatingFileLogger(join(bootConfig.appDataDir, 'logs')),
+  });
   const config = app.get<AppConfig>(APP_CONFIG);
   app.setGlobalPrefix('api/v1');
   app.use(cookieParser());

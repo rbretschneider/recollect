@@ -1,0 +1,20 @@
+<header class="topbar">
+  <a class="back" routerLink="/" aria-label="Back to photos">‹</a>
+  <h1>Logs</h1>
+  <app-activity-spinner />
+  <span class="spacer"></span>
+  <button type="button" class="topbar-action" (click)="toggleFollowing()">
+    {{ isFollowing() ? 'Pause' : 'Follow' }}
+  </button>
+  <a class="topbar-action" [href]="downloadUrl" download>Download</a>
+</header>
+
+<main class="logs">
+  <pre #scroller class="tail" aria-live="off">@for (line of lines(); track $index) {{{ line }}
+}</pre>
+  @if (isLoaded() && lines().length === 0) {
+    <p class="hint">No log entries yet.</p>
+  }
+</main>
+
+<app-bottom-nav />

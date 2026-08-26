@@ -1,8 +1,6 @@
 <header class="topbar">
   <app-brand />
-  @if (pendingCount() > 0) {
-    <span class="chip" aria-live="polite">Indexing · {{ pendingCount() }} left</span>
-  }
+  <app-activity-spinner />
   <span class="spacer"></span>
   @if (canWrite && !isSelecting()) {
     <button type="button" class="topbar-action" (click)="startSelecting()">Select</button>

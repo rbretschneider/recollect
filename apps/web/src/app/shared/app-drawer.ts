@@ -1,8 +1,10 @@
 import { Component, inject, OnInit, output, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { ActivityService } from '../core/activity.service';
 import { LibraryApiService } from '../core/api/library-api.service';
 import { LibraryStatus } from '../core/api/api-models';
 import { AuthStateService } from '../core/auth/auth-state.service';
+import { ActivitySpinner } from './activity-spinner';
 
 /**
  * The app side panel: account, library management, and destinations that don't
@@ -10,7 +12,7 @@ import { AuthStateService } from '../core/auth/auth-state.service';
  */
 @Component({
   selector: 'app-drawer',
-  imports: [RouterLink],
+  imports: [ActivitySpinner, RouterLink],
   templateUrl: './app-drawer.html',
   styleUrl: './app-drawer.scss',
 })
@@ -18,6 +20,7 @@ export class AppDrawer implements OnInit {
   private readonly auth = inject(AuthStateService);
   private readonly libraryApi = inject(LibraryApiService);
   private readonly router = inject(Router);
+  protected readonly activity = inject(ActivityService);
 
   readonly closed = output<void>();
 

@@ -10,6 +10,7 @@ import { JobsModule } from './jobs/jobs.module';
 import { LibraryModule } from './library/library.module';
 import { MemoriesModule } from './memories/memories.module';
 import { SharingModule } from './sharing/sharing.module';
+import { SystemModule } from './system/system.module';
 import { TrashModule } from './trash/trash.module';
 import { UsersModule } from './users/users.module';
 
@@ -26,6 +27,7 @@ import { UsersModule } from './users/users.module';
     MemoriesModule,
     AlbumsModule,
     SharingModule,
+    SystemModule,
     TrashModule,
   ],
   controllers: [HealthController],

@@ -27,17 +27,20 @@
       <a routerLink="/settings" (click)="closed.emit()">
         <span class="icon">⚙️</span> Settings
       </a>
+      <a routerLink="/logs" (click)="closed.emit()">
+        <span class="icon">📜</span> Logs
+      </a>
     }
   </nav>
 
   @if (isAdmin) {
     <section class="library">
-      <h3>Library</h3>
-      @if (status(); as stats) {
-        <p>
+      <h3>Library <app-activity-spinner /></h3>
+      @if (activity.status() ?? status(); as stats) {
+        <p aria-live="polite">
           {{ stats.totalAssets }} items indexed
-          @if (stats.queuedJobs + stats.runningJobs > 0) {
-            · {{ stats.queuedJobs + stats.runningJobs }} processing
+          @if (activity.isWorking()) {
+            · {{ activity.runningCount() }} running · {{ activity.pendingCount() }} queued
           }
           @if (stats.failedStages > 0) {
             · <span class="warn">{{ stats.failedStages }} failed</span>
