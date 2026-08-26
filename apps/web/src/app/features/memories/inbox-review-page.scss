@@ -78,18 +78,80 @@
     }
   }
 
-  .preview {
+  .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
-    gap: 2px;
+    gap: 4px;
+    padding: 0 0.4rem;
     max-height: 55dvh;
     overflow-y: auto;
+  }
+
+  .tile {
+    position: relative;
+    aspect-ratio: 1;
+    padding: 0;
+    border: none;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--surface-raised);
 
     img {
       width: 100%;
-      aspect-ratio: 1;
+      height: 100%;
       object-fit: cover;
       display: block;
+      // Deselected reads as dimmed and desaturated; selected is full-colour.
+      opacity: 0.45;
+      filter: grayscale(0.4);
+      transition: opacity 0.15s ease, filter 0.15s ease;
+    }
+
+    &.selected {
+      outline: 3px solid var(--accent);
+      outline-offset: -3px;
+
+      img {
+        opacity: 1;
+        filter: none;
+      }
+    }
+
+    &:disabled {
+      cursor: default;
+    }
+
+    .check {
+      position: absolute;
+      inset: auto 0.25rem 0.25rem auto;
+      display: grid;
+      place-items: center;
+      width: 1.4rem;
+      height: 1.4rem;
+      border-radius: 50%;
+      background: var(--accent);
+      color: var(--accent-contrast);
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    &.add {
+      display: grid;
+      place-items: center;
+      gap: 0.2rem;
+      border: 2px dashed var(--border);
+      background: transparent;
+      color: var(--text-muted);
+
+      .plus {
+        font-size: 1.5rem;
+        line-height: 1;
+      }
+
+      .add-label {
+        font-size: 0.7rem;
+      }
     }
   }
 

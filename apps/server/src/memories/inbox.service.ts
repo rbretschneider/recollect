@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { asc, desc, eq, inArray } from 'drizzle-orm';
 import { v7 as uuidv7 } from 'uuid';
 import { DATABASE } from '../database/database.module';
@@ -15,6 +15,17 @@ export interface InboxSuggestion {
   /** Up to four asset ids for the cover mosaic. */
   previewAssetIds: string[];
   score: number;
+}
+
+/** Options for turning a suggestion into a Memory. */
+export interface AcceptOptions {
+  /** Overrides the auto-generated title. */
+  title?: string;
+  /**
+   * The reviewer's edited photo selection. When given, the Memory is built from
+   * exactly these assets instead of the suggestion's own members.
+   */
+  assetIds?: string[];
 }
 
 const PREVIEW_ASSET_COUNT = 4;
@@ -56,16 +67,25 @@ export class InboxService {
   }
 
   /** Accepts a suggestion into a Memory owned by the accepting user. */
-  async accept(clusterId: string, userId: string, title?: string): Promise<{ memoryId: string }> {
+  async accept(
+    clusterId: string,
+    userId: string,
+    options: AcceptOptions = {},
+  ): Promise<{ memoryId: string }> {
     const cluster = await this.requireSuggested(clusterId);
-    const memberIds = await this.loadMemberIdsOldestFirst(clusterId);
+    const memberIds = await this.resolveMemberIds(clusterId, options.assetIds);
+    // An edited selection can pull in photos outside the cluster's window, so
+    // its date span is recomputed; an untouched accept keeps the cluster's own.
+    const span = options.assetIds?.length
+      ? await this.spanFor(memberIds, cluster)
+      : { startAt: cluster.startAt, endAt: cluster.endAt };
     const memoryId = uuidv7();
     await this.db.transaction(async (tx) => {
       await tx.insert(memory).values({
         id: memoryId,
-        title: title?.trim() || cluster.seedTitle,
-        startAt: cluster.startAt,
-        endAt: cluster.endAt,
+        title: options.title?.trim() || cluster.seedTitle,
+        startAt: span.startAt,
+        endAt: span.endAt,
         coverAssetId: memberIds[0] ?? null,
         createdBy: userId,
       });
@@ -149,6 +169,50 @@ export class InboxService {
       throw new NotFoundException('That suggestion is no longer available.');
     }
     return cluster;
+  }
+
+  /**
+   * The final member set: the reviewer's explicit selection when given
+   * (validated against real assets, order preserved), else the suggestion's own.
+   */
+  private async resolveMemberIds(clusterId: string, selection?: string[]): Promise<string[]> {
+    if (!selection || selection.length === 0) {
+      return this.loadMemberIdsOldestFirst(clusterId);
+    }
+    const rows = await this.db
+      .select({ id: asset.id })
+      .from(asset)
+      .where(inArray(asset.id, selection));
+    const known = new Set(rows.map((row) => row.id));
+    const missing = selection.filter((id) => !known.has(id));
+    if (missing.length > 0) {
+      throw new BadRequestException('Some selected photos are no longer available.');
+    }
+    return selection;
+  }
+
+  /**
+   * Date span for the Memory header: min/max capture time across the chosen
+   * assets, falling back to the cluster's own span when none carry a timestamp.
+   */
+  private async spanFor(
+    memberIds: string[],
+    cluster: typeof eventCluster.$inferSelect,
+  ): Promise<{ startAt: Date; endAt: Date }> {
+    if (memberIds.length === 0) {
+      return { startAt: cluster.startAt, endAt: cluster.endAt };
+    }
+    const rows = await this.db
+      .select({ capturedAt: asset.capturedAt })
+      .from(asset)
+      .where(inArray(asset.id, memberIds));
+    const times = rows
+      .map((row) => row.capturedAt?.getTime())
+      .filter((time): time is number => typeof time === 'number');
+    if (times.length === 0) {
+      return { startAt: cluster.startAt, endAt: cluster.endAt };
+    }
+    return { startAt: new Date(Math.min(...times)), endAt: new Date(Math.max(...times)) };
   }
 
   private async loadMemberIdsOldestFirst(clusterId: string): Promise<string[]> {
