@@ -1,16 +1,24 @@
-<header class="topbar">
-  <app-brand />
-  <app-activity-spinner />
-  <span class="spacer"></span>
-  @if (canWrite && !isSelecting()) {
-    <button type="button" class="topbar-action" (click)="startSelecting()">Select</button>
-  }
+<header class="topbar" [class.selecting]="isSelecting()">
   @if (isSelecting()) {
     <button type="button" class="topbar-action" (click)="cancelSelecting()">Cancel</button>
+    <span class="select-title" aria-live="polite">
+      @if (selectedIds().size === 0) {
+        Select photos to add to an album{{ canDelete ? ' or delete' : '' }}
+      } @else {
+        {{ selectedIds().size }} selected
+      }
+    </span>
+  } @else {
+    <app-brand />
+    <app-activity-spinner />
+    <span class="spacer"></span>
+    @if (canWrite) {
+      <button type="button" class="topbar-action" (click)="startSelecting()">Select</button>
+    }
+    <button type="button" class="avatar" aria-label="Menu" (click)="isDrawerOpen.set(true)">
+      {{ userInitial }}
+    </button>
   }
-  <button type="button" class="avatar" aria-label="Menu" (click)="isDrawerOpen.set(true)">
-    {{ userInitial }}
-  </button>
 </header>
 
 <main class="timeline">
