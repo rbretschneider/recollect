@@ -14,32 +14,25 @@ real-library testing (~18.5k assets on hawaii) teaches us things.
   (private-until-explicit-link, expiration, revoke)
 - Video: orientation-safe playback, background HEVC→H.264 transcoding
 - Self-healing pipelines: thumbnail repair sweeps, single-file reprocess
-- ML sidecar built (FastAPI + InsightFace antelopev2 + open_clip ViT-L-14,
-  GPU 1 on hawaii, env-configurable down to CPU) — not yet wired to the server
-
-## In progress
-
-- **ML wiring (E12/E15)**: server jobs `detect_faces` / `embed_clip`,
-  face/person/embedding schema (specced in data-model.md), backfill →
-  face clustering → People UI (name/merge/ignore) → CLIP semantic search UI
+- **Search v1**: memories (incl. journal text), albums, folders, filenames,
+  date expressions — plus **CLIP semantic search** ("Looks like 'beach'")
+- **Grid view options**: justified mosaic (default) / uniform / small squares
+- **Edit mode app-wide**; album typeahead picker + auto covers; viewer
+  load spinner
+- **ML live in production**: sidecar wired (faces → People with incremental
+  clustering, CLIP embeddings), ml service in compose on GPU 1, backfill
+  sweeping the library; People pages shipped
 
 ## Next up
 
-1. **Search v1** — one box: text, dates, filename/folder, filters. Biggest
-   daily-use gap; CLIP search lands on top of it later.
-2. **Grid view options** — keep today's uniform grid, add PhotoPrism-style
-   alternatives with a view switcher: **mosaic tiling** (fills dead space,
-   their default), **cards** (photo + metadata block), **small squares**.
-3. **Edit-mode app-wide** — read-only by default across Photos/Albums/Memories;
-   destructive/curation controls appear only in an explicit edit mode
-   (kills the stray per-image ✕). *(Decision locked: full scope.)*
-4. **Album QOL** — creation via typeahead select-list; auto cover thumbnail
-   from a member photo (user-selectable later).
-5. **Wait-state sweep** — audit every async action against the three-signal
-   standard; includes a viewer spinner while the full image loads.
-6. **Settings completeness** — edit/disable members, change password
+1. **People polish** — merge two people, "not the same person" split,
+   ignore a face, person↔user linking; face-crop avatars instead of
+   whole-photo thumbs.
+2. **Settings completeness** — edit/disable members, change password
    (incl. forced first-login change), remove/re-enable library roots.
-7. **Favorites**; **Live Photos pairing** (needs real iPhone HEIC+MOV pairs).
+3. **Favorites**; **Live Photos pairing** (needs real iPhone HEIC+MOV pairs).
+4. **Wait-state sweep** — audit remaining async actions against the
+   three-signal standard.
 
 ## The big design pass
 
