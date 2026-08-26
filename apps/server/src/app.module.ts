@@ -9,6 +9,7 @@ import { HealthController } from './health/health.controller';
 import { JobsModule } from './jobs/jobs.module';
 import { LibraryModule } from './library/library.module';
 import { MemoriesModule } from './memories/memories.module';
+import { SearchModule } from './search/search.module';
 import { SharingModule } from './sharing/sharing.module';
 import { SystemModule } from './system/system.module';
 import { TrashModule } from './trash/trash.module';
@@ -26,6 +27,7 @@ import { UsersModule } from './users/users.module';
     FoldersModule,
     MemoriesModule,
     AlbumsModule,
+    SearchModule,
     SharingModule,
     SystemModule,
     TrashModule,

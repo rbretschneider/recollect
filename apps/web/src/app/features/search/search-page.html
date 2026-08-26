@@ -1,0 +1,107 @@
+<app-topbar />
+
+<main class="search">
+  <div class="box">
+    <input
+      #searchInput
+      type="search"
+      placeholder="Search memories, albums, folders, files, or “july 2025”…"
+      autocomplete="off"
+      (input)="onQueryInput($any($event.target).value)"
+    />
+    @if (isSearching()) {
+      <span class="spin" aria-label="Searching"></span>
+    }
+  </div>
+
+  @if (results(); as r) {
+    @if (!hasAnyHits()) {
+      <p class="hint">Nothing matched “{{ r.query }}”.</p>
+    }
+
+    @if (r.dateRange; as range) {
+      <section>
+        <h2>Photos from {{ range.label }}</h2>
+      </section>
+    }
+
+    @if (r.memories.length > 0) {
+      <section aria-label="Memories">
+        <h2>Memories</h2>
+        <div class="row-list">
+          @for (hit of r.memories; track hit.id) {
+            <a class="hit" [routerLink]="['/memories', hit.id]">
+              @if (coverUrl(hit.coverAssetId); as cover) {
+                <img [src]="cover" alt="" loading="lazy" />
+              }
+              <span>{{ hit.title }}</span>
+            </a>
+          }
+        </div>
+      </section>
+    }
+
+    @if (r.albums.length > 0) {
+      <section aria-label="Albums">
+        <h2>Albums</h2>
+        <div class="row-list">
+          @for (hit of r.albums; track hit.id) {
+            <a class="hit" [routerLink]="['/albums', hit.id]">
+              @if (coverUrl(hit.coverAssetId); as cover) {
+                <img [src]="cover" alt="" loading="lazy" />
+              }
+              <span>{{ hit.title }}</span>
+            </a>
+          }
+        </div>
+      </section>
+    }
+
+    @if (r.folders.length > 0) {
+      <section aria-label="Folders">
+        <h2>Folders</h2>
+        <div class="row-list">
+          @for (hit of r.folders; track hit.rootId + hit.path) {
+            <a class="hit" routerLink="/folders" [queryParams]="{ root: hit.rootId, path: hit.path }">
+              <span class="folder-icon">📁</span>
+              <span>{{ hit.path }}</span>
+            </a>
+          }
+        </div>
+      </section>
+    }
+
+    @if (r.assets.length > 0) {
+      <section aria-label="Photos and videos">
+        @if (!r.dateRange) {
+          <h2>Photos & videos</h2>
+        }
+        <div class="grid">
+          @for (hit of r.assets; track hit.id; let index = $index) {
+            <button type="button" class="tile" [attr.aria-label]="hit.fileName || 'Open photo'" (click)="openViewer(index)">
+              <img [src]="thumbUrl(hit.id)" alt="" loading="lazy" />
+              @if (hit.mediaType === 'video') {
+                <span class="badge">▶</span>
+              }
+            </button>
+          }
+        </div>
+      </section>
+    }
+  } @else {
+    <p class="hint">
+      Try a place, a word from a journal entry, a file or folder name — or a date
+      like “july 2025”.
+    </p>
+  }
+</main>
+
+@if (viewerIndex() !== null) {
+  <app-asset-viewer
+    [assets]="viewerAssets()"
+    [startIndex]="viewerIndex()!"
+    (closed)="closeViewer()"
+  />
+}
+
+<app-bottom-nav />

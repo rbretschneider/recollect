@@ -34,6 +34,11 @@ export const routes: Routes = [
       import('./features/memories/memory-detail-page').then((m) => m.MemoryDetailPage),
   },
   {
+    path: 'search',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/search/search-page').then((m) => m.SearchPage),
+  },
+  {
     path: 'albums',
     canActivate: [authGuard],
     loadComponent: () => import('./features/albums/albums-page').then((m) => m.AlbumsPage),
