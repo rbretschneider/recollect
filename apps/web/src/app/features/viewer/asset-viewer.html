@@ -1,19 +1,29 @@
-<div
-  class="viewer"
-  role="dialog"
-  aria-label="Photo viewer"
-  (touchstart)="onTouchStart($event)"
-  (touchend)="onTouchEnd($event)"
->
+<div class="viewer" role="dialog" aria-label="Photo viewer">
   <header class="controls">
     <span class="spacer"></span>
     <button type="button" class="icon" aria-label="Close" (click)="close()">✕</button>
   </header>
 
   @if (current(); as asset) {
-    <div class="stage" (click)="showInfo() && toggleInfo()">
+    <div
+      class="stage"
+      [class.zoomed]="zoom() > 1"
+      [class.dragging]="isGestureActive()"
+      (pointerdown)="onPointerDown($event)"
+      (pointermove)="onPointerMove($event)"
+      (pointerup)="onPointerUp($event)"
+      (pointercancel)="onPointerUp($event)"
+      (wheel)="onWheel($event)"
+      (dblclick)="onDoubleClick($event)"
+      (click)="onStageClick($event)"
+    >
       @if (asset.mediaType === 'image') {
-        <img [src]="imageUrl(asset.id)" [alt]="'Photo taken ' + formatDate(asset.capturedAt)" />
+        <img
+          [src]="imageUrl(asset.id)"
+          [alt]="'Photo taken ' + formatDate(asset.capturedAt)"
+          [style.transform]="mediaTransform()"
+          draggable="false"
+        />
       } @else if (isPreparingVideo()) {
         <div class="preparing" role="status">
           <div class="spinner" aria-hidden="true"></div>

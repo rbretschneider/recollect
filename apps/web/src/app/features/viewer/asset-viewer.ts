@@ -17,6 +17,14 @@ import { firstValueFrom } from 'rxjs';
 /** Minimum horizontal swipe distance (px) that counts as navigation. */
 const SWIPE_THRESHOLD_PX = 60;
 
+/** Zoom bounds and the double-tap zoom level. */
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 6;
+const DOUBLE_TAP_ZOOM = 2.5;
+
+/** Movement beyond this (px) makes a gesture a drag, not a tap/click. */
+const DRAG_THRESHOLD_PX = 8;
+
 /**
  * Fullscreen media viewer (FRD story S4.3): swipe/arrow navigation, video
  * playback, and an info sheet. Rendered as an overlay above the current page.
@@ -49,7 +57,27 @@ export class AssetViewer implements OnInit, OnDestroy {
 
   readonly current = computed<TimelineAsset | null>(() => this.assets()[this.index()] ?? null);
 
-  private touchStartX: number | null = null;
+  /** Pinch/scroll zoom state; 1 = fitted. Pan is in screen pixels. */
+  readonly zoom = signal(1);
+  readonly panX = signal(0);
+  readonly panY = signal(0);
+  readonly isGestureActive = signal(false);
+
+  readonly mediaTransform = computed(
+    () => `translate(${this.panX()}px, ${this.panY()}px) scale(${this.zoom()})`,
+  );
+
+  private readonly activePointers = new Map<number, { x: number; y: number }>();
+  private gestureStart: {
+    zoom: number;
+    panX: number;
+    panY: number;
+    x: number;
+    y: number;
+    pinchDistance: number | null;
+  } | null = null;
+  private didDrag = false;
+  private didPinch = false;
   private hasHistoryEntry = false;
   private prepareTimer: ReturnType<typeof setInterval> | null = null;
   private readonly onPopState = (): void => {
@@ -71,9 +99,10 @@ export class AssetViewer implements OnInit, OnDestroy {
       }
     });
     effect(() => {
-      this.current(); // Moving to another item resets any preparing state.
+      this.current(); // Moving to another item resets any preparing state and the zoom.
       this.stopPreparePolling();
       this.isPreparingVideo.set(false);
+      this.resetZoom();
     });
   }
 
@@ -161,21 +190,162 @@ export class AssetViewer implements OnInit, OnDestroy {
     }
   }
 
-  onTouchStart(event: TouchEvent): void {
-    this.touchStartX = event.touches[0]?.clientX ?? null;
+  // --- Gestures: pinch/wheel zoom, pan while zoomed, swipe-nav at 1x -------
+
+  onPointerDown(event: PointerEvent): void {
+    if ((event.target as HTMLElement).tagName === 'VIDEO') {
+      return; // Leave video controls alone.
+    }
+    this.activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    this.isGestureActive.set(true);
+    this.didDrag = false;
+    if (this.activePointers.size === 2) {
+      this.didPinch = true;
+      this.beginGesture(this.pinchDistance());
+    } else {
+      this.didPinch = false;
+      this.beginGesture(null);
+    }
   }
 
-  onTouchEnd(event: TouchEvent): void {
-    if (this.touchStartX === null) {
+  onPointerMove(event: PointerEvent): void {
+    if (!this.activePointers.has(event.pointerId) || !this.gestureStart) {
       return;
     }
-    const deltaX = (event.changedTouches[0]?.clientX ?? this.touchStartX) - this.touchStartX;
-    this.touchStartX = null;
-    if (deltaX < -SWIPE_THRESHOLD_PX) {
-      this.next();
-    } else if (deltaX > SWIPE_THRESHOLD_PX) {
-      this.previous();
+    this.activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const start = this.gestureStart;
+    const center = this.pointerCenter();
+    if (Math.hypot(center.x - start.x, center.y - start.y) > DRAG_THRESHOLD_PX) {
+      this.didDrag = true;
     }
+    if (this.activePointers.size === 2 && start.pinchDistance !== null) {
+      const scale = this.clampZoom((start.zoom * this.pinchDistance()) / start.pinchDistance);
+      this.zoomAround(center, scale, start);
+    } else if (this.activePointers.size === 1 && this.zoom() > MIN_ZOOM) {
+      this.panX.set(start.panX + (center.x - start.x));
+      this.panY.set(start.panY + (center.y - start.y));
+    }
+  }
+
+  onPointerUp(event: PointerEvent): void {
+    const wasSingle = this.activePointers.size === 1;
+    const start = this.gestureStart;
+    this.activePointers.delete(event.pointerId);
+    if (this.activePointers.size > 0) {
+      this.beginGesture(this.activePointers.size === 2 ? this.pinchDistance() : null);
+      return;
+    }
+    this.isGestureActive.set(false);
+    if (this.zoom() < 1.05) {
+      this.resetZoom();
+    }
+    if (wasSingle && !this.didPinch && this.zoom() === MIN_ZOOM && start) {
+      const deltaX = event.clientX - start.x;
+      if (deltaX < -SWIPE_THRESHOLD_PX) {
+        this.next();
+      } else if (deltaX > SWIPE_THRESHOLD_PX) {
+        this.previous();
+      }
+    }
+    this.gestureStart = null;
+  }
+
+  /** Desktop: scroll wheel zooms toward the cursor. */
+  onWheel(event: WheelEvent): void {
+    event.preventDefault();
+    const scale = this.clampZoom(this.zoom() * Math.exp(-event.deltaY * 0.0022));
+    this.zoomAround({ x: event.clientX, y: event.clientY }, scale, {
+      zoom: this.zoom(),
+      panX: this.panX(),
+      panY: this.panY(),
+    });
+    if (this.zoom() < 1.05) {
+      this.resetZoom();
+    }
+  }
+
+  /** Double tap / double click toggles between fitted and zoomed-in. */
+  onDoubleClick(event: MouseEvent): void {
+    if ((event.target as HTMLElement).tagName === 'VIDEO') {
+      return;
+    }
+    if (this.zoom() > MIN_ZOOM) {
+      this.resetZoom();
+    } else {
+      this.zoomAround({ x: event.clientX, y: event.clientY }, DOUBLE_TAP_ZOOM, {
+        zoom: 1,
+        panX: 0,
+        panY: 0,
+      });
+    }
+  }
+
+  /** Anywhere that isn't the media or a control closes the viewer. */
+  onStageClick(event: MouseEvent): void {
+    if (this.didDrag || this.didPinch) {
+      return; // The tail end of a pan/pinch is not a click.
+    }
+    if (event.target === event.currentTarget) {
+      if (this.showInfo()) {
+        this.showInfo.set(false);
+      } else {
+        this.close();
+      }
+    }
+  }
+
+  private beginGesture(pinchDistance: number | null): void {
+    const center = this.pointerCenter();
+    this.gestureStart = {
+      zoom: this.zoom(),
+      panX: this.panX(),
+      panY: this.panY(),
+      x: center.x,
+      y: center.y,
+      pinchDistance,
+    };
+  }
+
+  /** Rescales so the image point under `anchor` stays under it. */
+  private zoomAround(
+    anchor: { x: number; y: number },
+    scale: number,
+    from: { zoom: number; panX: number; panY: number },
+  ): void {
+    const originX = window.innerWidth / 2;
+    const originY = window.innerHeight / 2;
+    const imagePointX = (anchor.x - originX - from.panX) / from.zoom;
+    const imagePointY = (anchor.y - originY - from.panY) / from.zoom;
+    this.zoom.set(scale);
+    this.panX.set(anchor.x - originX - imagePointX * scale);
+    this.panY.set(anchor.y - originY - imagePointY * scale);
+  }
+
+  private pointerCenter(): { x: number; y: number } {
+    const points = [...this.activePointers.values()];
+    if (points.length === 0) {
+      return { x: 0, y: 0 };
+    }
+    return {
+      x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
+      y: points.reduce((sum, point) => sum + point.y, 0) / points.length,
+    };
+  }
+
+  private pinchDistance(): number {
+    const [first, second] = [...this.activePointers.values()];
+    return Math.hypot(second.x - first.x, second.y - first.y);
+  }
+
+  private clampZoom(value: number): number {
+    return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM * 0.85, value));
+  }
+
+  private resetZoom(): void {
+    this.zoom.set(1);
+    this.panX.set(0);
+    this.panY.set(0);
   }
 
   @HostListener('document:keydown', ['$event'])

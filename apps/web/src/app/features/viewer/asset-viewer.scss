@@ -48,12 +48,34 @@
   display: grid;
   place-items: center;
   height: 100dvh;
+  overflow: hidden;
+  // We own pinch/pan/swipe entirely; the browser must not consume them.
+  touch-action: none;
 
   img,
   video {
     max-width: 100vw;
     max-height: 100dvh;
     object-fit: contain;
+  }
+
+  img {
+    transition: transform 0.18s ease;
+    will-change: transform;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  &.dragging img {
+    transition: none; // Direct manipulation must track the fingers exactly.
+  }
+
+  &.zoomed {
+    cursor: grab;
+  }
+
+  &.zoomed:active {
+    cursor: grabbing;
   }
 }
 
