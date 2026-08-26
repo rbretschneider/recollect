@@ -12,12 +12,31 @@
     <article class="card">
       <header>
         <h2>{{ suggestion.seedTitle }}</h2>
-        <p>{{ suggestion.assetCount }} photos · {{ formatSpan(suggestion) }}</p>
+        <p>{{ selectedCount() }} of {{ displayAssetIds().length }} selected · {{ formatSpan(suggestion) }}</p>
       </header>
 
-      <div class="preview" aria-label="Photos in this suggestion">
-        @for (assetId of currentAssetIds(); track assetId) {
-          <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
+      <div class="grid" aria-label="Photos in this memory — tap to include or exclude">
+        @for (assetId of displayAssetIds(); track assetId) {
+          <button
+            type="button"
+            class="tile"
+            [class.selected]="isSelected(assetId)"
+            [attr.aria-pressed]="isSelected(assetId)"
+            [disabled]="!canWrite"
+            aria-label="Toggle photo"
+            (click)="toggleSelected(assetId)"
+          >
+            <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
+            @if (isSelected(assetId)) {
+              <span class="check" aria-hidden="true">✓</span>
+            }
+          </button>
+        }
+        @if (canWrite) {
+          <button type="button" class="tile add" aria-label="Add photos" (click)="openPicker()">
+            <span class="plus" aria-hidden="true">＋</span>
+            <span class="add-label">Add photos</span>
+          </button>
         }
       </div>
 
@@ -31,8 +50,13 @@
               Decide later
             </button>
           }
-          <button type="button" class="primary" [disabled]="isBusy()" (click)="accept()">
-            Create Memory
+          <button
+            type="button"
+            class="primary"
+            [disabled]="isBusy() || selectedCount() === 0"
+            (click)="accept()"
+          >
+            Create Memory ({{ selectedCount() }})
           </button>
         </div>
       }
@@ -49,5 +73,13 @@
     </section>
   }
 </main>
+
+@if (isPicking()) {
+  <app-asset-picker
+    [excludeIds]="shownIds()"
+    (picked)="onPicked($event)"
+    (cancelled)="closePicker()"
+  />
+}
 
 <app-bottom-nav />

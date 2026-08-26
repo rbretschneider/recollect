@@ -12,9 +12,18 @@ export class MemoriesApiService {
     return firstValueFrom(this.http.get<{ suggestions: InboxSuggestion[] }>('/api/v1/inbox'));
   }
 
-  acceptSuggestion(clusterId: string, title?: string): Promise<{ memoryId: string }> {
+  /**
+   * Accepts a suggestion into a Memory. Pass `assetIds` to create it from an
+   * edited selection (some suggested photos dropped, others added); omit it to
+   * take the whole suggestion as-is.
+   */
+  acceptSuggestion(
+    clusterId: string,
+    title?: string,
+    assetIds?: string[],
+  ): Promise<{ memoryId: string }> {
     return firstValueFrom(
-      this.http.post<{ memoryId: string }>(`/api/v1/inbox/${clusterId}/accept`, { title }),
+      this.http.post<{ memoryId: string }>(`/api/v1/inbox/${clusterId}/accept`, { title, assetIds }),
     );
   }
 

@@ -28,7 +28,7 @@ export class InboxController {
     @Body() body: AcceptSuggestionRequestDto,
     @CurrentUser() user: UserProfile,
   ): Promise<{ memoryId: string }> {
-    return this.inbox.accept(id, user.id, body.title);
+    return this.inbox.accept(id, user.id, { title: body.title, assetIds: body.assetIds });
   }
 
   @RequireGrant('write')
