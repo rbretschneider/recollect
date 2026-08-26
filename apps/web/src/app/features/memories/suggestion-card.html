@@ -1,0 +1,68 @@
+<article class="card">
+  <input
+    class="name"
+    type="text"
+    [ngModel]="name()"
+    (ngModelChange)="name.set($event)"
+    [disabled]="!canWrite()"
+    aria-label="Memory name"
+    placeholder="Name this memory"
+  />
+  <p class="meta">{{ selectedCount() }} of {{ displayAssetIds().length }} photos · {{ formatSpan() }}</p>
+
+  @if (!isEditingPhotos()) {
+    <div class="mosaic">
+      @for (assetId of displayAssetIds().slice(0, 6); track assetId) {
+        <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
+      }
+    </div>
+  } @else {
+    <div class="grid" aria-label="Photos — tap to include or exclude">
+      @for (assetId of displayAssetIds(); track assetId) {
+        <button
+          type="button"
+          class="tile"
+          [class.selected]="isSelected(assetId)"
+          [attr.aria-pressed]="isSelected(assetId)"
+          aria-label="Toggle photo"
+          (click)="toggleSelected(assetId)"
+        >
+          <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
+          @if (isSelected(assetId)) {
+            <span class="check" aria-hidden="true">✓</span>
+          }
+        </button>
+      }
+      <button type="button" class="tile add" aria-label="Add photos" (click)="openPicker()">
+        <span class="plus" aria-hidden="true">＋</span>
+      </button>
+    </div>
+  }
+
+  @if (canWrite()) {
+    <div class="actions">
+      <button type="button" class="link" [disabled]="isBusy()" (click)="toggleEditPhotos()">
+        {{ isEditingPhotos() ? 'Done' : 'Edit photos' }}
+      </button>
+      <span class="spacer"></span>
+      <button type="button" class="ghost" [disabled]="isBusy()" (click)="dismiss()" title="Not an event">✕</button>
+      <button type="button" class="ghost" [disabled]="isBusy()" (click)="later()" title="Decide later">Later</button>
+      <button
+        type="button"
+        class="primary"
+        [disabled]="isBusy() || selectedCount() === 0"
+        (click)="create()"
+      >
+        Create
+      </button>
+    </div>
+  }
+</article>
+
+@if (isPicking()) {
+  <app-asset-picker
+    [excludeIds]="shownIds()"
+    (picked)="onPicked($event)"
+    (cancelled)="closePicker()"
+  />
+}

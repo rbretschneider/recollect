@@ -8,59 +8,16 @@
 </header>
 
 <main class="review">
-  @if (current(); as suggestion) {
-    <article class="card">
-      <header>
-        <h2>{{ suggestion.seedTitle }}</h2>
-        <p>{{ selectedCount() }} of {{ displayAssetIds().length }} selected · {{ formatSpan(suggestion) }}</p>
-      </header>
-
-      <div class="grid" aria-label="Photos in this memory — tap to include or exclude">
-        @for (assetId of displayAssetIds(); track assetId) {
-          <button
-            type="button"
-            class="tile"
-            [class.selected]="isSelected(assetId)"
-            [attr.aria-pressed]="isSelected(assetId)"
-            [disabled]="!canWrite"
-            aria-label="Toggle photo"
-            (click)="toggleSelected(assetId)"
-          >
-            <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
-            @if (isSelected(assetId)) {
-              <span class="check" aria-hidden="true">✓</span>
-            }
-          </button>
-        }
-        @if (canWrite) {
-          <button type="button" class="tile add" aria-label="Add photos" (click)="openPicker()">
-            <span class="plus" aria-hidden="true">＋</span>
-            <span class="add-label">Add photos</span>
-          </button>
-        }
-      </div>
-
-      @if (canWrite) {
-        <div class="actions">
-          <button type="button" class="ghost" [disabled]="isBusy()" (click)="dismiss()">
-            Not an event
-          </button>
-          @if (queue().length > 1) {
-            <button type="button" class="ghost" [disabled]="isBusy()" (click)="skip()">
-              Decide later
-            </button>
-          }
-          <button
-            type="button"
-            class="primary"
-            [disabled]="isBusy() || selectedCount() === 0"
-            (click)="accept()"
-          >
-            Create Memory ({{ selectedCount() }})
-          </button>
-        </div>
+  @if (queue().length > 0) {
+    <div class="cards">
+      @for (suggestion of queue(); track suggestion.id) {
+        <app-suggestion-card
+          [suggestion]="suggestion"
+          [canWrite]="canWrite"
+          (decided)="onDecided(suggestion.id, $event)"
+        />
       }
-    </article>
+    </div>
   } @else if (isLoaded()) {
     <section class="empty">
       <h2>All caught up 🎉</h2>
@@ -73,13 +30,5 @@
     </section>
   }
 </main>
-
-@if (isPicking()) {
-  <app-asset-picker
-    [excludeIds]="shownIds()"
-    (picked)="onPicked($event)"
-    (cancelled)="closePicker()"
-  />
-}
 
 <app-bottom-nav />
