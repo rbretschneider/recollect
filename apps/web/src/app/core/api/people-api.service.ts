@@ -7,7 +7,14 @@ export interface PersonSummary {
   id: string;
   name: string | null;
   faceCount: number;
-  coverAssetId: string | null;
+  coverFaceId: string | null;
+}
+
+/** Mirrors the server's PersonFace. */
+export interface PersonFace {
+  id: string;
+  assetId: string;
+  quality: number;
 }
 
 /** Raw HTTP calls for People. */
@@ -27,5 +34,34 @@ export class PeopleApiService {
 
   rename(personId: string, name: string): Promise<void> {
     return firstValueFrom(this.http.patch<void>(`/api/v1/people/${personId}`, { name }));
+  }
+
+  getFaces(personId: string): Promise<{ faces: PersonFace[] }> {
+    return firstValueFrom(this.http.get<{ faces: PersonFace[] }>(`/api/v1/people/${personId}/faces`));
+  }
+
+  /** URL of a square face crop. */
+  faceCropUrl(faceId: string): string {
+    return `/api/v1/people/faces/${faceId}/crop`;
+  }
+
+  mergeInto(sourceId: string, targetPersonId: string): Promise<void> {
+    return firstValueFrom(
+      this.http.post<void>(`/api/v1/people/${sourceId}/merge-into`, { targetPersonId }),
+    );
+  }
+
+  split(personId: string, faceIds: string[]): Promise<{ personId: string }> {
+    return firstValueFrom(
+      this.http.post<{ personId: string }>(`/api/v1/people/${personId}/split`, { faceIds }),
+    );
+  }
+
+  ignoreFaces(faceIds: string[]): Promise<void> {
+    return firstValueFrom(this.http.post<void>('/api/v1/people/faces/ignore', { faceIds }));
+  }
+
+  hide(personId: string): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`/api/v1/people/${personId}/hide`, {}));
   }
 }

@@ -1,16 +1,24 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { eq, sql } from 'drizzle-orm';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { and, eq, inArray, sql } from 'drizzle-orm';
+import { v7 as uuidv7 } from 'uuid';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
-import { person } from '../database/schema';
+import { face, person } from '../database/schema';
 
 /** A person row in the People view. */
 export interface PersonSummary {
   id: string;
   name: string | null;
   faceCount: number;
-  /** An asset to use as the avatar (best-quality face's photo). */
-  coverAssetId: string | null;
+  /** The best-quality face, for a cropped avatar. */
+  coverFaceId: string | null;
+}
+
+/** One face instance of a person (for merge/split/ignore curation). */
+export interface PersonFace {
+  id: string;
+  assetId: string;
+  quality: number;
 }
 
 /** Everyone detected in the library, most-photographed first. */
@@ -22,9 +30,9 @@ export class PeopleService {
     const result = await this.db.execute(sql`
       SELECT p.id, p.name,
              count(f.id) AS face_count,
-             (SELECT f2.asset_id FROM face f2
+             (SELECT f2.id FROM face f2
               WHERE f2.person_id = p.id AND f2.ignored = false
-              ORDER BY f2.quality DESC LIMIT 1) AS cover_asset_id
+              ORDER BY f2.quality DESC LIMIT 1) AS cover_face_id
       FROM person p
       JOIN face f ON f.person_id = p.id AND f.ignored = false
       WHERE p.merged_into_id IS NULL AND p.hidden = false
@@ -35,8 +43,83 @@ export class PeopleService {
       id: row.id as string,
       name: (row.name as string | null) ?? null,
       faceCount: Number(row.face_count),
-      coverAssetId: (row.cover_asset_id as string | null) ?? null,
+      coverFaceId: (row.cover_face_id as string | null) ?? null,
     }));
+  }
+
+  /** Every visible face of a person, best quality first (curation UI). */
+  async getFaces(personId: string): Promise<PersonFace[]> {
+    await this.requirePerson(personId);
+    const rows = await this.db
+      .select({ id: face.id, assetId: face.assetId, quality: face.quality })
+      .from(face)
+      .where(sql`${face.personId} = ${personId} and ${face.ignored} = false`)
+      .orderBy(sql`${face.quality} desc`);
+    return rows;
+  }
+
+  /**
+   * Merges this person into another: every face repoints to the target and the
+   * source becomes a tombstone. A name survives — if the target is unnamed and
+   * the source was named, the target takes the name.
+   */
+  async mergeInto(sourceId: string, targetId: string): Promise<void> {
+    if (sourceId === targetId) {
+      throw new BadRequestException('A person cannot be merged into themselves.');
+    }
+    const source = await this.requirePerson(sourceId);
+    const target = await this.requirePerson(targetId);
+    await this.db.transaction(async (tx) => {
+      await tx.update(face).set({ personId: targetId }).where(eq(face.personId, sourceId));
+      await tx
+        .update(person)
+        .set({ mergedIntoId: targetId, updatedAt: new Date() })
+        .where(eq(person.id, sourceId));
+      if (target.name === null && source.name !== null) {
+        await tx
+          .update(person)
+          .set({ name: source.name, updatedAt: new Date() })
+          .where(eq(person.id, targetId));
+      }
+    });
+  }
+
+  /**
+   * "Not the same person": moves the given faces out into a new person.
+   * Moved faces become user assignments so re-clustering never undoes it.
+   */
+  async split(personId: string, faceIds: string[]): Promise<{ personId: string }> {
+    await this.requirePerson(personId);
+    const owned = await this.db
+      .select({ id: face.id })
+      .from(face)
+      .where(and(eq(face.personId, personId), inArray(face.id, faceIds)));
+    if (owned.length !== faceIds.length) {
+      throw new BadRequestException('Some of those faces do not belong to this person.');
+    }
+    const newPersonId = uuidv7();
+    await this.db.transaction(async (tx) => {
+      await tx.insert(person).values({ id: newPersonId });
+      await tx
+        .update(face)
+        .set({ personId: newPersonId, assignment: 'user' })
+        .where(inArray(face.id, faceIds));
+    });
+    return { personId: newPersonId };
+  }
+
+  /** Ignored faces vanish from people, counts, and future clustering. */
+  async ignoreFaces(faceIds: string[]): Promise<void> {
+    await this.db.update(face).set({ ignored: true }).where(inArray(face.id, faceIds));
+  }
+
+  /** Hides a person from the People view entirely (e.g. strangers in backgrounds). */
+  async hide(personId: string): Promise<void> {
+    await this.requirePerson(personId);
+    await this.db
+      .update(person)
+      .set({ hidden: true, updatedAt: new Date() })
+      .where(eq(person.id, personId));
   }
 
   /** All photos this person appears in, newest first. */
@@ -61,14 +144,15 @@ export class PeopleService {
       .where(eq(person.id, personId));
   }
 
-  private async requirePerson(personId: string): Promise<void> {
+  private async requirePerson(personId: string): Promise<typeof person.$inferSelect> {
     const [row] = await this.db
-      .select({ id: person.id })
+      .select()
       .from(person)
       .where(eq(person.id, personId))
       .limit(1);
-    if (!row) {
+    if (!row || row.mergedIntoId !== null) {
       throw new NotFoundException('That person does not exist.');
     }
+    return row;
   }
 }

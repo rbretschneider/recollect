@@ -5,6 +5,9 @@
   @if (saveState() === 'saved') {
     <span class="saved">Saved ✓</span>
   }
+  @if (canWrite) {
+    <app-edit-toggle />
+  }
 </header>
 
 <main class="person">
@@ -20,6 +23,46 @@
     </form>
   }
 
+  @if (editMode.isEditing()) {
+    <section class="curation" aria-label="Fix this person">
+      <div class="curation-head">
+        <h2>Faces ({{ faces().length }})</h2>
+        <button type="button" class="outline" (click)="isMergePickerOpen.set(true)">
+          Merge into…
+        </button>
+        <button type="button" class="outline danger" (click)="hidePerson()">Hide person</button>
+      </div>
+      <p class="hint">
+        Tap the faces that don’t belong, then split them into their own person
+        or ignore them entirely.
+      </p>
+      <div class="face-grid">
+        @for (face of faces(); track face.id) {
+          <button
+            type="button"
+            class="face"
+            [class.selected]="selectedFaceIds().has(face.id)"
+            [attr.aria-pressed]="selectedFaceIds().has(face.id)"
+            (click)="toggleFace(face.id)"
+          >
+            <img [src]="cropUrl(face.id)" alt="" loading="lazy" />
+          </button>
+        }
+      </div>
+      @if (selectedFaceIds().size > 0) {
+        <div class="face-actions" role="toolbar" aria-label="Selected face actions">
+          <span>{{ selectedFaceIds().size }} selected</span>
+          <button type="button" [disabled]="isBusy()" (click)="splitSelected()">
+            Not this person
+          </button>
+          <button type="button" class="danger" [disabled]="isBusy()" (click)="ignoreSelected()">
+            Ignore
+          </button>
+        </div>
+      }
+    </section>
+  }
+
   <div class="grid">
     @for (assetId of assetIds(); track assetId; let index = $index) {
       <button type="button" class="tile" aria-label="Open photo" (click)="openViewer(index)">
@@ -28,6 +71,32 @@
     }
   </div>
 </main>
+
+@if (isMergePickerOpen()) {
+  <div class="scrim" (click)="isMergePickerOpen.set(false)"></div>
+  <div class="merge-picker" role="dialog" aria-label="Merge into another person">
+    <h2>Merge “{{ title() }}” into…</h2>
+    <input
+      type="search"
+      placeholder="Filter by name…"
+      autocomplete="off"
+      [value]="mergeFilter()"
+      (input)="mergeFilter.set($any($event.target).value)"
+    />
+    <div class="candidates">
+      @for (candidate of mergeCandidates(); track candidate.id) {
+        <button type="button" [disabled]="isBusy()" (click)="mergeInto(candidate)">
+          @if (candidate.coverFaceId; as cover) {
+            <img [src]="cropUrl(cover)" alt="" loading="lazy" />
+          }
+          <span class="name">{{ candidate.name ?? 'Who’s this?' }}</span>
+          <span class="count">{{ candidate.faceCount }}</span>
+        </button>
+      }
+    </div>
+    <button type="button" class="ghost" (click)="isMergePickerOpen.set(false)">Cancel</button>
+  </div>
+}
 
 @if (viewerIndex() !== null) {
   <app-asset-viewer

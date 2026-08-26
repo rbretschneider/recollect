@@ -22,7 +22,7 @@ export class PeoplePage implements OnInit {
   }
 
   avatarUrl(person: PersonSummary): string | null {
-    return person.coverAssetId ? `/api/v1/assets/${person.coverAssetId}/thumb/240` : null;
+    return person.coverFaceId ? this.api.faceCropUrl(person.coverFaceId) : null;
   }
 
   private async load(): Promise<void> {
