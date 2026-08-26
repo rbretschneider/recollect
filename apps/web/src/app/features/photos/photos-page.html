@@ -12,6 +12,26 @@
     <app-brand />
     <app-activity-spinner />
     <span class="spacer"></span>
+    <div class="view-switch" role="group" aria-label="Grid style">
+      <button
+        type="button"
+        [class.active]="viewMode() === 'mosaic'"
+        aria-label="Mosaic view"
+        (click)="setViewMode('mosaic')"
+      >▤</button>
+      <button
+        type="button"
+        [class.active]="viewMode() === 'grid'"
+        aria-label="Grid view"
+        (click)="setViewMode('grid')"
+      >▦</button>
+      <button
+        type="button"
+        [class.active]="viewMode() === 'small'"
+        aria-label="Small squares view"
+        (click)="setViewMode('small')"
+      >▩</button>
+    </div>
     @if (canWrite) {
       <button type="button" class="topbar-action" (click)="startSelecting()">Select</button>
     }
@@ -37,9 +57,9 @@
   @for (group of groups(); track group.day) {
     <section class="day">
       <h2>{{ group.label }}</h2>
-      <div class="grid">
+      <div class="grid" [class.mosaic]="viewMode() === 'mosaic'" [class.small]="viewMode() === 'small'">
         @for (asset of group.items; track asset.id) {
-          <figure class="tile">
+          <figure class="tile" [style.--ar]="aspectOf(asset)">
             <button
               type="button"
               class="tile-button"

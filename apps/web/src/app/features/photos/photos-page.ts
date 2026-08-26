@@ -32,6 +32,20 @@ interface DayGroup {
   items: TimelineAsset[];
 }
 
+/** The available grid presentations. */
+export type GridViewMode = 'mosaic' | 'grid' | 'small';
+
+const VIEW_MODE_KEY = 'rc-grid-view';
+
+function loadViewMode(): GridViewMode {
+  try {
+    const stored = localStorage.getItem(VIEW_MODE_KEY);
+    return stored === 'grid' || stored === 'small' ? stored : 'mosaic';
+  } catch {
+    return 'mosaic';
+  }
+}
+
 const PAGE_SIZE = 100;
 const STATUS_POLL_MS = 4000;
 
@@ -68,6 +82,8 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
 
   readonly items = signal<TimelineAsset[]>([]);
   readonly viewerIndex = signal<number | null>(null);
+  /** Grid presentation: justified mosaic (default), uniform grid, or small squares. */
+  readonly viewMode = signal<GridViewMode>(loadViewMode());
   readonly isSelecting = signal(false);
   readonly selectedIds = signal<ReadonlySet<string>>(new Set());
   readonly isPickingAlbum = signal(false);
@@ -173,6 +189,24 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
 
   durationLabel(asset: TimelineAsset): string {
     return asset.durationMs === null ? '' : formatDuration(asset.durationMs);
+  }
+
+  setViewMode(mode: GridViewMode): void {
+    this.viewMode.set(mode);
+    try {
+      localStorage.setItem(VIEW_MODE_KEY, mode);
+    } catch {
+      // Per-viewer convenience only; losing it is harmless.
+    }
+  }
+
+  /** Aspect ratio driving the justified mosaic; unknown dimensions render square. */
+  aspectOf(asset: TimelineAsset): number {
+    if (!asset.width || !asset.height) {
+      return 1;
+    }
+    // Clamp so panoramas don't take a whole row and portraits stay readable.
+    return Math.min(2.4, Math.max(0.55, asset.width / asset.height));
   }
 
   get userInitial(): string {
