@@ -20,8 +20,10 @@ COPY requirements.txt .
 # whichever landed last, so force the GPU build to win deterministically.
 RUN pip3 install --upgrade pip \
     && pip3 install -r requirements.txt \
-    && pip3 uninstall -y onnxruntime || true \
-    && pip3 install --force-reinstall --no-deps onnxruntime-gpu==1.18.1
+    && pip3 uninstall -y onnxruntime onnxruntime-gpu || true \
+    && pip3 install --no-deps \
+       --index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/ \
+       onnxruntime-gpu==1.18.1
 
 COPY app ./app
 
