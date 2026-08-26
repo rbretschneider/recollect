@@ -23,7 +23,7 @@ RUN pip3 install --upgrade pip \
     && pip3 uninstall -y onnxruntime onnxruntime-gpu || true \
     && pip3 install --no-deps \
        --index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/ \
-       onnxruntime-gpu==1.18.1
+       onnxruntime-gpu==1.17.1
 
 COPY app ./app
 
