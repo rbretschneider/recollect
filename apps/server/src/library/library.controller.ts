@@ -11,7 +11,13 @@ import {
 } from '@nestjs/common';
 import { RequireAdmin } from '../auth/decorators/require-admin.decorator';
 import { CreateRootRequestDto } from './dto/create-root-request.dto';
-import { BrowseListing, LibraryRootView, LibraryService, LibraryStatus } from './library.service';
+import {
+  BrowseListing,
+  LibraryFailure,
+  LibraryRootView,
+  LibraryService,
+  LibraryStatus,
+} from './library.service';
 
 /** Library-root management and indexing status. Roots are admin territory. */
 @Controller('library')
@@ -48,5 +54,12 @@ export class LibraryController {
   @Get('browse')
   async browse(@Query('path') path?: string): Promise<BrowseListing> {
     return this.library.browse(path);
+  }
+
+  /** Plain-language list of what failed and why. */
+  @RequireAdmin()
+  @Get('failures')
+  async failures(): Promise<{ failures: LibraryFailure[] }> {
+    return { failures: await this.library.listFailures() };
   }
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "library_root" ADD COLUMN "last_scan_enqueued" integer DEFAULT 0 NOT NULL;

@@ -29,6 +29,22 @@ export class ActivityService {
   /** True while work is genuinely happening. */
   readonly isWorking = computed(() => this.pendingCount() > 0);
 
+  /**
+   * Import progress as "done / total" when a scan batch is in flight
+   * (e.g. "3,041 / 29,583"), falling back to the plain pending count.
+   */
+  readonly progressLabel = computed(() => {
+    const status = this.status();
+    if (!status) {
+      return '';
+    }
+    if (status.batchTotal > 0 && status.ingestPending > 0) {
+      const done = Math.max(0, status.batchTotal - status.ingestPending);
+      return `${done.toLocaleString()} / ${status.batchTotal.toLocaleString()}`;
+    }
+    return this.pendingCount().toLocaleString();
+  });
+
   constructor() {
     effect(() => {
       if (this.auth.user() !== null) {

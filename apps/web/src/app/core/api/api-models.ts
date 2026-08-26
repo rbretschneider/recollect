@@ -155,4 +155,12 @@ export interface LibraryStatus {
   failedStages: number;
   queuedJobs: number;
   runningJobs: number;
+  ingestPending: number;
+  batchTotal: number;
+}
+
+/** Mirrors the server's LibraryFailure. */
+export interface LibraryFailure {
+  name: string;
+  reason: string;
 }

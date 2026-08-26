@@ -27,6 +27,8 @@ export const libraryRoot = pgTable('library_root', {
   enabled: boolean('enabled').notNull().default(true),
   lastScanStartedAt: timestamp('last_scan_started_at', { withTimezone: true }),
   lastScanCompletedAt: timestamp('last_scan_completed_at', { withTimezone: true }),
+  /** How many ingest jobs the last scan enqueued — the denominator for progress. */
+  lastScanEnqueued: integer('last_scan_enqueued').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

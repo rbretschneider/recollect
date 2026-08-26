@@ -9,9 +9,9 @@ import { ActivityService } from '../core/activity.service';
   selector: 'app-activity-spinner',
   template: `
     @if (activity.isWorking()) {
-      <span class="activity" role="status" [attr.aria-label]="activity.pendingCount() + ' items processing'">
+      <span class="activity" role="status" [attr.aria-label]="activity.progressLabel() + ' processing'">
         <span class="ring" aria-hidden="true"></span>
-        <span class="count">{{ activity.pendingCount() }}</span>
+        <span class="count">{{ activity.progressLabel() }}</span>
       </span>
     }
   `,

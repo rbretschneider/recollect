@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { BrowseListing, LibraryRootView, LibraryStatus } from './api-models';
+import { BrowseListing, LibraryFailure, LibraryRootView, LibraryStatus } from './api-models';
 
 /** Raw HTTP calls for library roots and indexing status. */
 @Injectable({ providedIn: 'root' })
@@ -25,6 +25,12 @@ export class LibraryApiService {
   rescan(rootId: string): Promise<{ accepted: true }> {
     return firstValueFrom(
       this.http.post<{ accepted: true }>(`/api/v1/library/roots/${rootId}/scan`, {}),
+    );
+  }
+
+  listFailures(): Promise<{ failures: LibraryFailure[] }> {
+    return firstValueFrom(
+      this.http.get<{ failures: LibraryFailure[] }>('/api/v1/library/failures'),
     );
   }
 

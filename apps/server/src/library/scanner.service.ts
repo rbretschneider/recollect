@@ -48,7 +48,7 @@ export class ScannerService {
 
     await this.db
       .update(libraryRoot)
-      .set({ lastScanCompletedAt: new Date() })
+      .set({ lastScanCompletedAt: new Date(), lastScanEnqueued: enqueued })
       .where(eq(libraryRoot.id, rootId));
     // Scans run on a schedule, so this keeps the holding period enforced daily.
     await this.queue.enqueue(PURGE_TRASH_JOB, {}, { dedupeKey: PURGE_TRASH_JOB, priority: 250 });

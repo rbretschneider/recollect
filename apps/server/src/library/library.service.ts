@@ -7,7 +7,7 @@ import { APP_CONFIG } from '../config/app-config';
 import type { AppConfig } from '../config/app-config';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
-import { asset, job, libraryRoot } from '../database/schema';
+import { asset, assetFile, job, libraryRoot } from '../database/schema';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { SCAN_ROOT_JOB } from './library-job-types';
 import { isFilesystemRoot } from './filesystem-root';
@@ -21,6 +21,12 @@ export interface LibraryRootView {
   enabled: boolean;
   lastScanStartedAt: string | null;
   lastScanCompletedAt: string | null;
+}
+
+/** One failed file or job with a plain-language reason. */
+export interface LibraryFailure {
+  name: string;
+  reason: string;
 }
 
 /** A directory offered by the library folder picker. */
@@ -42,6 +48,9 @@ export interface LibraryStatus {
   failedStages: number;
   queuedJobs: number;
   runningJobs: number;
+  /** Files still waiting on ingest, and the size of the batch they belong to. */
+  ingestPending: number;
+  batchTotal: number;
 }
 
 /** Manages library roots and kicks off scans. */
@@ -97,9 +106,44 @@ export class LibraryService {
       .select({
         queuedJobs: count(sql`case when ${job.status} = 'queued' then 1 end`),
         runningJobs: count(sql`case when ${job.status} = 'running' then 1 end`),
+        ingestPending: count(
+          sql`case when ${job.status} in ('queued', 'running') and ${job.type} = 'ingest_file' then 1 end`,
+        ),
       })
       .from(job);
-    return { ...assets, ...jobs };
+    const [batch] = await this.db
+      .select({ batchTotal: sql<number>`coalesce(sum(${libraryRoot.lastScanEnqueued}), 0)::int` })
+      .from(libraryRoot);
+    return { ...assets, ...jobs, batchTotal: batch.batchTotal };
+  }
+
+  /** What went wrong, in human terms: failed processing stages and failed jobs. */
+  async listFailures(): Promise<LibraryFailure[]> {
+    const stageRows = await this.db
+      .select({ id: asset.id, errors: asset.stageErrors, fileName: assetFile.fileName })
+      .from(asset)
+      .leftJoin(assetFile, eq(assetFile.assetId, asset.id))
+      .where(sql`${asset.stageErrors} is not null`)
+      .limit(200);
+    const jobRows = await this.db
+      .select({ type: job.type, error: job.error, payload: job.payload })
+      .from(job)
+      .where(eq(job.status, 'failed'))
+      .limit(200);
+    const failures: LibraryFailure[] = stageRows.map((row) => ({
+      name: row.fileName ?? row.id,
+      reason: Object.entries((row.errors ?? {}) as Record<string, string>)
+        .map(([stage, message]) => `${stage}: ${message}`)
+        .join('; '),
+    }));
+    for (const row of jobRows) {
+      const payload = row.payload as { relPath?: string; assetId?: string };
+      failures.push({
+        name: payload.relPath ?? payload.assetId ?? row.type,
+        reason: `${row.type} failed: ${row.error ?? 'unknown error'}`,
+      });
+    }
+    return failures;
   }
 
   /**

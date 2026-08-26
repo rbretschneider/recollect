@@ -2,7 +2,7 @@ import { Component, inject, OnInit, output, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ActivityService } from '../core/activity.service';
 import { LibraryApiService } from '../core/api/library-api.service';
-import { LibraryStatus } from '../core/api/api-models';
+import { LibraryFailure, LibraryStatus } from '../core/api/api-models';
 import { AuthStateService } from '../core/auth/auth-state.service';
 import { ActivitySpinner } from './activity-spinner';
 
@@ -26,6 +26,7 @@ export class AppDrawer implements OnInit {
 
   readonly status = signal<LibraryStatus | null>(null);
   readonly isRescanBusy = signal(false);
+  readonly failures = signal<LibraryFailure[] | null>(null);
 
   get userName(): string {
     return this.auth.user()?.displayName ?? '';
@@ -49,6 +50,16 @@ export class AppDrawer implements OnInit {
 
   ngOnInit(): void {
     void this.loadStatus();
+  }
+
+  /** Loads (or hides) the plain-language list behind the failed count. */
+  async toggleFailures(): Promise<void> {
+    if (this.failures() !== null) {
+      this.failures.set(null);
+      return;
+    }
+    const { failures } = await this.libraryApi.listFailures();
+    this.failures.set(failures);
   }
 
   async rescan(): Promise<void> {
