@@ -21,7 +21,7 @@ COPY requirements.txt .
 RUN pip3 install --upgrade pip \
     && pip3 install -r requirements.txt \
     && pip3 uninstall -y onnxruntime || true \
-    && pip3 install --force-reinstall --no-deps onnxruntime-gpu==1.17.1
+    && pip3 install --force-reinstall --no-deps onnxruntime-gpu==1.18.1
 
 COPY app ./app
 
