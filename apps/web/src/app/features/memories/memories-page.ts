@@ -2,46 +2,35 @@ import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angula
 import { RouterLink } from '@angular/router';
 import { LibraryApiService } from '../../core/api/library-api.service';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
-import { InboxSuggestion, LibraryStatus, MemorySummary } from '../../core/api/api-models';
-import { AuthStateService } from '../../core/auth/auth-state.service';
+import { LibraryStatus, MemorySummary } from '../../core/api/api-models';
+import { AppTopbar } from '../../shared/app-topbar';
 import { BottomNav } from '../../shared/bottom-nav';
 
-/** The Memories tab: suggestion inbox on top, confirmed Memory timeline below. */
+/** The Memories tab: the timeline of confirmed memories; suggestions live on their own review page. */
 @Component({
   selector: 'app-memories-page',
-  imports: [BottomNav, RouterLink],
+  imports: [AppTopbar, BottomNav, RouterLink],
   templateUrl: './memories-page.html',
   styleUrl: './memories-page.scss',
 })
 export class MemoriesPage implements OnInit {
   private readonly api = inject(MemoriesApiService);
   private readonly libraryApi = inject(LibraryApiService);
-  private readonly auth = inject(AuthStateService);
   private readonly destroyRef = inject(DestroyRef);
   private statusTimer: ReturnType<typeof setInterval> | null = null;
 
-  readonly suggestions = signal<InboxSuggestion[]>([]);
   readonly memories = signal<MemorySummary[]>([]);
+  readonly suggestionCount = signal(0);
   readonly isLoaded = signal(false);
-  readonly busySuggestionId = signal<string | null>(null);
   readonly status = signal<LibraryStatus | null>(null);
-  readonly expandedSuggestionId = signal<string | null>(null);
-  readonly expandedAssetIds = signal<string[]>([]);
 
   readonly pendingCount = computed(() => {
     const status = this.status();
     return status ? status.queuedJobs + status.runningJobs : 0;
   });
 
-  /** Read-only users see the timeline but no accept/dismiss actions. */
-  get canWrite(): boolean {
-    const permission = this.auth.user()?.permission;
-    return permission === 'write' || permission === 'delete';
-  }
-
   ngOnInit(): void {
     void this.reload();
-    void this.pollWhileIndexing();
     this.statusTimer = setInterval(() => void this.pollWhileIndexing(), 5000);
     this.destroyRef.onDestroy(() => {
       if (this.statusTimer !== null) {
@@ -50,61 +39,21 @@ export class MemoriesPage implements OnInit {
     });
   }
 
-  thumbUrl(assetId: string): string {
-    return `/api/v1/assets/${assetId}/thumb/240`;
-  }
-
   coverUrl(memory: MemorySummary): string | null {
     return memory.coverAssetId ? `/api/v1/assets/${memory.coverAssetId}/thumb/720` : null;
   }
 
-  /** Tap a suggestion to see exactly which photos it groups before deciding. */
-  async toggleExpanded(suggestion: InboxSuggestion): Promise<void> {
-    if (this.expandedSuggestionId() === suggestion.id) {
-      this.expandedSuggestionId.set(null);
-      return;
-    }
-    this.expandedSuggestionId.set(suggestion.id);
-    this.expandedAssetIds.set([]);
-    const { assetIds } = await this.api.getSuggestionAssets(suggestion.id);
-    if (this.expandedSuggestionId() === suggestion.id) {
-      this.expandedAssetIds.set(assetIds);
-    }
-  }
-
-  async accept(suggestion: InboxSuggestion): Promise<void> {
-    this.busySuggestionId.set(suggestion.id);
-    try {
-      await this.api.acceptSuggestion(suggestion.id);
-      await this.reload();
-    } finally {
-      this.busySuggestionId.set(null);
-    }
-  }
-
-  async dismiss(suggestion: InboxSuggestion): Promise<void> {
-    this.busySuggestionId.set(suggestion.id);
-    try {
-      await this.api.dismissSuggestion(suggestion.id);
-      this.suggestions.update((list) => list.filter((item) => item.id !== suggestion.id));
-    } finally {
-      this.busySuggestionId.set(null);
-    }
-  }
-
-  formatSpan(memoryOrSuggestion: { startAt: string; endAt: string }): string {
-    const start = new Date(memoryOrSuggestion.startAt);
-    const end = new Date(memoryOrSuggestion.endAt);
-    const sameDay = start.toDateString() === end.toDateString();
-    const dayFormat = new Intl.DateTimeFormat(undefined, {
+  formatSpan(memory: MemorySummary): string {
+    const start = new Date(memory.startAt);
+    const end = new Date(memory.endAt);
+    const format = new Intl.DateTimeFormat(undefined, {
       month: 'long',
       day: 'numeric',
       year: 'numeric',
     });
-    if (sameDay) {
-      return dayFormat.format(start);
-    }
-    return `${dayFormat.format(start)} – ${dayFormat.format(end)}`;
+    return start.toDateString() === end.toDateString()
+      ? format.format(start)
+      : `${format.format(start)} – ${format.format(end)}`;
   }
 
   yearOf(memory: MemorySummary): number {
@@ -118,12 +67,11 @@ export class MemoriesPage implements OnInit {
 
   private async reload(): Promise<void> {
     const [inbox, memories] = await Promise.all([this.api.listInbox(), this.api.listMemories()]);
-    this.suggestions.set(inbox.suggestions);
+    this.suggestionCount.set(inbox.suggestions.length);
     this.memories.set(memories.memories);
     this.isLoaded.set(true);
   }
 
-  /** While indexing runs, keep the page live: fresh suggestions surface as found. */
   private async pollWhileIndexing(): Promise<void> {
     try {
       this.status.set(await this.libraryApi.getStatus());
@@ -132,7 +80,7 @@ export class MemoriesPage implements OnInit {
     }
     if (this.pendingCount() > 0) {
       const { suggestions } = await this.api.listInbox();
-      this.suggestions.set(suggestions);
+      this.suggestionCount.set(suggestions.length);
     }
   }
 }

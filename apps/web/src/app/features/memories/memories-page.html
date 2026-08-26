@@ -1,70 +1,26 @@
-<header class="topbar">
-  <h1>Memories</h1>
-</header>
+<app-topbar />
 
 <main class="memories">
-  @if (suggestions().length > 0) {
-    <section class="inbox" aria-label="Suggested memories">
-      <h2>Looks like something happened</h2>
-      @for (suggestion of suggestions(); track suggestion.id) {
-        <article class="suggestion">
-          <button type="button" class="summary" (click)="toggleExpanded(suggestion)">
-            <div class="mosaic" [class.single]="suggestion.previewAssetIds.length === 1">
-              @for (assetId of suggestion.previewAssetIds; track assetId) {
-                <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
-              }
-            </div>
-            <div class="body">
-              <h3>{{ suggestion.seedTitle }}</h3>
-              <p>{{ suggestion.assetCount }} photos · {{ formatSpan(suggestion) }}</p>
-              <p class="peek">
-                {{ expandedSuggestionId() === suggestion.id ? 'Hide photos' : 'Tap to see the photos' }}
-              </p>
-            </div>
-          </button>
-
-          @if (expandedSuggestionId() === suggestion.id) {
-            <div class="preview-grid">
-              @for (assetId of expandedAssetIds(); track assetId) {
-                <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
-              }
-            </div>
-          }
-
-          @if (canWrite) {
-            <div class="actions">
-              <button
-                type="button"
-                class="primary"
-                [disabled]="busySuggestionId() === suggestion.id"
-                (click)="accept(suggestion)"
-              >
-                Create Memory
-              </button>
-              <button
-                type="button"
-                class="ghost"
-                [disabled]="busySuggestionId() === suggestion.id"
-                (click)="dismiss(suggestion)"
-              >
-                Not an event
-              </button>
-            </div>
-          }
-        </article>
-      }
-    </section>
+  @if (suggestionCount() > 0) {
+    <a class="inbox-banner" routerLink="/memories/inbox">
+      <span class="badge">{{ suggestionCount() }}</span>
+      <span class="text">
+        <strong>Looks like something happened</strong>
+        {{ suggestionCount() === 1 ? '1 suggested memory' : suggestionCount() + ' suggested memories' }} to review
+      </span>
+      <span class="chevron">›</span>
+    </a>
   }
 
-  @if (isLoaded() && memories().length === 0 && suggestions().length === 0) {
+  @if (isLoaded() && memories().length === 0) {
     <section class="empty">
       @if (pendingCount() > 0) {
         <h2>Still indexing your library</h2>
         <p aria-live="polite">
-          {{ pendingCount() }} items to go. Suggestions appear here every couple of
-          minutes as events are found — no need to wait for the whole library.
+          {{ pendingCount() }} items to go. Suggestions appear in the review inbox as
+          events are found — no need to wait for the whole library.
         </p>
-      } @else {
+      } @else if (suggestionCount() === 0) {
         <h2>No memories yet</h2>
         <p>As photos are indexed, Recollect will suggest moments that look like events.</p>
       }

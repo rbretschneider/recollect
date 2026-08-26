@@ -1,0 +1,53 @@
+<header class="topbar">
+  <a class="back" routerLink="/memories" aria-label="Back to memories">‹</a>
+  <h1>Suggested memories</h1>
+  <span class="spacer"></span>
+  @if (queue().length > 0) {
+    <span class="remaining">{{ queue().length }} left</span>
+  }
+</header>
+
+<main class="review">
+  @if (current(); as suggestion) {
+    <article class="card">
+      <header>
+        <h2>{{ suggestion.seedTitle }}</h2>
+        <p>{{ suggestion.assetCount }} photos · {{ formatSpan(suggestion) }}</p>
+      </header>
+
+      <div class="preview" aria-label="Photos in this suggestion">
+        @for (assetId of currentAssetIds(); track assetId) {
+          <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
+        }
+      </div>
+
+      @if (canWrite) {
+        <div class="actions">
+          <button type="button" class="ghost" [disabled]="isBusy()" (click)="dismiss()">
+            Not an event
+          </button>
+          @if (queue().length > 1) {
+            <button type="button" class="ghost" [disabled]="isBusy()" (click)="skip()">
+              Decide later
+            </button>
+          }
+          <button type="button" class="primary" [disabled]="isBusy()" (click)="accept()">
+            Create Memory
+          </button>
+        </div>
+      }
+    </article>
+  } @else if (isLoaded()) {
+    <section class="empty">
+      <h2>All caught up 🎉</h2>
+      @if (reviewedCount() > 0) {
+        <p>You reviewed {{ reviewedCount() }} {{ reviewedCount() === 1 ? 'suggestion' : 'suggestions' }}.</p>
+      } @else {
+        <p>New suggestions appear here as photos are indexed.</p>
+      }
+      <a class="cta" routerLink="/memories">Back to Memories</a>
+    </section>
+  }
+</main>
+
+<app-bottom-nav />

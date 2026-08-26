@@ -21,6 +21,13 @@ export const routes: Routes = [
     loadComponent: () => import('./features/memories/memories-page').then((m) => m.MemoriesPage),
   },
   {
+    // Must precede memories/:id so "inbox" is not read as an id.
+    path: 'memories/inbox',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/memories/inbox-review-page').then((m) => m.InboxReviewPage),
+  },
+  {
     path: 'memories/:id',
     canActivate: [authGuard],
     loadComponent: () =>
