@@ -1,13 +1,17 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { count, eq, sql } from 'drizzle-orm';
-import { stat } from 'fs/promises';
+import { readdir, stat } from 'fs/promises';
+import { basename, join, resolve } from 'path';
 import { v7 as uuidv7 } from 'uuid';
+import { APP_CONFIG } from '../config/app-config';
+import type { AppConfig } from '../config/app-config';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
 import { asset, job, libraryRoot } from '../database/schema';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { SCAN_ROOT_JOB } from './library-job-types';
 import { isFilesystemRoot } from './filesystem-root';
+import { isExcludedDirectory } from './scan-classifier';
 
 /** A library root as exposed to the API. */
 export interface LibraryRootView {
@@ -17,6 +21,18 @@ export interface LibraryRootView {
   enabled: boolean;
   lastScanStartedAt: string | null;
   lastScanCompletedAt: string | null;
+}
+
+/** A directory offered by the library folder picker. */
+export interface BrowseEntry {
+  name: string;
+  path: string;
+}
+
+/** One level of the folder picker: where we are and what's inside. */
+export interface BrowseListing {
+  path: string | null;
+  entries: BrowseEntry[];
 }
 
 /** Aggregate indexing progress for the status panel. */
@@ -33,6 +49,7 @@ export interface LibraryStatus {
 export class LibraryService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
     private readonly queue: JobQueueService,
   ) {}
 
@@ -83,6 +100,55 @@ export class LibraryService {
       })
       .from(job);
     return { ...assets, ...jobs };
+  }
+
+  /**
+   * The folder picker: with no path, lists the configured browse bases that
+   * exist (the container's mounted volumes); with a path, lists its child
+   * directories. Paths outside the bases are refused.
+   */
+  async browse(path: string | undefined): Promise<BrowseListing> {
+    if (!path) {
+      const bases: BrowseEntry[] = [];
+      for (const base of this.config.libraryBrowseBases) {
+        if (await this.isDirectory(base)) {
+          bases.push({ name: basename(base) || base, path: base });
+        }
+      }
+      // A single mounted volume needs no "choose a volume" level.
+      if (bases.length === 1) {
+        return this.browse(bases[0].path);
+      }
+      return { path: null, entries: bases };
+    }
+    this.assertWithinBrowseBases(path);
+    const entries: BrowseEntry[] = [];
+    for (const entry of await readdir(path, { withFileTypes: true })) {
+      if (entry.isDirectory() && !isExcludedDirectory(entry.name, [])) {
+        entries.push({ name: entry.name, path: join(path, entry.name).replaceAll('\\', '/') });
+      }
+    }
+    entries.sort((a, b) => a.name.localeCompare(b.name));
+    return { path, entries };
+  }
+
+  private assertWithinBrowseBases(path: string): void {
+    const resolved = resolve(path).replaceAll('\\', '/');
+    const isInside = this.config.libraryBrowseBases.some((base) => {
+      const resolvedBase = resolve(base).replaceAll('\\', '/');
+      return resolved === resolvedBase || resolved.startsWith(`${resolvedBase}/`);
+    });
+    if (!isInside) {
+      throw new BadRequestException('That folder is outside the mounted library volumes.');
+    }
+  }
+
+  private async isDirectory(path: string): Promise<boolean> {
+    try {
+      return (await stat(path)).isDirectory();
+    } catch {
+      return false;
+    }
   }
 
   private async assertDirectoryExists(path: string): Promise<void> {

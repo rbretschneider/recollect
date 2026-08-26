@@ -3,11 +3,12 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { LibraryApiService } from '../../core/api/library-api.service';
 import { AuthStateService } from '../../core/auth/auth-state.service';
+import { FolderPicker } from '../../shared/folder-picker';
 
 /** First-run wizard: create the admin account, then point Recollect at a photo folder. */
 @Component({
   selector: 'app-setup-page',
-  imports: [FormsModule],
+  imports: [FolderPicker, FormsModule],
   templateUrl: './setup-page.html',
   styleUrl: './setup-page.scss',
 })
@@ -23,7 +24,6 @@ export class SetupPage {
   displayName = '';
   email = '';
   password = '';
-  libraryPath = '';
 
   async createAccount(): Promise<void> {
     this.error.set(null);
@@ -38,11 +38,12 @@ export class SetupPage {
     }
   }
 
-  async addLibrary(): Promise<void> {
+  async addLibrary(path: string): Promise<void> {
     this.error.set(null);
     this.busy.set(true);
     try {
-      await this.library.createRoot(this.libraryPath, 'Photos');
+      const name = path.split(/[\\/]/).filter((part) => part.length > 0).pop() ?? 'Photos';
+      await this.library.createRoot(path, name);
       await this.router.navigateByUrl('/');
     } catch (error) {
       this.error.set(this.messageFrom(error, 'Could not add that folder.'));

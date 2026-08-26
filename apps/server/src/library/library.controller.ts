@@ -1,7 +1,17 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { RequireAdmin } from '../auth/decorators/require-admin.decorator';
 import { CreateRootRequestDto } from './dto/create-root-request.dto';
-import { LibraryRootView, LibraryService, LibraryStatus } from './library.service';
+import { BrowseListing, LibraryRootView, LibraryService, LibraryStatus } from './library.service';
 
 /** Library-root management and indexing status. Roots are admin territory. */
 @Controller('library')
@@ -31,5 +41,12 @@ export class LibraryController {
   @Get('status')
   async status(): Promise<LibraryStatus> {
     return this.library.getStatus();
+  }
+
+  /** Folder picker over the mounted library volumes. */
+  @RequireAdmin()
+  @Get('browse')
+  async browse(@Query('path') path?: string): Promise<BrowseListing> {
+    return this.library.browse(path);
   }
 }

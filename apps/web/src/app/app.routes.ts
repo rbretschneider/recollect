@@ -43,6 +43,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/folders/folders-page').then((m) => m.FoldersPage),
   },
   {
+    path: 'settings',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/settings/settings-page').then((m) => m.SettingsPage),
+  },
+  {
     path: 'trash',
     canActivate: [authGuard],
     loadComponent: () => import('./features/trash/trash-page').then((m) => m.TrashPage),

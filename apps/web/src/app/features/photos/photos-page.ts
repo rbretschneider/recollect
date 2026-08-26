@@ -21,6 +21,7 @@ import { AppDrawer } from '../../shared/app-drawer';
 import { BottomNav } from '../../shared/bottom-nav';
 import { LongPressDirective } from '../../shared/long-press.directive';
 import { AssetViewer } from '../viewer/asset-viewer';
+import { RouterLink } from '@angular/router';
 
 /** One day's worth of photos in the grid. */
 interface DayGroup {
@@ -35,7 +36,7 @@ const STATUS_POLL_MS = 4000;
 /** The main photo timeline: grid grouped by day with infinite scroll. */
 @Component({
   selector: 'app-photos-page',
-  imports: [AlbumPicker, AppDrawer, AssetViewer, BottomNav, LongPressDirective],
+  imports: [AlbumPicker, AppDrawer, AssetViewer, BottomNav, LongPressDirective, RouterLink],
   templateUrl: './photos-page.html',
   styleUrl: './photos-page.scss',
 })
@@ -165,6 +166,10 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
 
   get userInitial(): string {
     return this.userName().charAt(0).toUpperCase();
+  }
+
+  get isAdmin(): boolean {
+    return this.auth.user()?.isAdmin ?? false;
   }
 
   cancelSelecting(): void {

@@ -33,7 +33,10 @@ services:
       TZ: ${TZ:-America/New_York}
     volumes:
       - app-data:/app/data
+      # The in-app folder picker browses everything under /library. One volume:
       - ${LIBRARY_PATH:?set LIBRARY_PATH in .env}:/library
+      # More volumes: add lines like
+      #   - /mnt/tank/videos:/library/videos
     ports:
       - "${SERVER_PORT:-8080}:8080"
 

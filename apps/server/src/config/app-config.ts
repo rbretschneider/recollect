@@ -15,6 +15,11 @@ const configSchema = z.object({
   webDistDir: z.string().default(''),
   /** Directory of SQL migrations to apply at boot; empty disables (dev uses drizzle-kit). */
   migrationsDir: z.string().default(''),
+  /** Comma-separated bases the library folder picker may browse (mounted volumes). */
+  libraryBrowseBases: z
+    .string()
+    .default('/library')
+    .transform((value) => value.split(',').map((base) => base.trim()).filter((base) => base.length > 0)),
 });
 
 /** Validated application configuration, loaded once from the environment at startup. */
@@ -41,6 +46,7 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     scanIntervalHours: env.SCAN_INTERVAL_HOURS,
     webDistDir: env.WEB_DIST_DIR,
     migrationsDir: env.MIGRATIONS_DIR,
+    libraryBrowseBases: env.LIBRARY_BROWSE_BASES,
   });
   if (!parsed.success) {
     throw new Error(`Invalid configuration: ${parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ')}`);

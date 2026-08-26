@@ -1,7 +1,7 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { LibraryRootView, LibraryStatus } from './api-models';
+import { BrowseListing, LibraryRootView, LibraryStatus } from './api-models';
 
 /** Raw HTTP calls for library roots and indexing status. */
 @Injectable({ providedIn: 'root' })
@@ -26,5 +26,14 @@ export class LibraryApiService {
     return firstValueFrom(
       this.http.post<{ accepted: true }>(`/api/v1/library/roots/${rootId}/scan`, {}),
     );
+  }
+
+  /** Folder picker over the server's mounted library volumes (admin). */
+  browse(path?: string): Promise<BrowseListing> {
+    let params = new HttpParams();
+    if (path) {
+      params = params.set('path', path);
+    }
+    return firstValueFrom(this.http.get<BrowseListing>('/api/v1/library/browse', { params }));
   }
 }

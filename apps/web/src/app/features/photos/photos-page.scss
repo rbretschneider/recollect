@@ -253,5 +253,18 @@
     color: var(--text);
     margin-bottom: 0.25rem;
   }
+
+  .cta {
+    display: inline-grid;
+    place-items: center;
+    margin-top: 1rem;
+    min-height: 44px;
+    padding: 0 1.25rem;
+    border-radius: 0.5rem;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-weight: 600;
+    text-decoration: none;
+  }
 }
 

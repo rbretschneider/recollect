@@ -21,6 +21,12 @@ export class UsersService {
     return row.value;
   }
 
+  /** All active accounts, for the admin settings page. */
+  async list(): Promise<UserProfile[]> {
+    const rows = await this.db.select().from(userAccount).orderBy(userAccount.createdAt);
+    return rows.filter((row) => row.disabledAt === null).map((row) => this.toProfile(row));
+  }
+
   async findById(id: string): Promise<UserProfile | null> {
     const [row] = await this.db.select().from(userAccount).where(eq(userAccount.id, id)).limit(1);
     if (!row || row.disabledAt !== null) {

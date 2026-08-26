@@ -19,7 +19,12 @@
   @if (showEmptyState) {
     <section class="empty">
       <h2>No photos yet</h2>
-      <p>Once a library folder is indexed, your photos will appear here automatically.</p>
+      @if (isAdmin) {
+        <p>Point Recollect at your photo folder to get started.</p>
+        <a class="cta" routerLink="/settings">Add a photo folder</a>
+      } @else {
+        <p>Once a library folder is indexed, your photos will appear here automatically.</p>
+      }
     </section>
   }
 

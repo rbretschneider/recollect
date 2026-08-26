@@ -1,0 +1,36 @@
+@if (!isLoaded()) {
+  <p class="hint">Looking for photo folders…</p>
+} @else if (isManualMode()) {
+  <div class="manual">
+    <label>
+      Folder path
+      <input name="manualPath" [(ngModel)]="manualPath" placeholder="/library/photos" />
+    </label>
+    <button type="button" class="primary" (click)="useManual()">Use this folder</button>
+  </div>
+} @else {
+  <div class="browser">
+    <div class="path-row">
+      @if (canGoBack) {
+        <button type="button" class="nav" aria-label="Back" (click)="goBack()">‹</button>
+      }
+      <span class="path">{{ currentPath() ?? 'Mounted volumes' }}</span>
+    </div>
+
+    <div class="list" role="listbox" aria-label="Folders">
+      @for (entry of entries(); track entry.path) {
+        <button type="button" (click)="open(entry)">📁 {{ entry.name }}</button>
+      }
+      @if (entries().length === 0) {
+        <p class="hint">No subfolders here.</p>
+      }
+    </div>
+
+    @if (currentPath(); as path) {
+      <button type="button" class="primary" (click)="useCurrent()">
+        Use “{{ path }}”
+      </button>
+    }
+    <button type="button" class="ghost" (click)="switchToManual()">Type a path instead</button>
+  </div>
+}

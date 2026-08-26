@@ -36,24 +36,13 @@
       <p class="hint">
         Recollect indexes this folder in place — nothing is copied or moved.
       </p>
-      <form (ngSubmit)="addLibrary()">
-        <label>
-          Folder path
-          <input
-            name="libraryPath"
-            [(ngModel)]="libraryPath"
-            required
-            placeholder="\\nas\Photos or D:\Photos"
-          />
-        </label>
-        @if (error(); as message) {
-          <p class="error" role="alert">{{ message }}</p>
-        }
-        <button type="submit" [disabled]="busy()">
-          {{ busy() ? 'Adding…' : 'Start indexing' }}
-        </button>
-        <button type="button" class="ghost" (click)="skipLibrary()">Skip for now</button>
-      </form>
+      @if (error(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+      <app-folder-picker (picked)="addLibrary($event)" />
+      <button type="button" class="ghost" (click)="skipLibrary()">
+        Skip — I'll set this up in Settings later
+      </button>
     }
   </section>
 </main>

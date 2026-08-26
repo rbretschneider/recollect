@@ -23,6 +23,11 @@
     <button type="button" disabled title="Coming soon">
       <span class="icon">📍</span> Places <span class="soon">soon</span>
     </button>
+    @if (isAdmin) {
+      <a routerLink="/settings" (click)="closed.emit()">
+        <span class="icon">⚙️</span> Settings
+      </a>
+    }
   </nav>
 
   @if (isAdmin) {

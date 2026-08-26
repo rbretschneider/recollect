@@ -136,6 +136,18 @@ export interface SharedView {
   journal: Array<{ authorName: string; bodyMd: string }>;
 }
 
+/** Mirrors the server's BrowseEntry. */
+export interface BrowseEntry {
+  name: string;
+  path: string;
+}
+
+/** Mirrors the server's BrowseListing. */
+export interface BrowseListing {
+  path: string | null;
+  entries: BrowseEntry[];
+}
+
 /** Mirrors the server's LibraryStatus. */
 export interface LibraryStatus {
   totalAssets: number;
