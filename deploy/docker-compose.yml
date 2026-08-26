@@ -1,6 +1,5 @@
 # Production stack: pulls the prebuilt image from GHCR instead of building.
-# Lives on the server at /opt/recollect next to a .env file with:
-#   DB_PASSWORD, AUTH_TOKEN_SECRET, LIBRARY_PATH  (and optional tuning vars)
+# Lives on the server at /opt/recollect next to a .env file (see env.example).
 name: recollect
 
 services:
