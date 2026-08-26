@@ -53,6 +53,9 @@ export interface AssetDetail {
   gpsLon: number | null;
   relPath: string | null;
   sizeBytes: number | null;
+  hasThumbnail: boolean;
+  /** Per-stage failure reasons, e.g. { thumbs: "unsupported format" }. */
+  stageErrors: Record<string, string> | null;
 }
 
 const DEFAULT_PAGE_SIZE = 100;
@@ -139,6 +142,8 @@ export class AssetsService {
       gpsLon: row.gpsLon,
       relPath: file?.relPath ?? null,
       sizeBytes: file?.sizeBytes ?? null,
+      hasThumbnail: row.stageThumbsAt !== null,
+      stageErrors: row.stageErrors as Record<string, string> | null,
     };
   }
 

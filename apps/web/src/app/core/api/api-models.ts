@@ -52,6 +52,8 @@ export interface AssetDetail {
   gpsLon: number | null;
   relPath: string | null;
   sizeBytes: number | null;
+  hasThumbnail: boolean;
+  stageErrors: Record<string, string> | null;
 }
 
 /** Mirrors the server's InboxSuggestion. */

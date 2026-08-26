@@ -52,8 +52,12 @@ export class IngestService {
     await this.linkFile(payload, assetId, stats);
     // A file moved on disk re-links here; restore the asset if a scan marked it missing.
     await this.recomputeAssetStatus(assetId);
-    if (!existing) {
+    // Run thumbnails for new assets AND for existing ones still missing them —
+    // a job that failed mid-thumbnail must not skip the stage forever on retry.
+    if (!existing || existing.stageThumbsAt === null) {
       await this.runThumbnailStage(assetId, absolutePath, typeInfo);
+    }
+    if (!existing) {
       await this.queuePlaybackTranscodeIfNeeded(assetId);
     }
     // Same priority as ingest with a short delay: during a large import,
@@ -88,9 +92,11 @@ export class IngestService {
     return hash.digest('hex');
   }
 
-  private async findAssetByHash(contentHash: string): Promise<{ id: string } | null> {
+  private async findAssetByHash(
+    contentHash: string,
+  ): Promise<{ id: string; stageThumbsAt: Date | null } | null> {
     const [row] = await this.db
-      .select({ id: asset.id })
+      .select({ id: asset.id, stageThumbsAt: asset.stageThumbsAt })
       .from(asset)
       .where(eq(asset.contentHash, contentHash))
       .limit(1);
@@ -223,6 +229,70 @@ export class IngestService {
   }
 
   /** Full status derivation (data-model.md §3.2): present → active, else trashed → trashed, else missing. */
+  /**
+   * Re-runs metadata extraction and thumbnailing for one existing asset
+   * (user-triggered retry after a failure, or after a pipeline fix).
+   * User-corrected capture times are never overwritten (data-model.md §5.3).
+   */
+  async reprocessAsset(assetId: string): Promise<void> {
+    const [row] = await this.db
+      .select({
+        id: asset.id,
+        capturedAtSource: asset.capturedAtSource,
+        relPath: assetFile.relPath,
+        rootPath: libraryRoot.path,
+      })
+      .from(asset)
+      .innerJoin(assetFile, and(eq(assetFile.assetId, asset.id), eq(assetFile.state, 'present')))
+      .innerJoin(libraryRoot, eq(libraryRoot.id, assetFile.rootId))
+      .where(eq(asset.id, assetId))
+      .limit(1);
+    if (!row) {
+      throw new NotFoundException('That item has no present file to reprocess.');
+    }
+    const absolutePath = join(row.rootPath, row.relPath);
+    const typeInfo = classifyMediaFile(basename(row.relPath));
+    if (!typeInfo) {
+      return;
+    }
+    await this.db
+      .update(asset)
+      .set({ stageErrors: null, updatedAt: new Date() })
+      .where(eq(asset.id, assetId));
+    const stats = await stat(absolutePath);
+    const metadata = await this.extractSafely(absolutePath, typeInfo, stats.mtime);
+    if (metadata) {
+      await this.db
+        .update(asset)
+        .set({
+          width: metadata.width,
+          height: metadata.height,
+          durationMs: metadata.durationMs,
+          orientation: metadata.orientation,
+          gpsLat: metadata.gpsLat,
+          gpsLon: metadata.gpsLon,
+          gpsAltM: metadata.gpsAltM,
+          videoCodec: metadata.videoCodec,
+          cameraMake: metadata.cameraMake,
+          cameraModel: metadata.cameraModel,
+          lensModel: metadata.lensModel,
+          stageMetadataAt: new Date(),
+          ...(row.capturedAtSource === 'user'
+            ? {}
+            : {
+                capturedAt: metadata.capturedAt,
+                capturedTzOffsetMin: metadata.capturedTzOffsetMin,
+                capturedAtSource: metadata.capturedAtSource,
+                capturedDay: toCapturedDay(metadata.capturedAt, metadata.capturedTzOffsetMin),
+              }),
+          updatedAt: new Date(),
+        })
+        .where(eq(asset.id, assetId));
+    }
+    await this.runThumbnailStage(assetId, absolutePath, typeInfo);
+    await this.queuePlaybackTranscodeIfNeeded(assetId);
+  }
+
   /**
    * The last pipeline step for videos browsers can't decode: a background
    * playback transcode, behind ingest work so photos appear first. Opening

@@ -3,14 +3,19 @@ import {
   Controller,
   Get,
   Header,
+  HttpCode,
   HttpStatus,
   Param,
   ParseIntPipe,
   ParseUUIDPipe,
+  Post,
   Query,
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { RequireGrant } from '../auth/decorators/require-grant.decorator';
+import { JobQueueService } from '../jobs/job-queue.service';
+import { REPROCESS_ASSET_JOB } from '../library/handlers/reprocess-asset.handler';
 import { isThumbnailSize } from '../media/thumbnail-store';
 import { AssetsService, TimelinePage } from './assets.service';
 import type { AssetDetail } from './assets.service';
@@ -18,7 +23,10 @@ import type { AssetDetail } from './assets.service';
 /** Read endpoints for the photo timeline and thumbnails. */
 @Controller('assets')
 export class AssetsController {
-  constructor(private readonly assets: AssetsService) {}
+  constructor(
+    private readonly assets: AssetsService,
+    private readonly queue: JobQueueService,
+  ) {}
 
   @Get()
   async list(
@@ -35,6 +43,20 @@ export class AssetsController {
   @Get(':id/detail')
   async detail(@Param('id', ParseUUIDPipe) id: string): Promise<AssetDetail> {
     return this.assets.getDetail(id);
+  }
+
+  /** Queues a re-run of metadata + thumbnails for one item (user retry). */
+  @RequireGrant('write')
+  @Post(':id/reprocess')
+  @HttpCode(HttpStatus.ACCEPTED)
+  async reprocess(@Param('id', ParseUUIDPipe) id: string): Promise<{ accepted: true }> {
+    await this.assets.getDetail(id); // 404 for unknown ids before queueing.
+    await this.queue.enqueue(
+      REPROCESS_ASSET_JOB,
+      { assetId: id },
+      { dedupeKey: `${REPROCESS_ASSET_JOB}:${id}`, priority: 20 },
+    );
+    return { accepted: true };
   }
 
   /** Streams the original file. express sendFile handles Range requests for video. */

@@ -49,25 +49,40 @@ export class ThumbnailService {
   }
 
   private async extractVideoPoster(absolutePath: string): Promise<Buffer> {
+    // Prefer a frame past the first second (first frames are often black),
+    // but clips shorter than that need the very first frame instead.
+    const frameAtOneSecond = await this.extractFrame(absolutePath, VIDEO_POSTER_SEEK_SECONDS);
+    if (frameAtOneSecond.length > 0) {
+      return frameAtOneSecond;
+    }
+    const firstFrame = await this.extractFrame(absolutePath, 0);
+    if (firstFrame.length === 0) {
+      throw new Error('ffmpeg produced no poster frame (tried 1s and 0s).');
+    }
+    return firstFrame;
+  }
+
+  private async extractFrame(absolutePath: string, seekSeconds: number): Promise<Buffer> {
     if (!ffmpegPath) {
       throw new Error('ffmpeg binary is not available on this platform.');
     }
-    const { stdout } = await execFileAsync(
-      ffmpegPath,
-      [
-        '-ss', String(VIDEO_POSTER_SEEK_SECONDS),
-        '-i', absolutePath,
-        '-frames:v', '1',
-        '-f', 'image2pipe',
-        '-vcodec', 'png',
-        '-',
-      ],
-      { encoding: 'buffer', maxBuffer: FFMPEG_MAX_BUFFER_BYTES },
-    );
-    if (stdout.length === 0) {
-      throw new Error('ffmpeg produced no poster frame.');
+    try {
+      const { stdout } = await execFileAsync(
+        ffmpegPath,
+        [
+          '-ss', String(seekSeconds),
+          '-i', absolutePath,
+          '-frames:v', '1',
+          '-f', 'image2pipe',
+          '-vcodec', 'png',
+          '-',
+        ],
+        { encoding: 'buffer', maxBuffer: FFMPEG_MAX_BUFFER_BYTES },
+      );
+      return stdout;
+    } catch {
+      return Buffer.alloc(0); // A failed seek is "no frame", not a hard error yet.
     }
-    return stdout;
   }
 
   /** Sharp reports pre-rotation dimensions; swap when EXIF orientation turns the image. */

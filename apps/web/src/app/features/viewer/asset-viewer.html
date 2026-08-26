@@ -58,6 +58,26 @@
       <aside class="info" aria-label="Photo details">
         <h3>{{ formatDate(asset.capturedAt) }}</h3>
         @if (detail(); as info) {
+          @if (processingProblem(info); as problem) {
+            <div class="problem" role="alert">
+              <p>⚠ {{ problem }}</p>
+              @if (canWrite) {
+                <button
+                  type="button"
+                  [disabled]="reprocessState() === 'running'"
+                  (click)="reprocess()"
+                >
+                  @if (reprocessState() === 'running') {
+                    Reprocessing…
+                  } @else if (reprocessState() === 'done') {
+                    Fixed ✓
+                  } @else {
+                    Try again
+                  }
+                </button>
+              }
+            </div>
+          }
           <dl>
             @if (info.cameraMake || info.cameraModel) {
               <div>

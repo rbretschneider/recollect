@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { Dirent } from 'fs';
 import { readdir, stat } from 'fs/promises';
 import { basename, join, relative } from 'path';
@@ -10,6 +10,7 @@ import { JobQueueService } from '../jobs/job-queue.service';
 import { classifyMediaFile } from '../media/media-types';
 import { DETECT_EVENTS_JOB } from '../memories/handlers/detect-events.handler';
 import { TRANSCODE_BACKFILL_JOB } from '../assets/handlers/transcode-backfill.handler';
+import { REPROCESS_ASSET_JOB } from './handlers/reprocess-asset.handler';
 import { PURGE_TRASH_JOB } from '../trash/handlers/purge-trash.handler';
 import { INGEST_FILE_JOB } from './library-job-types';
 import { classifyScannedFile, isExcludedDirectory, KnownFileState } from './scan-classifier';
@@ -61,6 +62,7 @@ export class ScannerService {
       {},
       { dedupeKey: TRANSCODE_BACKFILL_JOB, priority: 140 },
     );
+    await this.queueThumbnailRepairs();
     this.logger.log(`Scan of ${root.path}: ${enqueued} enqueued, ${missing} missing.`);
     return { enqueued, missing };
   }
@@ -185,6 +187,29 @@ export class ScannerService {
         .update(asset)
         .set({ status, updatedAt: new Date() })
         .where(eq(asset.id, assetId));
+    }
+  }
+
+  /**
+   * Assets that never got thumbnails (failed stage, or a job that died
+   * mid-run) are re-queued for processing after every scan — a scan can't
+   * re-ingest them (their files are unchanged), so they need this sweep.
+   */
+  private async queueThumbnailRepairs(): Promise<void> {
+    const broken = await this.db
+      .select({ id: asset.id })
+      .from(asset)
+      .where(sql`${asset.status} = 'active' and ${asset.stageThumbsAt} is null`)
+      .limit(500);
+    for (const row of broken) {
+      await this.queue.enqueue(
+        REPROCESS_ASSET_JOB,
+        { assetId: row.id },
+        { dedupeKey: `${REPROCESS_ASSET_JOB}:${row.id}`, priority: 130 },
+      );
+    }
+    if (broken.length > 0) {
+      this.logger.log(`Queued thumbnail repair for ${broken.length} assets.`);
     }
   }
 
