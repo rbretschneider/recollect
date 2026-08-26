@@ -6,11 +6,8 @@
   (touchend)="onTouchEnd($event)"
 >
   <header class="controls">
-    <button type="button" class="icon" aria-label="Close" (click)="close()">✕</button>
     <span class="spacer"></span>
-    @if (allowInfo()) {
-      <button type="button" class="icon" aria-label="Info" (click)="toggleInfo()">ⓘ</button>
-    }
+    <button type="button" class="icon" aria-label="Close" (click)="close()">✕</button>
   </header>
 
   @if (current(); as asset) {
@@ -27,6 +24,12 @@
     }
     @if (index() < assets().length - 1) {
       <button type="button" class="nav next" aria-label="Next" (click)="next()">›</button>
+    }
+
+    @if (allowInfo() && !showInfo()) {
+      <footer class="bottombar">
+        <button type="button" class="bar-action" (click)="toggleInfo()">ⓘ Info</button>
+      </footer>
     }
 
     @if (showInfo()) {

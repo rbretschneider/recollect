@@ -57,6 +57,32 @@
   }
 }
 
+.bottombar {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, rgb(0 0 0 / 65%));
+  transition: opacity 0.2s ease;
+
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+.bar-action {
+  min-height: 44px;
+  padding: 0 1.1rem;
+  border: none;
+  border-radius: 1.4rem;
+  background: rgb(0 0 0 / 45%);
+  color: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
 .nav {
   position: absolute;
   top: 50%;

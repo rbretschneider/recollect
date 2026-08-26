@@ -4,6 +4,8 @@ import {
   effect,
   HostListener,
   input,
+  OnDestroy,
+  OnInit,
   output,
   signal,
 } from '@angular/core';
@@ -25,7 +27,7 @@ const SWIPE_THRESHOLD_PX = 60;
   templateUrl: './asset-viewer.html',
   styleUrl: './asset-viewer.scss',
 })
-export class AssetViewer {
+export class AssetViewer implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);
 
   /** The list being browsed and the index to start at. */
@@ -44,6 +46,13 @@ export class AssetViewer {
   readonly current = computed<TimelineAsset | null>(() => this.assets()[this.index()] ?? null);
 
   private touchStartX: number | null = null;
+  private hasHistoryEntry = false;
+  private readonly onPopState = (): void => {
+    // The Android/browser back button pops our entry: close the viewer,
+    // never the page underneath (the PhotoPrism-PWA failure mode).
+    this.hasHistoryEntry = false;
+    this.closed.emit();
+  };
 
   constructor() {
     effect(() => {
@@ -56,6 +65,22 @@ export class AssetViewer {
         void this.loadDetail(asset.id);
       }
     });
+  }
+
+  ngOnInit(): void {
+    history.pushState({ recollectViewer: true }, '', location.href);
+    this.hasHistoryEntry = true;
+    window.addEventListener('popstate', this.onPopState);
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('popstate', this.onPopState);
+    // Closed by other means (X, Escape)? Consume our history entry so the
+    // NEXT back press doesn't need pressing twice.
+    if (this.hasHistoryEntry) {
+      this.hasHistoryEntry = false;
+      history.back();
+    }
   }
 
   imageUrl(assetId: string): string {
