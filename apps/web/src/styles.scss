@@ -20,6 +20,16 @@ html {
   color-scheme: dark;
 }
 
+/* Motion is decoration here, never information — honor the OS setting wholesale. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
 body {
   margin: 0;
   background: var(--bg);

@@ -15,10 +15,12 @@ import { LibraryStatus, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { TrashApiService } from '../../core/api/trash-api.service';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
+import { formatDuration } from '../../core/format-duration';
 import { AlbumPicker } from '../../shared/album-picker';
+import { AppDrawer } from '../../shared/app-drawer';
 import { BottomNav } from '../../shared/bottom-nav';
+import { LongPressDirective } from '../../shared/long-press.directive';
 import { AssetViewer } from '../viewer/asset-viewer';
-import { RouterLink } from '@angular/router';
 
 /** One day's worth of photos in the grid. */
 interface DayGroup {
@@ -33,7 +35,7 @@ const STATUS_POLL_MS = 4000;
 /** The main photo timeline: grid grouped by day with infinite scroll. */
 @Component({
   selector: 'app-photos-page',
-  imports: [AlbumPicker, AssetViewer, BottomNav, RouterLink],
+  imports: [AlbumPicker, AppDrawer, AssetViewer, BottomNav, LongPressDirective],
   templateUrl: './photos-page.html',
   styleUrl: './photos-page.scss',
 })
@@ -57,6 +59,7 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
   readonly isSelecting = signal(false);
   readonly selectedIds = signal<ReadonlySet<string>>(new Set());
   readonly isPickingAlbum = signal(false);
+  readonly isDrawerOpen = signal(false);
   readonly undoIds = signal<string[]>([]);
   readonly isLoading = signal(false);
   readonly isComplete = signal(false);
@@ -143,8 +146,25 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
     }
   }
 
+  /** PhotoPrism-PWA gesture: press-and-hold a tile starts selection with it. */
+  onTileLongPress(asset: TimelineAsset): void {
+    if (!this.canWrite || this.isSelecting()) {
+      return;
+    }
+    this.isSelecting.set(true);
+    this.toggleSelected(asset.id);
+  }
+
   startSelecting(): void {
     this.isSelecting.set(true);
+  }
+
+  durationLabel(asset: TimelineAsset): string {
+    return asset.durationMs === null ? '' : formatDuration(asset.durationMs);
+  }
+
+  get userInitial(): string {
+    return this.userName().charAt(0).toUpperCase();
   }
 
   cancelSelecting(): void {

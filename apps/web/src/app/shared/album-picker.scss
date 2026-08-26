@@ -3,6 +3,11 @@
   inset: 0;
   z-index: 24;
   background: rgb(0 0 0 / 55%);
+  transition: opacity 0.2s ease;
+
+  @starting-style {
+    opacity: 0;
+  }
 }
 
 .picker {
@@ -15,6 +20,11 @@
   border: 1px solid var(--border);
   border-radius: 1rem 1rem 0 0;
   padding: 1.1rem 1.1rem calc(1.1rem + env(safe-area-inset-bottom));
+  transition: translate 0.22s ease;
+
+  @starting-style {
+    translate: 0 100%;
+  }
 
   h2 {
     margin: 0 0 0.75rem;

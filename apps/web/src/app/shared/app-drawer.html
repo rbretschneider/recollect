@@ -1,0 +1,51 @@
+<div class="scrim" (click)="closed.emit()"></div>
+<aside class="drawer" role="dialog" aria-label="Menu">
+  <header class="account">
+    <span class="avatar" aria-hidden="true">{{ userInitial }}</span>
+    <div>
+      <h2>{{ userName }}</h2>
+      <p>{{ userEmail }}</p>
+    </div>
+  </header>
+
+  <nav class="items">
+    @if (canDelete) {
+      <a routerLink="/trash" (click)="closed.emit()">
+        <span class="icon">🗑</span> Trash
+      </a>
+    }
+    <a routerLink="/folders" (click)="closed.emit()">
+      <span class="icon">📁</span> Folders
+    </a>
+    <button type="button" disabled title="Coming soon">
+      <span class="icon">🙂</span> People <span class="soon">soon</span>
+    </button>
+    <button type="button" disabled title="Coming soon">
+      <span class="icon">📍</span> Places <span class="soon">soon</span>
+    </button>
+  </nav>
+
+  @if (isAdmin) {
+    <section class="library">
+      <h3>Library</h3>
+      @if (status(); as stats) {
+        <p>
+          {{ stats.totalAssets }} items indexed
+          @if (stats.queuedJobs + stats.runningJobs > 0) {
+            · {{ stats.queuedJobs + stats.runningJobs }} processing
+          }
+          @if (stats.failedStages > 0) {
+            · <span class="warn">{{ stats.failedStages }} failed</span>
+          }
+        </p>
+      }
+      <button type="button" class="outline" [disabled]="isRescanBusy()" (click)="rescan()">
+        {{ isRescanBusy() ? 'Scanning…' : 'Rescan library' }}
+      </button>
+    </section>
+  }
+
+  <footer>
+    <button type="button" class="outline" (click)="signOut()">Sign out</button>
+  </footer>
+</aside>

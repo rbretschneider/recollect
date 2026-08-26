@@ -7,13 +7,12 @@
   @if (canWrite && !isSelecting()) {
     <button type="button" class="topbar-action" (click)="startSelecting()">Select</button>
   }
-  @if (canDelete && !isSelecting()) {
-    <a class="topbar-action" routerLink="/trash" aria-label="Trash">🗑</a>
-  }
   @if (isSelecting()) {
     <button type="button" class="topbar-action" (click)="cancelSelecting()">Cancel</button>
   }
-  <span class="user">{{ userName() }}</span>
+  <button type="button" class="avatar" aria-label="Menu" (click)="isDrawerOpen.set(true)">
+    {{ userInitial }}
+  </button>
 </header>
 
 <main class="timeline">
@@ -33,10 +32,12 @@
             <button
               type="button"
               class="tile-button"
+              appLongPress
               [class.selected]="isSelected(asset.id)"
               [attr.aria-label]="'Open photo from ' + group.label"
               [attr.aria-pressed]="isSelecting() ? isSelected(asset.id) : null"
               (click)="onTileClick(asset)"
+              (longPress)="onTileLongPress(asset)"
             >
               @if (asset.hasThumbnail) {
                 <img
@@ -49,7 +50,9 @@
                 <div class="placeholder" aria-label="Photo still processing"></div>
               }
               @if (asset.mediaType === 'video') {
-                <span class="badge" aria-label="Video">▶</span>
+                <span class="badge video-badge" [attr.aria-label]="'Video, ' + durationLabel(asset)">
+                  ▶ {{ durationLabel(asset) }}
+                </span>
               }
             </button>
           </figure>
@@ -81,6 +84,10 @@
 
 @if (isPickingAlbum()) {
   <app-album-picker (picked)="addSelectionToAlbum($event)" (cancelled)="cancelAlbumPick()" />
+}
+
+@if (isDrawerOpen()) {
+  <app-drawer (closed)="isDrawerOpen.set(false)" />
 }
 
 @if (undoIds().length > 0) {

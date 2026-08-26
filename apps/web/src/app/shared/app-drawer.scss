@@ -1,0 +1,157 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 28;
+  background: rgb(0 0 0 / 50%);
+  transition: opacity 0.2s ease;
+
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+.drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 29;
+  width: min(20rem, 85vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  padding: 1.25rem 1rem calc(1rem + env(safe-area-inset-bottom));
+  transition: translate 0.22s ease;
+
+  @starting-style {
+    translate: 100% 0;
+  }
+}
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+
+  .avatar {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+}
+
+.items {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.75rem 0;
+
+  a,
+  button {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 44px;
+    padding: 0 0.6rem;
+    border: none;
+    border-radius: 0.6rem;
+    background: none;
+    color: var(--text);
+    font-size: 0.95rem;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+
+    &:hover:not(:disabled) {
+      background: var(--surface-raised);
+    }
+
+    &:disabled {
+      color: var(--text-muted);
+      cursor: default;
+    }
+
+    .icon {
+      width: 1.5rem;
+      text-align: center;
+    }
+
+    .soon {
+      margin-left: auto;
+      font-size: 0.7rem;
+      padding: 0.1rem 0.45rem;
+      border-radius: 1rem;
+      background: var(--surface-raised);
+      color: var(--text-muted);
+    }
+  }
+}
+
+.library {
+  padding: 0.75rem 0.6rem;
+  border-top: 1px solid var(--border);
+
+  h3 {
+    margin: 0 0 0.25rem;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+
+  p {
+    margin: 0 0 0.6rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .warn {
+    color: var(--danger);
+  }
+}
+
+footer {
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.outline {
+  min-height: 40px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: none;
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrim,
+  .drawer {
+    transition: none;
+  }
+}

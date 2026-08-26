@@ -21,4 +21,10 @@ export class LibraryApiService {
   getStatus(): Promise<LibraryStatus> {
     return firstValueFrom(this.http.get<LibraryStatus>('/api/v1/library/status'));
   }
+
+  rescan(rootId: string): Promise<{ accepted: true }> {
+    return firstValueFrom(
+      this.http.post<{ accepted: true }>(`/api/v1/library/roots/${rootId}/scan`, {}),
+    );
+  }
 }

@@ -26,9 +26,24 @@
     flex: 1;
   }
 
-  .user {
-    color: var(--text-muted);
-    font-size: 0.9rem;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+
+  &:active {
+    transform: scale(0.92);
   }
 }
 
@@ -61,6 +76,12 @@
   background: var(--surface-raised);
   border: 1px solid var(--border);
   box-shadow: 0 6px 24px rgb(0 0 0 / 40%);
+  transition: translate 0.2s ease, opacity 0.2s ease;
+
+  @starting-style {
+    translate: 0 0.75rem;
+    opacity: 0;
+  }
 
   button {
     min-height: 40px;
@@ -95,6 +116,12 @@
   border-radius: 0.75rem;
   background: var(--surface-raised);
   border: 1px solid var(--border);
+  transition: translate 0.2s ease, opacity 0.2s ease;
+
+  @starting-style {
+    translate: 0 0.75rem;
+    opacity: 0;
+  }
 
   button {
     border: none;
@@ -168,15 +195,28 @@
     height: 100%;
     object-fit: cover;
     display: block;
+    // Thumbnails fade in as they arrive instead of popping.
+    opacity: 1;
+    transition: opacity 0.25s ease;
+
+    @starting-style {
+      opacity: 0;
+    }
   }
 
-  .badge {
+  .video-badge {
     position: absolute;
-    top: 0.4rem;
-    right: 0.4rem;
-    font-size: 0.7rem;
+    bottom: 0.35rem;
+    right: 0.35rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 1rem;
+    background: rgb(0 0 0 / 55%);
     color: white;
-    text-shadow: 0 1px 2px rgb(0 0 0 / 60%);
+    font-size: 0.7rem;
+    font-variant-numeric: tabular-nums;
   }
 }
 
