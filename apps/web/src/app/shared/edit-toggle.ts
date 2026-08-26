@@ -14,7 +14,7 @@ import { EditModeService } from '../core/edit-mode.service';
         [attr.aria-label]="editMode.isEditing() ? 'Done editing' : 'Edit'"
         (click)="editMode.toggle()"
       >
-        {{ editMode.isEditing() ? 'Done' : '✎' }}
+        {{ editMode.isEditing() ? '✓ Done' : '✎ Edit' }}
       </button>
     }
   `,
@@ -22,14 +22,13 @@ import { EditModeService } from '../core/edit-mode.service';
     .toggle {
       display: grid;
       place-items: center;
-      min-width: 38px;
-      min-height: 38px;
-      padding: 0 0.6rem;
+      min-height: 40px;
+      padding: 0 0.9rem;
       border: 1px solid var(--border);
       border-radius: 0.5rem;
       background: var(--surface);
-      color: var(--text-muted);
-      font-size: 0.95rem;
+      color: var(--text);
+      font-size: 0.9rem;
       cursor: pointer;
       transition: background-color 0.15s ease, color 0.15s ease;
 

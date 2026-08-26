@@ -1,4 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
+import { NavigationStart, Router } from '@angular/router';
 import { AuthStateService } from './auth/auth-state.service';
 
 /**
@@ -12,6 +13,16 @@ export class EditModeService {
   private readonly auth = inject(AuthStateService);
 
   private readonly isEditingRaw = signal(false);
+
+  constructor() {
+    // Editing is a per-page state of mind: leaving the page always ends it,
+    // so a forgotten edit toggle never haunts the next screen.
+    inject(Router).events.subscribe((event) => {
+      if (event instanceof NavigationStart) {
+        this.isEditingRaw.set(false);
+      }
+    });
+  }
 
   /** True only for users who can write AND have switched editing on. */
   readonly isEditing = computed(() => {

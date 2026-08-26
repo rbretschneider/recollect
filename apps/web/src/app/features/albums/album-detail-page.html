@@ -3,16 +3,18 @@
     <a class="back" routerLink="/albums" aria-label="Back to albums">‹</a>
     <h1>{{ album.title }}</h1>
     <span class="spacer"></span>
-    @if (canWrite) {
-      <app-share-button targetType="album" [targetId]="album.id" />
-      <app-edit-toggle />
-    }
-    @if (editMode.isEditing()) {
-      <button type="button" class="danger-link" (click)="deleteAlbum()">Delete</button>
-    }
   </header>
 
   <main class="album">
+    @if (canWrite) {
+      <section class="manage" aria-label="Album actions">
+        <app-share-button targetType="album" [targetId]="album.id" />
+        <app-edit-toggle />
+        @if (editMode.isEditing()) {
+          <button type="button" class="danger-link" (click)="deleteAlbum()">Delete album</button>
+        }
+      </section>
+    }
     @if (album.description) {
       <p class="description">{{ album.description }}</p>
     }

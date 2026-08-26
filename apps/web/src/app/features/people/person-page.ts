@@ -36,10 +36,32 @@ export class PersonPage implements OnInit {
   readonly mergeFilter = signal('');
   readonly saveState = signal<'idle' | 'saved'>('idle');
   readonly isBusy = signal(false);
+  /** Mirrors the name input so suggestions react as the user types. */
+  readonly nameQuery = signal('');
 
   nameDraft = '';
 
   readonly title = computed(() => this.person()?.name ?? 'Who’s this?');
+
+  /**
+   * Existing named people matching what's being typed — the same kid years
+   * apart clusters separately, so typing their name offers to combine.
+   */
+  readonly nameSuggestions = computed(() => {
+    const needle = this.nameQuery().trim().toLowerCase();
+    const self = this.person();
+    if (needle.length === 0 || needle === (self?.name ?? '').toLowerCase()) {
+      return [];
+    }
+    return this.everyone()
+      .filter(
+        (candidate) =>
+          candidate.id !== self?.id &&
+          candidate.name !== null &&
+          candidate.name.toLowerCase().includes(needle),
+      )
+      .slice(0, 5);
+  });
 
   readonly mergeCandidates = computed(() => {
     const needle = this.mergeFilter().trim().toLowerCase();
@@ -76,9 +98,16 @@ export class PersonPage implements OnInit {
     if (!person || name.length === 0 || name === person.name) {
       return;
     }
+    const wasUnnamed = person.name === null;
     await this.api.rename(person.id, name);
     this.person.set({ ...person, name });
+    this.nameQuery.set('');
     this.saveState.set('saved');
+    if (wasUnnamed) {
+      // First naming answers "who's this?" — float back out to the People list.
+      setTimeout(() => void this.router.navigateByUrl('/people'), 900);
+      return;
+    }
     setTimeout(() => this.saveState.set('idle'), 2000);
   }
 

@@ -5,22 +5,41 @@
   @if (saveState() === 'saved') {
     <span class="saved">Saved ✓</span>
   }
-  @if (canWrite) {
-    <app-edit-toggle />
-  }
 </header>
 
 <main class="person">
   @if (canWrite) {
     <form class="naming" (ngSubmit)="saveName()">
-      <input
-        name="nameDraft"
-        [(ngModel)]="nameDraft"
-        placeholder="Type a name — “Grandma”, “Emma”…"
-        autocomplete="off"
-      />
-      <button type="submit">Save name</button>
+      <div class="name-row">
+        <input
+          name="nameDraft"
+          [(ngModel)]="nameDraft"
+          (ngModelChange)="nameQuery.set($event)"
+          placeholder="Type a name — “Grandma”, “Emma”…"
+          autocomplete="off"
+        />
+        <button type="submit">Save name</button>
+      </div>
+      @if (nameSuggestions().length > 0) {
+        <div class="suggestions" role="listbox" aria-label="Existing people with this name">
+          <p class="suggest-hint">Already someone you know? Tap to combine.</p>
+          @for (candidate of nameSuggestions(); track candidate.id) {
+            <button type="button" [disabled]="isBusy()" (click)="mergeInto(candidate)">
+              @if (candidate.coverFaceId; as cover) {
+                <img [src]="cropUrl(cover)" alt="" loading="lazy" />
+              }
+              <span class="name">{{ candidate.name }}</span>
+              <span class="count">{{ candidate.faceCount }} photos</span>
+              <span class="combine">Combine ›</span>
+            </button>
+          }
+        </div>
+      }
     </form>
+
+    <section class="manage" aria-label="Person actions">
+      <app-edit-toggle />
+    </section>
   }
 
   @if (editMode.isEditing()) {

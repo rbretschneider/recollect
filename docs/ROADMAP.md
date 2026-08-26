@@ -31,6 +31,12 @@ real-library testing (~18.5k assets on hawaii) teaches us things.
 2. **Settings completeness** — edit/disable members, change password
    (incl. forced first-login change), remove/re-enable library roots.
 3. **Favorites**; **Live Photos pairing** (needs real iPhone HEIC+MOV pairs).
+4. **Special photo types**: photospheres/panoramas currently display as flat
+   wide images (correct data, no 360° projection) — add an interactive 360°
+   viewer for assets with GPano XMP or `.PHOTOSPHERE.` names; Pixel motion
+   photos show their still (embedded video not yet played). Note: a
+   `PHOTOSPHERE.jpg` that renders as a grey mountain icon is a Google Photos
+   cloud-only stub on the NAS (7KB placeholder), not an app bug.
 4. **Wait-state sweep** — audit remaining async actions against the
    three-signal standard.
 
