@@ -6,10 +6,18 @@ import { IngestService } from './ingest.service';
 import { LibraryController } from './library.controller';
 import { LibraryService } from './library.service';
 import { ScannerService } from './scanner.service';
+import { ScanSchedulerService } from './scan-scheduler.service';
 
 @Module({
   imports: [MediaModule],
   controllers: [LibraryController],
-  providers: [LibraryService, ScannerService, IngestService, ScanRootHandler, IngestFileHandler],
+  providers: [
+    LibraryService,
+    ScannerService,
+    ScanSchedulerService,
+    IngestService,
+    ScanRootHandler,
+    IngestFileHandler,
+  ],
 })
 export class LibraryModule {}

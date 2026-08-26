@@ -10,6 +10,7 @@ const configSchema = z.object({
   clusterMaxJumpKm: z.coerce.number().positive().default(50),
   clusterMinSize: z.coerce.number().int().positive().default(3),
   trashRetentionDays: z.coerce.number().int().positive().default(7),
+  scanIntervalHours: z.coerce.number().positive().default(24),
 });
 
 /** Validated application configuration, loaded once from the environment at startup. */
@@ -33,6 +34,7 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     clusterMaxJumpKm: env.CLUSTER_MAX_JUMP_KM,
     clusterMinSize: env.CLUSTER_MIN_SIZE,
     trashRetentionDays: env.TRASH_RETENTION_DAYS,
+    scanIntervalHours: env.SCAN_INTERVAL_HOURS,
   });
   if (!parsed.success) {
     throw new Error(`Invalid configuration: ${parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ')}`);
