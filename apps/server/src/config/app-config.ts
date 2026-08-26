@@ -11,6 +11,8 @@ const configSchema = z.object({
   clusterMinSize: z.coerce.number().int().positive().default(3),
   trashRetentionDays: z.coerce.number().int().positive().default(7),
   scanIntervalHours: z.coerce.number().positive().default(24),
+  /** CPU threads per ffmpeg transcode; keep low so playback never starves. */
+  transcodeThreads: z.coerce.number().int().positive().default(2),
   /** Directory of the built web app to serve; empty disables static serving (dev). */
   webDistDir: z.string().default(''),
   /** Directory of SQL migrations to apply at boot; empty disables (dev uses drizzle-kit). */
@@ -44,6 +46,7 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     clusterMinSize: env.CLUSTER_MIN_SIZE,
     trashRetentionDays: env.TRASH_RETENTION_DAYS,
     scanIntervalHours: env.SCAN_INTERVAL_HOURS,
+    transcodeThreads: env.TRANSCODE_THREADS,
     webDistDir: env.WEB_DIST_DIR,
     migrationsDir: env.MIGRATIONS_DIR,
     libraryBrowseBases: env.LIBRARY_BROWSE_BASES,

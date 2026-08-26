@@ -30,6 +30,7 @@ services:
       TRASH_RETENTION_DAYS: ${TRASH_RETENTION_DAYS:-7}
       SCAN_INTERVAL_HOURS: ${SCAN_INTERVAL_HOURS:-24}
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
+      TRANSCODE_THREADS: ${TRANSCODE_THREADS:-2}
       TZ: ${TZ:-America/New_York}
     volumes:
       - app-data:/app/data
