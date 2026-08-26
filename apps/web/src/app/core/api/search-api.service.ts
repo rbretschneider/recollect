@@ -40,6 +40,7 @@ export interface SearchResults {
   albums: SearchAlbumHit[];
   folders: SearchFolderHit[];
   assets: SearchAssetHit[];
+  semantic: SearchAssetHit[];
 }
 
 /** Raw HTTP calls for search. */

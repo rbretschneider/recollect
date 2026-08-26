@@ -31,6 +31,9 @@ services:
       SCAN_INTERVAL_HOURS: ${SCAN_INTERVAL_HOURS:-24}
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
       TRANSCODE_THREADS: ${TRANSCODE_THREADS:-2}
+      # Set to http://ml:8000 (and start with --profile ml) to enable faces
+      # and semantic search. Empty = ML fully off; everything else works.
+      RECOLLECT_ML_URL: ${RECOLLECT_ML_URL:-}
       TZ: ${TZ:-America/New_York}
     volumes:
       - app-data:/app/data
@@ -41,6 +44,28 @@ services:
     ports:
       - "${SERVER_PORT:-8080}:8080"
 
+  # Faces + CLIP semantic search. Opt-in: COMPOSE_PROFILES=ml (or --profile ml)
+  # plus RECOLLECT_ML_URL=http://ml:8000 in .env. GPU by default; a CPU-only
+  # box removes the deploy block and sets RECOLLECT_ML_DEVICE=cpu.
+  ml:
+    image: ghcr.io/rbretschneider/recollect-ml:latest
+    restart: unless-stopped
+    profiles: ["ml"]
+    environment:
+      RECOLLECT_ML_DEVICE: ${RECOLLECT_ML_DEVICE:-cuda}
+      RECOLLECT_FACE_MODEL: ${RECOLLECT_FACE_MODEL:-antelopev2}
+      RECOLLECT_CLIP_MODEL: ${RECOLLECT_CLIP_MODEL:-ViT-L-14}
+    volumes:
+      - ml-models:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${ML_GPU_DEVICE:-1}"]
+              capabilities: [gpu]
+
 volumes:
   db-data:
   app-data:
+  ml-models:

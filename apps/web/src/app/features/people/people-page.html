@@ -1,0 +1,29 @@
+<app-topbar />
+
+<main class="people">
+  @if (isLoaded() && people().length === 0) {
+    <section class="empty">
+      <h2>No people yet</h2>
+      <p>
+        As photos are processed, faces are grouped here automatically. Give a
+        group a name and it becomes a person you can browse and search.
+      </p>
+    </section>
+  }
+
+  <div class="grid">
+    @for (person of people(); track person.id) {
+      <a class="person" [routerLink]="['/people', person.id]">
+        @if (avatarUrl(person); as avatar) {
+          <img [src]="avatar" alt="" loading="lazy" />
+        } @else {
+          <span class="fallback">🙂</span>
+        }
+        <h3>{{ person.name ?? 'Who’s this?' }}</h3>
+        <p>{{ person.faceCount }} photos</p>
+      </a>
+    }
+  </div>
+</main>
+
+<app-bottom-nav />

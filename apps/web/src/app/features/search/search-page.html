@@ -71,6 +71,19 @@
       </section>
     }
 
+    @if (r.semantic.length > 0) {
+      <section aria-label="Photos that look like the search">
+        <h2>Looks like “{{ r.query }}”</h2>
+        <div class="grid">
+          @for (hit of r.semantic; track hit.id; let index = $index) {
+            <button type="button" class="tile" aria-label="Open photo" (click)="openSemanticViewer(index)">
+              <img [src]="thumbUrl(hit.id)" alt="" loading="lazy" />
+            </button>
+          }
+        </div>
+      </section>
+    }
+
     @if (r.assets.length > 0) {
       <section aria-label="Photos and videos">
         @if (!r.dateRange) {

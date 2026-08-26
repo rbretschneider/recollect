@@ -11,6 +11,7 @@ import {
   libraryRoot,
   memory,
 } from '../database/schema';
+import { MlClientService } from '../ml/ml-client.service';
 import { DateQueryRange, parseDateQuery } from './date-query';
 
 /** A memory hit in search results. */
@@ -51,9 +52,13 @@ export interface SearchResults {
   albums: SearchAlbumHit[];
   folders: SearchFolderHit[];
   assets: SearchAssetHit[];
+  /** CLIP semantic matches ("beach", "kids in snow") — empty when ML is off. */
+  semantic: SearchAssetHit[];
 }
 
 const MIN_TEXT_LENGTH = 2;
+const SEMANTIC_LIMIT = 30;
+const SEMANTIC_MAX_DISTANCE = 0.78;
 const MEMORY_LIMIT = 20;
 const ALBUM_LIMIT = 20;
 const FOLDER_LIMIT = 10;
@@ -65,17 +70,21 @@ const ASSET_LIMIT = 100;
  */
 @Injectable()
 export class SearchService {
-  constructor(@Inject(DATABASE) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Database,
+    private readonly ml: MlClientService,
+  ) {}
 
   async search(query: string): Promise<SearchResults> {
     const trimmed = query.trim();
     const dateRange = parseDateQuery(trimmed);
     const isTextSearch = trimmed.length >= MIN_TEXT_LENGTH && dateRange === null;
-    const [memories, albums, folders, assets] = await Promise.all([
+    const [memories, albums, folders, assets, semantic] = await Promise.all([
       isTextSearch ? this.searchMemories(trimmed) : Promise.resolve([]),
       isTextSearch ? this.searchAlbums(trimmed) : Promise.resolve([]),
       isTextSearch ? this.searchFolders(trimmed) : Promise.resolve([]),
       dateRange ? this.assetsInRange(dateRange) : isTextSearch ? this.searchFiles(trimmed) : Promise.resolve([]),
+      isTextSearch ? this.searchSemantic(trimmed) : Promise.resolve([]),
     ]);
     return {
       query: trimmed,
@@ -86,7 +95,40 @@ export class SearchService {
       albums,
       folders,
       assets,
+      semantic,
     };
+  }
+
+  /** CLIP text-to-image search over the embedded library; empty when ML is off. */
+  private async searchSemantic(text: string): Promise<SearchAssetHit[]> {
+    if (!this.ml.isEnabled) {
+      return [];
+    }
+    try {
+      const { embedding } = await this.ml.embedText(text);
+      if (embedding.length === 0) {
+        return [];
+      }
+      const vectorLiteral = JSON.stringify(embedding);
+      const result = await this.db.execute(sql`
+        SELECT a.id, a.media_type, a.captured_at,
+               e.embedding <=> ${vectorLiteral}::vector AS distance
+        FROM asset_embedding e
+        JOIN asset a ON a.id = e.asset_id AND a.status = 'active'
+        ORDER BY e.embedding <=> ${vectorLiteral}::vector
+        LIMIT ${SEMANTIC_LIMIT}
+      `);
+      return result.rows
+        .filter((row) => Number(row.distance) <= SEMANTIC_MAX_DISTANCE)
+        .map((row) => ({
+          id: row.id as string,
+          mediaType: row.media_type as 'image' | 'video',
+          capturedAt: new Date(row.captured_at as string).toISOString(),
+          fileName: '',
+        }));
+    } catch {
+      return []; // A sick sidecar must never break plain search.
+    }
   }
 
   private async searchMemories(text: string): Promise<SearchMemoryHit[]> {

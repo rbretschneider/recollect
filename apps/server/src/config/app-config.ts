@@ -19,6 +19,10 @@ const configSchema = z.object({
   webDistDir: z.string().default(''),
   /** Directory of SQL migrations to apply at boot; empty disables (dev uses drizzle-kit). */
   migrationsDir: z.string().default(''),
+  /** Base URL of the ML sidecar; empty disables faces + semantic search entirely. */
+  mlUrl: z.string().default(''),
+  /** Cosine distance below which a face joins an existing person cluster. */
+  faceClusterDistance: z.coerce.number().positive().default(0.45),
   /** Comma-separated bases the library folder picker may browse (mounted volumes). */
   libraryBrowseBases: z
     .string()
@@ -52,6 +56,8 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     webDistDir: env.WEB_DIST_DIR,
     migrationsDir: env.MIGRATIONS_DIR,
     libraryBrowseBases: env.LIBRARY_BROWSE_BASES,
+    mlUrl: env.RECOLLECT_ML_URL,
+    faceClusterDistance: env.FACE_CLUSTER_DISTANCE,
   });
   if (!parsed.success) {
     throw new Error(`Invalid configuration: ${parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ')}`);

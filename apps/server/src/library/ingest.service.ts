@@ -17,6 +17,8 @@ import { DETECT_EVENTS_JOB } from '../memories/handlers/detect-events.handler';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { TRANSCODE_PLAYBACK_JOB } from '../assets/assets.service';
 import { isWebSafeVideoCodec } from '../media/transcode.service';
+import { MlClientService } from '../ml/ml-client.service';
+import { DETECT_FACES_JOB, EMBED_CLIP_JOB, ML_JOB_PRIORITY } from '../people/people-job-types';
 import { TRANSCODE_BACKGROUND_PRIORITY } from './library-job-types';
 import { IngestFilePayload } from './scanner.service';
 
@@ -34,6 +36,7 @@ export class IngestService {
     private readonly extractor: MetadataExtractorService,
     private readonly thumbnails: ThumbnailService,
     private readonly queue: JobQueueService,
+    private readonly ml: MlClientService,
   ) {}
 
   async ingestFile(payload: IngestFilePayload): Promise<void> {
@@ -59,6 +62,7 @@ export class IngestService {
     }
     if (!existing) {
       await this.queuePlaybackTranscodeIfNeeded(assetId);
+      await this.queueMlStages(assetId, typeInfo);
     }
     // Same priority as ingest with a short delay: during a large import,
     // detection interleaves every ~90s so suggestions appear while indexing
@@ -311,6 +315,23 @@ export class IngestService {
       TRANSCODE_PLAYBACK_JOB,
       { assetId },
       { dedupeKey: `${TRANSCODE_PLAYBACK_JOB}:${assetId}`, priority: TRANSCODE_BACKGROUND_PRIORITY },
+    );
+  }
+
+  /** Faces + CLIP run last, and only for images while the ML sidecar is configured. */
+  private async queueMlStages(assetId: string, typeInfo: MediaTypeInfo): Promise<void> {
+    if (!this.ml.isEnabled || typeInfo.mediaType !== 'image') {
+      return;
+    }
+    await this.queue.enqueue(
+      DETECT_FACES_JOB,
+      { assetId },
+      { dedupeKey: `${DETECT_FACES_JOB}:${assetId}`, priority: ML_JOB_PRIORITY },
+    );
+    await this.queue.enqueue(
+      EMBED_CLIP_JOB,
+      { assetId },
+      { dedupeKey: `${EMBED_CLIP_JOB}:${assetId}`, priority: ML_JOB_PRIORITY },
     );
   }
 

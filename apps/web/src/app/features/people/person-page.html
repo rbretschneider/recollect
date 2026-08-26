@@ -1,0 +1,40 @@
+<header class="topbar">
+  <a class="back" routerLink="/people" aria-label="Back to people">‹</a>
+  <h1>{{ title() }}</h1>
+  <span class="spacer"></span>
+  @if (saveState() === 'saved') {
+    <span class="saved">Saved ✓</span>
+  }
+</header>
+
+<main class="person">
+  @if (canWrite) {
+    <form class="naming" (ngSubmit)="saveName()">
+      <input
+        name="nameDraft"
+        [(ngModel)]="nameDraft"
+        placeholder="Type a name — “Grandma”, “Emma”…"
+        autocomplete="off"
+      />
+      <button type="submit">Save name</button>
+    </form>
+  }
+
+  <div class="grid">
+    @for (assetId of assetIds(); track assetId; let index = $index) {
+      <button type="button" class="tile" aria-label="Open photo" (click)="openViewer(index)">
+        <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
+      </button>
+    }
+  </div>
+</main>
+
+@if (viewerIndex() !== null) {
+  <app-asset-viewer
+    [assets]="viewerAssets()"
+    [startIndex]="viewerIndex()!"
+    (closed)="closeViewer()"
+  />
+}
+
+<app-bottom-nav />

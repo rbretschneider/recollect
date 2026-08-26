@@ -43,6 +43,13 @@
       "when": 1787752154608,
       "tag": "0005_smooth_sprite",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787773374102,
+      "tag": "0006_warm_storm",
+      "breakpoints": true
     }
   ]
 }

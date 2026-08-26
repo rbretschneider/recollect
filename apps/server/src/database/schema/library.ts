@@ -66,6 +66,8 @@ export const asset = pgTable(
     trashedBy: uuid('trashed_by').references(() => userAccount.id, { onDelete: 'set null' }),
     stageMetadataAt: timestamp('stage_metadata_at', { withTimezone: true }),
     stageThumbsAt: timestamp('stage_thumbs_at', { withTimezone: true }),
+    stageFacesAt: timestamp('stage_faces_at', { withTimezone: true }),
+    stageEmbedAt: timestamp('stage_embed_at', { withTimezone: true }),
     stageErrors: jsonb('stage_errors'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

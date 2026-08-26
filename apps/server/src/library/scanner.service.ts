@@ -11,6 +11,8 @@ import { classifyMediaFile } from '../media/media-types';
 import { DETECT_EVENTS_JOB } from '../memories/handlers/detect-events.handler';
 import { TRANSCODE_BACKFILL_JOB } from '../assets/handlers/transcode-backfill.handler';
 import { REPROCESS_ASSET_JOB } from './handlers/reprocess-asset.handler';
+import { MlClientService } from '../ml/ml-client.service';
+import { DETECT_FACES_JOB, EMBED_CLIP_JOB, ML_JOB_PRIORITY } from '../people/people-job-types';
 import { PURGE_TRASH_JOB } from '../trash/handlers/purge-trash.handler';
 import { INGEST_FILE_JOB } from './library-job-types';
 import { classifyScannedFile, isExcludedDirectory, KnownFileState } from './scan-classifier';
@@ -33,6 +35,7 @@ export class ScannerService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     private readonly queue: JobQueueService,
+    private readonly ml: MlClientService,
   ) {}
 
   /** Scans one root; returns counts of what was enqueued and reconciled. */
@@ -63,6 +66,7 @@ export class ScannerService {
       { dedupeKey: TRANSCODE_BACKFILL_JOB, priority: 140 },
     );
     await this.queueThumbnailRepairs();
+    await this.queueMlBackfill();
     this.logger.log(`Scan of ${root.path}: ${enqueued} enqueued, ${missing} missing.`);
     return { enqueued, missing };
   }
@@ -210,6 +214,41 @@ export class ScannerService {
     }
     if (broken.length > 0) {
       this.logger.log(`Queued thumbnail repair for ${broken.length} assets.`);
+    }
+  }
+
+  /** Images indexed before ML existed (or after failures) get their ML stages queued. */
+  private async queueMlBackfill(): Promise<void> {
+    if (!this.ml.isEnabled) {
+      return;
+    }
+    const pending = await this.db
+      .select({ id: asset.id, stageFacesAt: asset.stageFacesAt, stageEmbedAt: asset.stageEmbedAt })
+      .from(asset)
+      .where(
+        sql`${asset.status} = 'active' and ${asset.mediaType} = 'image'
+            and ${asset.stageThumbsAt} is not null
+            and (${asset.stageFacesAt} is null or ${asset.stageEmbedAt} is null)`,
+      )
+      .limit(2000);
+    for (const row of pending) {
+      if (row.stageFacesAt === null) {
+        await this.queue.enqueue(
+          DETECT_FACES_JOB,
+          { assetId: row.id },
+          { dedupeKey: `${DETECT_FACES_JOB}:${row.id}`, priority: ML_JOB_PRIORITY },
+        );
+      }
+      if (row.stageEmbedAt === null) {
+        await this.queue.enqueue(
+          EMBED_CLIP_JOB,
+          { assetId: row.id },
+          { dedupeKey: `${EMBED_CLIP_JOB}:${row.id}`, priority: ML_JOB_PRIORITY },
+        );
+      }
+    }
+    if (pending.length > 0) {
+      this.logger.log(`ML backfill queued for ${pending.length} assets.`);
     }
   }
 

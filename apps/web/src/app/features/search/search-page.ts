@@ -28,10 +28,15 @@ export class SearchPage implements AfterViewInit {
   readonly results = signal<SearchResults | null>(null);
   readonly isSearching = signal(false);
   readonly viewerIndex = signal<number | null>(null);
+  /** Which hit list feeds the viewer (filename hits vs semantic hits). */
+  readonly viewerSource = signal<'assets' | 'semantic'>('assets');
 
   readonly hasAnyHits = computed(() => {
     const r = this.results();
-    return r !== null && r.memories.length + r.albums.length + r.folders.length + r.assets.length > 0;
+    return (
+      r !== null &&
+      r.memories.length + r.albums.length + r.folders.length + r.assets.length + r.semantic.length > 0
+    );
   });
 
   ngAfterViewInit(): void {
@@ -61,6 +66,12 @@ export class SearchPage implements AfterViewInit {
   }
 
   openViewer(index: number): void {
+    this.viewerSource.set('assets');
+    this.viewerIndex.set(index);
+  }
+
+  openSemanticViewer(index: number): void {
+    this.viewerSource.set('semantic');
     this.viewerIndex.set(index);
   }
 
@@ -69,7 +80,9 @@ export class SearchPage implements AfterViewInit {
   }
 
   viewerAssets(): TimelineAsset[] {
-    return (this.results()?.assets ?? []).map((hit: SearchAssetHit) => ({
+    const r = this.results();
+    const hits = this.viewerSource() === 'semantic' ? (r?.semantic ?? []) : (r?.assets ?? []);
+    return hits.map((hit: SearchAssetHit) => ({
       id: hit.id,
       mediaType: hit.mediaType,
       capturedAt: hit.capturedAt,
