@@ -61,4 +61,21 @@ export class PublicShareController {
     res.type(file.mime);
     res.sendFile(file.path);
   }
+
+  @Public()
+  @Get(':token/assets/:assetId/playback')
+  async playback(
+    @Param('token') token: string,
+    @Param('assetId', ParseUUIDPipe) assetId: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.sharing.assertAssetShared(token, assetId);
+    const resolution = await this.assets.getPlayback(assetId);
+    if (resolution.kind === 'preparing') {
+      res.status(202).json({ status: 'preparing' });
+      return;
+    }
+    res.type(resolution.mime);
+    res.sendFile(resolution.path);
+  }
 }

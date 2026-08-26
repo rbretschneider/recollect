@@ -14,8 +14,20 @@
     <div class="stage" (click)="showInfo() && toggleInfo()">
       @if (asset.mediaType === 'image') {
         <img [src]="imageUrl(asset.id)" [alt]="'Photo taken ' + formatDate(asset.capturedAt)" />
+      } @else if (isPreparingVideo()) {
+        <div class="preparing" role="status">
+          <div class="spinner" aria-hidden="true"></div>
+          <p>Preparing video for playback…</p>
+          <p class="sub">This happens once per video; it will start automatically.</p>
+        </div>
       } @else {
-        <video [src]="originalUrl(asset.id)" controls autoplay playsinline></video>
+        <video
+          [src]="videoUrl(asset.id)"
+          controls
+          autoplay
+          playsinline
+          (error)="onVideoError()"
+        ></video>
       }
     </div>
 

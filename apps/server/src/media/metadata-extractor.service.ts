@@ -16,6 +16,7 @@ export interface ExtractedMetadata {
   gpsLat: number | null;
   gpsLon: number | null;
   gpsAltM: number | null;
+  videoCodec: string | null;
   cameraMake: string | null;
   cameraModel: string | null;
   lensModel: string | null;
@@ -47,6 +48,7 @@ export class MetadataExtractorService implements OnApplicationShutdown {
       gpsLat: typeof tags.GPSLatitude === 'number' ? tags.GPSLatitude : null,
       gpsLon: typeof tags.GPSLongitude === 'number' ? tags.GPSLongitude : null,
       gpsAltM: typeof tags.GPSAltitude === 'number' ? tags.GPSAltitude : null,
+      videoCodec: this.resolveVideoCodec(tags, typeInfo),
       cameraMake: tags.Make ?? null,
       cameraModel: tags.Model ?? null,
       lensModel: tags.LensModel ?? null,
@@ -94,6 +96,14 @@ export class MetadataExtractorService implements OnApplicationShutdown {
       }
     }
     return null;
+  }
+
+  private resolveVideoCodec(tags: Tags, typeInfo: MediaTypeInfo): string | null {
+    if (typeInfo.mediaType !== 'video') {
+      return null;
+    }
+    const codec = tags.CompressorID ?? (tags as Record<string, unknown>).VideoCodecID;
+    return typeof codec === 'string' ? codec.toLowerCase() : null;
   }
 
   private resolveDurationMs(tags: Tags, typeInfo: MediaTypeInfo): number | null {

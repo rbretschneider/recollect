@@ -42,11 +42,16 @@ export class AssetViewer implements OnInit, OnDestroy {
   readonly index = signal(0);
   readonly showInfo = signal(false);
   readonly detail = signal<AssetDetail | null>(null);
+  /** True while the server is transcoding this video for playback. */
+  readonly isPreparingVideo = signal(false);
+  /** Bumped when a prepared rendition becomes available, to reload the <video>. */
+  readonly videoReloadKey = signal(0);
 
   readonly current = computed<TimelineAsset | null>(() => this.assets()[this.index()] ?? null);
 
   private touchStartX: number | null = null;
   private hasHistoryEntry = false;
+  private prepareTimer: ReturnType<typeof setInterval> | null = null;
   private readonly onPopState = (): void => {
     // The Android/browser back button pops our entry: close the viewer,
     // never the page underneath (the PhotoPrism-PWA failure mode).
@@ -65,6 +70,11 @@ export class AssetViewer implements OnInit, OnDestroy {
         void this.loadDetail(asset.id);
       }
     });
+    effect(() => {
+      this.current(); // Moving to another item resets any preparing state.
+      this.stopPreparePolling();
+      this.isPreparingVideo.set(false);
+    });
   }
 
   ngOnInit(): void {
@@ -74,6 +84,7 @@ export class AssetViewer implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.stopPreparePolling();
     window.removeEventListener('popstate', this.onPopState);
     // Closed by other means (X, Escape)? Consume our history entry so the
     // NEXT back press doesn't need pressing twice.
@@ -89,6 +100,41 @@ export class AssetViewer implements OnInit, OnDestroy {
 
   originalUrl(assetId: string): string {
     return `${this.mediaBase()}/${assetId}/original`;
+  }
+
+  /** Videos play through the playback route (original or H.264 rendition). */
+  videoUrl(assetId: string): string {
+    return `${this.mediaBase()}/${assetId}/playback?r=${this.videoReloadKey()}`;
+  }
+
+  /** The playback route answered 202 (transcoding): show status and poll. */
+  onVideoError(): void {
+    const asset = this.current();
+    if (!asset || asset.mediaType !== 'video' || this.isPreparingVideo()) {
+      return;
+    }
+    this.isPreparingVideo.set(true);
+    this.prepareTimer = setInterval(() => void this.checkPrepared(asset.id), 3000);
+  }
+
+  private async checkPrepared(assetId: string): Promise<void> {
+    try {
+      const response = await fetch(`${this.mediaBase()}/${assetId}/playback`, { method: 'HEAD' });
+      if (response.status === 200 && this.current()?.id === assetId) {
+        this.stopPreparePolling();
+        this.isPreparingVideo.set(false);
+        this.videoReloadKey.update((value) => value + 1);
+      }
+    } catch {
+      // Keep polling; transient network errors just mean "not yet".
+    }
+  }
+
+  private stopPreparePolling(): void {
+    if (this.prepareTimer !== null) {
+      clearInterval(this.prepareTimer);
+      this.prepareTimer = null;
+    }
   }
 
   next(): void {

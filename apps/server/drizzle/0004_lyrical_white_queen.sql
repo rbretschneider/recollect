@@ -1,0 +1,1 @@
+ALTER TABLE "asset" ADD COLUMN "video_codec" text;

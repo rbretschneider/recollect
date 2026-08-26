@@ -111,6 +111,7 @@ export class IngestService {
       gpsLat: metadata?.gpsLat ?? null,
       gpsLon: metadata?.gpsLon ?? null,
       gpsAltM: metadata?.gpsAltM ?? null,
+      videoCodec: metadata?.videoCodec ?? null,
       cameraMake: metadata?.cameraMake ?? null,
       cameraModel: metadata?.cameraModel ?? null,
       lensModel: metadata?.lensModel ?? null,

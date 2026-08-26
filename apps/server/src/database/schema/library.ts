@@ -54,6 +54,8 @@ export const asset = pgTable(
     gpsLat: doublePrecision('gps_lat'),
     gpsLon: doublePrecision('gps_lon'),
     gpsAltM: real('gps_alt_m'),
+    /** Video codec id from container metadata (e.g. 'hvc1', 'avc1'); drives playback transcoding. */
+    videoCodec: text('video_codec'),
     cameraMake: text('camera_make'),
     cameraModel: text('camera_model'),
     lensModel: text('lens_model'),

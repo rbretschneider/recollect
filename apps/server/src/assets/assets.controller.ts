@@ -49,6 +49,21 @@ export class AssetsController {
     });
   }
 
+  /**
+   * Streams a browser-playable rendition: the original when web-safe, a cached
+   * H.264 transcode otherwise. 202 while the transcode is still being prepared.
+   */
+  @Get(':id/playback')
+  async playback(@Param('id', ParseUUIDPipe) id: string, @Res() res: Response): Promise<void> {
+    const resolution = await this.assets.getPlayback(id);
+    if (resolution.kind === 'preparing') {
+      res.status(HttpStatus.ACCEPTED).json({ status: 'preparing' });
+      return;
+    }
+    res.type(resolution.mime);
+    res.sendFile(resolution.path);
+  }
+
   @Get(':id/thumb/:size')
   @Header('Cache-Control', 'private, max-age=31536000, immutable')
   async thumbnail(
