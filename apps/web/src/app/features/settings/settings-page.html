@@ -11,10 +11,16 @@
   <section aria-label="Photo folders">
     <div class="section-head">
       <h2>Photo folders</h2>
+      @if (pendingCount() > 0) {
+        <span class="chip" aria-live="polite">Indexing · {{ pendingCount() }} left</span>
+      }
       @if (isAdmin && !isAddingFolder()) {
         <button type="button" class="outline" (click)="isAddingFolder.set(true)">Add folder</button>
       }
     </div>
+    @if (isAddingFolder()) {
+      <p class="hint">Indexing starts automatically as soon as you add a folder.</p>
+    }
 
     @if (isAddingFolder()) {
       <div class="card">
@@ -32,16 +38,22 @@
         <div class="info">
           <h3>{{ root.name }}</h3>
           <p>{{ root.path }}</p>
-          <p class="muted">{{ lastScanLabel(root) }}</p>
+          <p class="muted">
+            @if (justQueuedRootId() === root.id || pendingCount() > 0) {
+              Indexing — new photos appear as they're processed
+            } @else {
+              {{ lastScanLabel(root) }}
+            }
+          </p>
         </div>
         @if (isAdmin) {
           <button
             type="button"
             class="outline"
-            [disabled]="scanBusyRootId() === root.id"
+            [disabled]="pendingCount() > 0 || justQueuedRootId() === root.id"
             (click)="scanNow(root)"
           >
-            {{ scanBusyRootId() === root.id ? 'Scanning…' : 'Scan now' }}
+            {{ scanButtonLabel(root) }}
           </button>
         }
       </div>

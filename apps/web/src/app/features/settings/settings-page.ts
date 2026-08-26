@@ -1,9 +1,9 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LibraryApiService } from '../../core/api/library-api.service';
 import { CreateUserInput, UsersApiService } from '../../core/api/users-api.service';
-import { LibraryRootView, UserProfile } from '../../core/api/api-models';
+import { LibraryRootView, LibraryStatus, UserProfile } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { BottomNav } from '../../shared/bottom-nav';
 import { FolderPicker } from '../../shared/folder-picker';
@@ -24,10 +24,20 @@ export class SettingsPage implements OnInit {
   readonly users = signal<UserProfile[]>([]);
   readonly isAddingFolder = signal(false);
   readonly isAddingUser = signal(false);
-  readonly scanBusyRootId = signal<string | null>(null);
+  readonly justQueuedRootId = signal<string | null>(null);
+  readonly status = signal<LibraryStatus | null>(null);
   readonly error = signal<string | null>(null);
 
+  /** How many indexing jobs are queued or running right now. */
+  readonly pendingCount = computed(() => {
+    const status = this.status();
+    return status ? status.queuedJobs + status.runningJobs : 0;
+  });
+
   newUser: CreateUserInput = this.emptyUser();
+  private statusTimer: ReturnType<typeof setInterval> | null = null;
+  private wasIndexing = false;
+  private readonly destroyRef = inject(DestroyRef);
 
   get isAdmin(): boolean {
     return this.auth.user()?.isAdmin ?? false;
@@ -35,6 +45,13 @@ export class SettingsPage implements OnInit {
 
   ngOnInit(): void {
     void this.reload();
+    void this.pollStatus();
+    this.statusTimer = setInterval(() => void this.pollStatus(), 3000);
+    this.destroyRef.onDestroy(() => {
+      if (this.statusTimer !== null) {
+        clearInterval(this.statusTimer);
+      }
+    });
   }
 
   async addFolder(path: string): Promise<void> {
@@ -42,20 +59,47 @@ export class SettingsPage implements OnInit {
     this.isAddingFolder.set(false);
     try {
       const name = path.split(/[\\/]/).filter((part) => part.length > 0).pop() ?? 'Photos';
-      await this.libraryApi.createRoot(path, name);
+      const { root } = await this.libraryApi.createRoot(path, name);
+      // Adding a folder auto-starts its first scan — say so, don't leave a mystery.
+      this.justQueuedRootId.set(root.id);
       await this.reload();
+      await this.pollStatus();
     } catch (error) {
       this.error.set(this.messageFrom(error, 'Could not add that folder.'));
     }
   }
 
   async scanNow(root: LibraryRootView): Promise<void> {
-    this.scanBusyRootId.set(root.id);
-    try {
-      await this.libraryApi.rescan(root.id);
-    } finally {
-      this.scanBusyRootId.set(null);
+    this.justQueuedRootId.set(root.id);
+    await this.libraryApi.rescan(root.id);
+    await this.pollStatus();
+  }
+
+  /** The three-signal contract: ack on the control, live progress, completion. */
+  scanButtonLabel(root: LibraryRootView): string {
+    if (this.justQueuedRootId() === root.id && this.pendingCount() === 0) {
+      return 'Scan queued ✓';
     }
+    if (this.pendingCount() > 0) {
+      return 'Scanning…';
+    }
+    return 'Scan now';
+  }
+
+  private async pollStatus(): Promise<void> {
+    try {
+      this.status.set(await this.libraryApi.getStatus());
+    } catch {
+      return;
+    }
+    const isIndexing = this.pendingCount() > 0;
+    // Completion signal: when the queue drains, refresh last-scan times.
+    if (this.wasIndexing && !isIndexing) {
+      this.justQueuedRootId.set(null);
+      const { roots } = await this.libraryApi.listRoots();
+      this.roots.set(roots);
+    }
+    this.wasIndexing = isIndexing;
   }
 
   async createUser(): Promise<void> {
