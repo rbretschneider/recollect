@@ -13,8 +13,10 @@ import { LibraryApiService } from '../../core/api/library-api.service';
 import { PhotosApiService } from '../../core/api/photos-api.service';
 import { LibraryStatus, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
+import { TrashApiService } from '../../core/api/trash-api.service';
 import { BottomNav } from '../../shared/bottom-nav';
 import { AssetViewer } from '../viewer/asset-viewer';
+import { RouterLink } from '@angular/router';
 
 /** One day's worth of photos in the grid. */
 interface DayGroup {
@@ -29,15 +31,17 @@ const STATUS_POLL_MS = 4000;
 /** The main photo timeline: grid grouped by day with infinite scroll. */
 @Component({
   selector: 'app-photos-page',
-  imports: [AssetViewer, BottomNav],
+  imports: [AssetViewer, BottomNav, RouterLink],
   templateUrl: './photos-page.html',
   styleUrl: './photos-page.scss',
 })
 export class PhotosPage implements AfterViewInit, OnDestroy {
   private readonly photosApi = inject(PhotosApiService);
   private readonly libraryApi = inject(LibraryApiService);
+  private readonly trashApi = inject(TrashApiService);
   private readonly auth = inject(AuthStateService);
   private readonly destroyRef = inject(DestroyRef);
+  private undoTimer: ReturnType<typeof setTimeout> | null = null;
 
   private readonly sentinel = viewChild.required<ElementRef<HTMLElement>>('sentinel');
   private observer: IntersectionObserver | null = null;
@@ -47,6 +51,9 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
 
   readonly items = signal<TimelineAsset[]>([]);
   readonly viewerIndex = signal<number | null>(null);
+  readonly isSelecting = signal(false);
+  readonly selectedIds = signal<ReadonlySet<string>>(new Set());
+  readonly undoIds = signal<string[]>([]);
   readonly isLoading = signal(false);
   readonly isComplete = signal(false);
   readonly status = signal<LibraryStatus | null>(null);
@@ -94,6 +101,78 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
 
   closeViewer(): void {
     this.viewerIndex.set(null);
+  }
+
+  /** Whether the signed-in user holds the delete grant. */
+  get canDelete(): boolean {
+    return this.auth.user()?.permission === 'delete';
+  }
+
+  onTileClick(asset: TimelineAsset): void {
+    if (this.isSelecting()) {
+      this.toggleSelected(asset.id);
+    } else {
+      this.openViewer(asset);
+    }
+  }
+
+  startSelecting(): void {
+    this.isSelecting.set(true);
+  }
+
+  cancelSelecting(): void {
+    this.isSelecting.set(false);
+    this.selectedIds.set(new Set());
+  }
+
+  isSelected(assetId: string): boolean {
+    return this.selectedIds().has(assetId);
+  }
+
+  /** Trashes the selection optimistically and offers a timed Undo (S5.1). */
+  async deleteSelected(): Promise<void> {
+    const ids = [...this.selectedIds()];
+    if (ids.length === 0) {
+      return;
+    }
+    this.cancelSelecting();
+    this.items.update((list) => list.filter((item) => !ids.includes(item.id)));
+    await this.trashApi.trashAssets(ids);
+    this.showUndo(ids);
+  }
+
+  async undoDelete(): Promise<void> {
+    const ids = this.undoIds();
+    this.dismissUndo();
+    if (ids.length > 0) {
+      await this.trashApi.restoreAssets(ids);
+      await this.refreshFromStart();
+    }
+  }
+
+  dismissUndo(): void {
+    if (this.undoTimer !== null) {
+      clearTimeout(this.undoTimer);
+      this.undoTimer = null;
+    }
+    this.undoIds.set([]);
+  }
+
+  private toggleSelected(assetId: string): void {
+    this.selectedIds.update((current) => {
+      const next = new Set(current);
+      if (next.has(assetId)) {
+        next.delete(assetId);
+      } else {
+        next.add(assetId);
+      }
+      return next;
+    });
+  }
+
+  private showUndo(ids: string[]): void {
+    this.undoIds.set(ids);
+    this.undoTimer = setTimeout(() => this.dismissUndo(), 6000);
   }
 
   async loadMore(): Promise<void> {

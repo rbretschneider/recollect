@@ -9,6 +9,7 @@ const configSchema = z.object({
   clusterMaxGapHours: z.coerce.number().positive().default(3),
   clusterMaxJumpKm: z.coerce.number().positive().default(50),
   clusterMinSize: z.coerce.number().int().positive().default(3),
+  trashRetentionDays: z.coerce.number().int().positive().default(7),
 });
 
 /** Validated application configuration, loaded once from the environment at startup. */
@@ -31,6 +32,7 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     clusterMaxGapHours: env.CLUSTER_MAX_GAP_HOURS,
     clusterMaxJumpKm: env.CLUSTER_MAX_JUMP_KM,
     clusterMinSize: env.CLUSTER_MIN_SIZE,
+    trashRetentionDays: env.TRASH_RETENTION_DAYS,
   });
   if (!parsed.success) {
     throw new Error(`Invalid configuration: ${parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ')}`);

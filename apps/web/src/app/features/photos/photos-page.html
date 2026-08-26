@@ -4,6 +4,13 @@
     <span class="chip" aria-live="polite">Indexing · {{ pendingCount() }} left</span>
   }
   <span class="spacer"></span>
+  @if (canDelete && !isSelecting()) {
+    <button type="button" class="topbar-action" (click)="startSelecting()">Select</button>
+    <a class="topbar-action" routerLink="/trash" aria-label="Trash">🗑</a>
+  }
+  @if (isSelecting()) {
+    <button type="button" class="topbar-action" (click)="cancelSelecting()">Cancel</button>
+  }
   <span class="user">{{ userName() }}</span>
 </header>
 
@@ -24,8 +31,10 @@
             <button
               type="button"
               class="tile-button"
+              [class.selected]="isSelected(asset.id)"
               [attr.aria-label]="'Open photo from ' + group.label"
-              (click)="openViewer(asset)"
+              [attr.aria-pressed]="isSelecting() ? isSelected(asset.id) : null"
+              (click)="onTileClick(asset)"
             >
               @if (asset.hasThumbnail) {
                 <img
@@ -57,6 +66,20 @@
 
   <div #sentinel class="sentinel" aria-hidden="true"></div>
 </main>
+
+@if (isSelecting() && selectedIds().size > 0) {
+  <div class="action-bar" role="toolbar" aria-label="Selection actions">
+    <span>{{ selectedIds().size }} selected</span>
+    <button type="button" class="danger" (click)="deleteSelected()">Move to Trash</button>
+  </div>
+}
+
+@if (undoIds().length > 0) {
+  <div class="snackbar" role="status">
+    <span>Moved {{ undoIds().length }} to Trash</span>
+    <button type="button" (click)="undoDelete()">Undo</button>
+  </div>
+}
 
 @if (viewerIndex() !== null) {
   <app-asset-viewer

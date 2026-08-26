@@ -26,5 +26,10 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/memories/memory-detail-page').then((m) => m.MemoryDetailPage),
   },
+  {
+    path: 'trash',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/trash/trash-page').then((m) => m.TrashPage),
+  },
   { path: '**', redirectTo: '' },
 ];

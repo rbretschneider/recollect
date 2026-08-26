@@ -1,0 +1,26 @@
+<header class="topbar">
+  <a class="back" routerLink="/" aria-label="Back to photos">‹</a>
+  <h1>Trash</h1>
+</header>
+
+<main class="trash">
+  @if (isLoaded() && items().length === 0) {
+    <section class="empty">
+      <h2>Trash is empty</h2>
+      <p>Deleted photos wait here before being removed for good.</p>
+    </section>
+  }
+
+  @for (item of items(); track item.assetId) {
+    <article class="row">
+      <img [src]="thumbUrl(item.assetId)" alt="" loading="lazy" />
+      <div class="info">
+        <h3>{{ item.fileName }}</h3>
+        <p>Deletes forever in {{ daysUntilPurge(item) }} days</p>
+      </div>
+      <button type="button" (click)="restore(item)">Restore</button>
+    </article>
+  }
+</main>
+
+<app-bottom-nav />
