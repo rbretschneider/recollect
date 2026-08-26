@@ -1,0 +1,67 @@
+name: Publish image
+
+# Builds the container image and publishes it to the GitHub Container Registry
+# on every push to main, so the server can pull ghcr.io/rbretschneider/recollect.
+#
+# main is published as :latest for anyone tracking the tip. Pushing a version tag
+# (v1.2.3) additionally publishes :1.2.3 and :1.2 so a deployment can pin.
+#
+# Deploy is intentionally pull-based: nothing here reaches into the LAN. Once a
+# new image is published, the server is rolled with a manual
+# `docker compose pull && docker compose up -d` (see deploy/docker-compose.yml).
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Sign in to the registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Work out the tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+          labels: |
+            org.opencontainers.image.title=Recollect
+            org.opencontainers.image.description=Self-hosted photo journal / timeline PWA
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          # amd64 only: Hawaii is x86-64. Add linux/arm64 here (plus
+          # docker/setup-qemu-action above) if the image ever needs to run on a Pi.
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Reuse layers between runs so a code-only change does not reinstall the
+          # whole Node/Angular toolchain every time.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
