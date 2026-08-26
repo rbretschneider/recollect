@@ -220,8 +220,9 @@
 ## E14 — Sharing & Visibility
 
 - **S14.1 🔴 Shared vs private memories** — Memories default shared to the household; a creator can mark one private (only they see it, including its inbox suggestions when derivable 🟢).
-- **S14.2 🟡 Public share link** — Share a Memory as a read-only public link (tokened URL, optional expiry/password): title, journal (opt-in), media in web sizes.
-- **S14.3 🟢 Guest album upload** — A share link that accepts uploads ("drop your photos from the party here") into a review queue. *(Note: this is the one place files enter via upload; they land in a configurable library folder.)*
+- **S14.2 🟡 Public share link** — Share a Memory or Album as a read-only public link: title, journal (opt-in), media in web sizes. *(Basic version shipped.)*
+- **S14.2b 🟡 Share-link management (PhotoPrism-parity)** — Per-album/memory panel listing its links: create with optional **expiration**, toggle on/off (revoke + re-enable), copy, view counts, short URLs.
+- **S14.3 🟢 Guest album upload** — A share link that accepts uploads ("drop your photos from the party here") into a review queue. **Deliberately the last feature on the roadmap** — it's the only public write path, so it ships after everything else is stable. *(Files land in a configurable library folder.)*
 
 ---
 

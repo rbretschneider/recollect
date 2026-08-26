@@ -13,6 +13,7 @@ It's also a genuinely good day-to-day photo app — grid, viewer, search, and sa
 | Doc | What's in it |
 |---|---|
 | [docs/frd.md](docs/frd.md) | Functional requirements — vision, principles, architecture, stack |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | What's next, in order — the living short-list |
 | [docs/plan.md](docs/plan.md) | Feature plan — epics & stories with acceptance criteria, phased |
 | [docs/data-model.md](docs/data-model.md) | Database schema (Postgres + pgvector), lifecycle rules |
 | [docs/frd-v1-original.md](docs/frd-v1-original.md) | Original draft, kept for history |
