@@ -41,6 +41,13 @@ import { ActivityService } from '../core/activity.service';
       font-variant-numeric: tabular-nums;
     }
 
+    // Narrow phones: the ring alone signals activity; the count needs too much room.
+    @media (width < 460px) {
+      .count {
+        display: none;
+      }
+    }
+
     @keyframes activity-spin {
       to {
         transform: rotate(360deg);

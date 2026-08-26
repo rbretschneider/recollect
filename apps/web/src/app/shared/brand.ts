@@ -39,6 +39,13 @@ import { RouterLink } from '@angular/router';
       display: block;
       border-radius: 0.4rem;
     }
+
+    // On narrow phones the toolbar needs the room; the icon alone is the brand.
+    @media (width < 460px) {
+      span {
+        display: none;
+      }
+    }
   `,
 })
 export class Brand {}
