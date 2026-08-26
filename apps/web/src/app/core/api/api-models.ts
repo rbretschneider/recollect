@@ -99,6 +99,8 @@ export interface MemoryDetail {
   coverAssetId: string | null;
   assetIds: string[];
   journal: JournalEntryView[];
+  gpsLat: number | null;
+  gpsLon: number | null;
 }
 
 /** Mirrors the server's AlbumSummary. */

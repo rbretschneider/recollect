@@ -1,12 +1,22 @@
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  ElementRef,
+  inject,
+  OnInit,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { MemoryDetail, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { BottomNav } from '../../shared/bottom-nav';
+import { SafeResourcePipe } from '../../shared/safe-resource.pipe';
 import { ShareButton } from '../../shared/share-button';
 import { AssetViewer } from '../viewer/asset-viewer';
 
@@ -15,7 +25,7 @@ const JOURNAL_AUTOSAVE_MS = 1500;
 /** One Memory: hero, editable title, media grid, and the journal. */
 @Component({
   selector: 'app-memory-detail-page',
-  imports: [AssetViewer, BottomNav, FormsModule, RouterLink, ShareButton],
+  imports: [AssetViewer, BottomNav, FormsModule, RouterLink, SafeResourcePipe, ShareButton],
   templateUrl: './memory-detail-page.html',
   styleUrl: './memory-detail-page.scss',
 })
@@ -23,10 +33,12 @@ export class MemoryDetailPage implements OnInit {
   private readonly api = inject(MemoriesApiService);
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly auth = inject(AuthStateService);
   private readonly destroyRef = inject(DestroyRef);
 
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly editor = viewChild<ElementRef<HTMLTextAreaElement>>('editor');
 
   readonly detail = signal<MemoryDetail | null>(null);
   readonly viewerAssets = signal<TimelineAsset[]>([]);
@@ -106,6 +118,46 @@ export class MemoryDetailPage implements OnInit {
     this.saveTimer = setTimeout(() => void this.saveJournal(), JOURNAL_AUTOSAVE_MS);
   }
 
+  /** OSM embed URL centered on the memory's median photo location. */
+  mapEmbedUrl(detail: MemoryDetail): string | null {
+    if (detail.gpsLat === null || detail.gpsLon === null) {
+      return null;
+    }
+    const delta = 0.02;
+    const bbox = [
+      detail.gpsLon - delta,
+      detail.gpsLat - delta,
+      detail.gpsLon + delta,
+      detail.gpsLat + delta,
+    ].join('%2C');
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${detail.gpsLat}%2C${detail.gpsLon}`;
+  }
+
+  googleMapsUrl(detail: MemoryDetail): string {
+    return `https://www.google.com/maps?q=${detail.gpsLat},${detail.gpsLon}`;
+  }
+
+  async deleteMemory(): Promise<void> {
+    const detail = this.detail();
+    if (!detail) {
+      return;
+    }
+    const confirmed = confirm(
+      `Delete the memory "${detail.title}"? Your photos are not affected.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+    await this.api.deleteMemory(detail.id);
+    await this.router.navigateByUrl('/memories');
+  }
+
+  /** The journal grows with the writing instead of scrolling inside a box. */
+  autoGrow(element: HTMLTextAreaElement): void {
+    element.style.height = 'auto';
+    element.style.height = `${element.scrollHeight}px`;
+  }
+
   async openViewer(assetId: string): Promise<void> {
     const detail = this.detail();
     if (!detail) {
@@ -134,6 +186,13 @@ export class MemoryDetailPage implements OnInit {
     this.journalDraft.set(
       detail.journal.find((entry) => entry.authorUserId === this.auth.user()?.id)?.bodyMd ?? '',
     );
+    // Existing writing must be fully visible, not clipped at the min height.
+    setTimeout(() => {
+      const element = this.editor()?.nativeElement;
+      if (element) {
+        this.autoGrow(element);
+      }
+    });
   }
 
   private async saveJournal(): Promise<void> {

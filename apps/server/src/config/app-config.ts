@@ -8,7 +8,9 @@ const configSchema = z.object({
   workerConcurrency: z.coerce.number().int().positive().default(2),
   clusterMaxGapHours: z.coerce.number().positive().default(3),
   clusterMaxJumpKm: z.coerce.number().positive().default(50),
-  clusterMinSize: z.coerce.number().int().positive().default(3),
+  // Real-library learning: 3 produced thousands of trivial suggestions; an
+  // "event" worth remembering usually has a healthier handful of photos.
+  clusterMinSize: z.coerce.number().int().positive().default(7),
   trashRetentionDays: z.coerce.number().int().positive().default(7),
   scanIntervalHours: z.coerce.number().positive().default(24),
   /** CPU threads per ffmpeg transcode; keep low so playback never starves. */

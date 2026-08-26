@@ -22,6 +22,14 @@ export class MemoriesApiService {
     return firstValueFrom(this.http.post<void>(`/api/v1/inbox/${clusterId}/dismiss`, {}));
   }
 
+  getSuggestionAssets(clusterId: string): Promise<{ assetIds: string[] }> {
+    return firstValueFrom(this.http.get<{ assetIds: string[] }>(`/api/v1/inbox/${clusterId}/assets`));
+  }
+
+  deleteMemory(memoryId: string): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`/api/v1/memories/${memoryId}`));
+  }
+
   listMemories(): Promise<{ memories: MemorySummary[] }> {
     return firstValueFrom(this.http.get<{ memories: MemorySummary[] }>('/api/v1/memories'));
   }

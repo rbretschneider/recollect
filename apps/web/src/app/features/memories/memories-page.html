@@ -8,35 +8,49 @@
       <h2>Looks like something happened</h2>
       @for (suggestion of suggestions(); track suggestion.id) {
         <article class="suggestion">
-          <div class="mosaic" [class.single]="suggestion.previewAssetIds.length === 1">
-            @for (assetId of suggestion.previewAssetIds; track assetId) {
-              <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
-            }
-          </div>
-          <div class="body">
-            <h3>{{ suggestion.seedTitle }}</h3>
-            <p>{{ suggestion.assetCount }} photos · {{ formatSpan(suggestion) }}</p>
-            @if (canWrite) {
-              <div class="actions">
-                <button
-                  type="button"
-                  class="primary"
-                  [disabled]="busySuggestionId() === suggestion.id"
-                  (click)="accept(suggestion)"
-                >
-                  Create Memory
-                </button>
-                <button
-                  type="button"
-                  class="ghost"
-                  [disabled]="busySuggestionId() === suggestion.id"
-                  (click)="dismiss(suggestion)"
-                >
-                  Not an event
-                </button>
-              </div>
-            }
-          </div>
+          <button type="button" class="summary" (click)="toggleExpanded(suggestion)">
+            <div class="mosaic" [class.single]="suggestion.previewAssetIds.length === 1">
+              @for (assetId of suggestion.previewAssetIds; track assetId) {
+                <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
+              }
+            </div>
+            <div class="body">
+              <h3>{{ suggestion.seedTitle }}</h3>
+              <p>{{ suggestion.assetCount }} photos · {{ formatSpan(suggestion) }}</p>
+              <p class="peek">
+                {{ expandedSuggestionId() === suggestion.id ? 'Hide photos' : 'Tap to see the photos' }}
+              </p>
+            </div>
+          </button>
+
+          @if (expandedSuggestionId() === suggestion.id) {
+            <div class="preview-grid">
+              @for (assetId of expandedAssetIds(); track assetId) {
+                <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
+              }
+            </div>
+          }
+
+          @if (canWrite) {
+            <div class="actions">
+              <button
+                type="button"
+                class="primary"
+                [disabled]="busySuggestionId() === suggestion.id"
+                (click)="accept(suggestion)"
+              >
+                Create Memory
+              </button>
+              <button
+                type="button"
+                class="ghost"
+                [disabled]="busySuggestionId() === suggestion.id"
+                (click)="dismiss(suggestion)"
+              >
+                Not an event
+              </button>
+            </div>
+          }
         </article>
       }
     </section>

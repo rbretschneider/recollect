@@ -22,36 +22,30 @@
       </div>
     </header>
 
-    @if (canWrite) {
-      <div class="share-row">
-        <app-share-button targetType="memory" [targetId]="memory.id" [includeJournal]="true" />
-      </div>
-    }
-
-    <section class="journal" aria-label="Journal">
+    <section class="story" aria-label="Journal">
       @if (canWrite) {
         <div class="mine">
-          <label for="journal-editor">
-            Your journal
-            @if (saveState() === 'saving') {
-              <span class="save-state">Saving…</span>
-            } @else if (saveState() === 'saved') {
-              <span class="save-state">Saved</span>
-            }
-          </label>
           <textarea
+            #editor
             id="journal-editor"
-            rows="4"
-            placeholder="What do you want to remember about this?"
+            rows="3"
+            placeholder="Write the story of this day — who was there, what happened, what you want to remember…"
             [value]="journalDraft()"
-            (input)="onJournalInput($any($event.target).value)"
+            (input)="onJournalInput($any($event.target).value); autoGrow($any($event.target))"
           ></textarea>
+          <div class="byline">
+            @if (saveState() === 'saving') {
+              <span>Saving…</span>
+            } @else if (saveState() === 'saved') {
+              <span>Saved ✓</span>
+            }
+          </div>
         </div>
       }
       @for (entry of othersJournalEntries(); track entry.id) {
         <article class="entry">
-          <h3>{{ entry.authorName }}</h3>
-          <p>{{ entry.bodyMd }}</p>
+          <p class="prose">{{ entry.bodyMd }}</p>
+          <p class="author">— {{ entry.authorName }}</p>
         </article>
       }
     </section>
@@ -66,6 +60,25 @@
         >
           <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
         </button>
+      }
+    </section>
+
+    @if (mapEmbedUrl(memory); as mapUrl) {
+      <section class="place" aria-label="Where this happened">
+        <h2>Where</h2>
+        <iframe
+          [src]="mapUrl | safeResource"
+          title="Map of where this memory happened"
+          loading="lazy"
+        ></iframe>
+        <a [href]="googleMapsUrl(memory)" target="_blank" rel="noopener">Open in Google Maps ↗</a>
+      </section>
+    }
+
+    <section class="manage">
+      @if (canWrite) {
+        <app-share-button targetType="memory" [targetId]="memory.id" [includeJournal]="true" />
+        <button type="button" class="danger-link" (click)="deleteMemory()">Delete memory</button>
       }
     </section>
   </main>

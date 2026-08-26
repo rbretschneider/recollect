@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { v7 as uuidv7 } from 'uuid';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
@@ -28,6 +28,9 @@ export interface MemoryDetail {
   coverAssetId: string | null;
   assetIds: string[];
   journal: JournalEntryView[];
+  /** Median GPS of the member photos, for the map view; null when none have GPS. */
+  gpsLat: number | null;
+  gpsLon: number | null;
 }
 
 /** A journal entry with attribution. */
@@ -84,7 +87,10 @@ export class MemoriesService {
     const row = await this.requireMemory(memoryId);
     const assetIds = await this.loadAssetIds(memoryId);
     const journal = await this.loadJournal(memoryId);
+    const location = await this.loadMedianGps(memoryId);
     return {
+      gpsLat: location?.lat ?? null,
+      gpsLon: location?.lon ?? null,
       id: row.id,
       title: row.title,
       description: row.description,
@@ -199,6 +205,22 @@ export class MemoriesService {
       throw new NotFoundException('That memory does not exist.');
     }
     return row;
+  }
+
+  /** Median GPS of member photos — robust against one mis-tagged outlier. */
+  private async loadMedianGps(memoryId: string): Promise<{ lat: number; lon: number } | null> {
+    const [row] = await this.db
+      .select({
+        lat: sql<number | null>`percentile_cont(0.5) within group (order by ${asset.gpsLat})`,
+        lon: sql<number | null>`percentile_cont(0.5) within group (order by ${asset.gpsLon})`,
+      })
+      .from(memoryAsset)
+      .innerJoin(asset, eq(asset.id, memoryAsset.assetId))
+      .where(and(eq(memoryAsset.memoryId, memoryId), sql`${asset.gpsLat} is not null`));
+    if (!row || row.lat === null || row.lon === null) {
+      return null;
+    }
+    return { lat: Number(row.lat), lon: Number(row.lon) };
   }
 
   private async loadAssetIds(memoryId: string): Promise<string[]> {

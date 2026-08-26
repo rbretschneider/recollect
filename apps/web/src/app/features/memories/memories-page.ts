@@ -25,6 +25,8 @@ export class MemoriesPage implements OnInit {
   readonly isLoaded = signal(false);
   readonly busySuggestionId = signal<string | null>(null);
   readonly status = signal<LibraryStatus | null>(null);
+  readonly expandedSuggestionId = signal<string | null>(null);
+  readonly expandedAssetIds = signal<string[]>([]);
 
   readonly pendingCount = computed(() => {
     const status = this.status();
@@ -54,6 +56,20 @@ export class MemoriesPage implements OnInit {
 
   coverUrl(memory: MemorySummary): string | null {
     return memory.coverAssetId ? `/api/v1/assets/${memory.coverAssetId}/thumb/720` : null;
+  }
+
+  /** Tap a suggestion to see exactly which photos it groups before deciding. */
+  async toggleExpanded(suggestion: InboxSuggestion): Promise<void> {
+    if (this.expandedSuggestionId() === suggestion.id) {
+      this.expandedSuggestionId.set(null);
+      return;
+    }
+    this.expandedSuggestionId.set(suggestion.id);
+    this.expandedAssetIds.set([]);
+    const { assetIds } = await this.api.getSuggestionAssets(suggestion.id);
+    if (this.expandedSuggestionId() === suggestion.id) {
+      this.expandedAssetIds.set(assetIds);
+    }
   }
 
   async accept(suggestion: InboxSuggestion): Promise<void> {
