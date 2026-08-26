@@ -79,6 +79,16 @@
     align-items: center;
   }
 
+  // Camera → owner mapping: label, name input, save.
+  &.device-row {
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+
+    .owner-input {
+      width: clamp(7rem, 30vw, 11rem);
+    }
+  }
+
   .info {
     min-width: 0;
 

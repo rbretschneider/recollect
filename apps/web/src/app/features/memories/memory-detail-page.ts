@@ -17,6 +17,7 @@ import { MemoryDetail, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { EditModeService } from '../../core/edit-mode.service';
 import { BottomNav } from '../../shared/bottom-nav';
+import { ConfirmService } from '../../shared/confirm.service';
 import { EditToggle } from '../../shared/edit-toggle';
 import { SafeResourcePipe } from '../../shared/safe-resource.pipe';
 import { ShareButton } from '../../shared/share-button';
@@ -45,6 +46,7 @@ export class MemoryDetailPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStateService);
+  private readonly confirms = inject(ConfirmService);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly editMode = inject(EditModeService);
 
@@ -153,9 +155,11 @@ export class MemoryDetailPage implements OnInit {
     if (!detail) {
       return;
     }
-    const confirmed = confirm(
-      `Delete the memory "${detail.title}"? Your photos are not affected.`,
-    );
+    const confirmed = await this.confirms.ask({
+      title: `Delete “${detail.title}”?`,
+      message: 'The memory and its journal go away for good. Your photos are not affected.',
+      confirmLabel: 'Delete memory',
+    });
     if (!confirmed) {
       return;
     }

@@ -1,6 +1,7 @@
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { DevicesApiService, DeviceView } from '../../core/api/devices-api.service';
 import { LibraryApiService } from '../../core/api/library-api.service';
 import { CreateUserInput, UsersApiService } from '../../core/api/users-api.service';
 import { LibraryRootView, LibraryStatus, UserProfile } from '../../core/api/api-models';
@@ -18,10 +19,16 @@ import { FolderPicker } from '../../shared/folder-picker';
 export class SettingsPage implements OnInit {
   private readonly libraryApi = inject(LibraryApiService);
   private readonly usersApi = inject(UsersApiService);
+  private readonly devicesApi = inject(DevicesApiService);
   private readonly auth = inject(AuthStateService);
 
   readonly roots = signal<LibraryRootView[]>([]);
   readonly users = signal<UserProfile[]>([]);
+  readonly devices = signal<DeviceView[]>([]);
+  /** Device key that just saved, driving the "Saved ✓" flash. */
+  readonly deviceJustSaved = signal<string | null>(null);
+  /** Per-device owner-name drafts, keyed by deviceKey(). */
+  deviceDrafts: Record<string, string> = {};
   readonly isAddingFolder = signal(false);
   readonly isAddingUser = signal(false);
   readonly justQueuedRootId = signal<string | null>(null);
@@ -114,6 +121,31 @@ export class SettingsPage implements OnInit {
     }
   }
 
+  deviceKey(device: DeviceView): string {
+    return `${device.cameraMake} ${device.cameraModel}`;
+  }
+
+  deviceLabel(device: DeviceView): string {
+    return `${device.cameraMake} ${device.cameraModel}`.trim() || 'Unknown camera';
+  }
+
+  async saveDeviceOwner(device: DeviceView): Promise<void> {
+    const key = this.deviceKey(device);
+    const name = (this.deviceDrafts[key] ?? '').trim();
+    await this.devicesApi.setOwner(device.cameraMake, device.cameraModel, name);
+    this.devices.update((list) =>
+      list.map((entry) =>
+        this.deviceKey(entry) === key ? { ...entry, ownerName: name || null } : entry,
+      ),
+    );
+    this.deviceJustSaved.set(key);
+    setTimeout(() => {
+      if (this.deviceJustSaved() === key) {
+        this.deviceJustSaved.set(null);
+      }
+    }, 2000);
+  }
+
   grantLabel(user: UserProfile): string {
     const grant = { read: 'Read only', write: 'Read & write', delete: 'Full (can delete)' }[
       user.permission
@@ -132,12 +164,17 @@ export class SettingsPage implements OnInit {
   }
 
   private async reload(): Promise<void> {
-    const [rootsResult, usersResult] = await Promise.all([
+    const [rootsResult, usersResult, devicesResult] = await Promise.all([
       this.libraryApi.listRoots(),
       this.isAdmin ? this.usersApi.list() : Promise.resolve({ users: [] }),
+      this.isAdmin ? this.devicesApi.list() : Promise.resolve({ devices: [] }),
     ]);
     this.roots.set(rootsResult.roots);
     this.users.set(usersResult.users);
+    this.devices.set(devicesResult.devices);
+    for (const device of devicesResult.devices) {
+      this.deviceDrafts[this.deviceKey(device)] = device.ownerName ?? '';
+    }
   }
 
   private emptyUser(): CreateUserInput {

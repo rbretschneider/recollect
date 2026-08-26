@@ -7,6 +7,7 @@ import { AlbumDetail, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { EditModeService } from '../../core/edit-mode.service';
 import { BottomNav } from '../../shared/bottom-nav';
+import { ConfirmService } from '../../shared/confirm.service';
 import { EditToggle } from '../../shared/edit-toggle';
 import { ShareButton } from '../../shared/share-button';
 import { AssetViewer } from '../viewer/asset-viewer';
@@ -24,6 +25,7 @@ export class AlbumDetailPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStateService);
+  private readonly confirms = inject(ConfirmService);
   protected readonly editMode = inject(EditModeService);
 
   readonly detail = signal<AlbumDetail | null>(null);
@@ -72,7 +74,15 @@ export class AlbumDetailPage implements OnInit {
 
   async deleteAlbum(): Promise<void> {
     const detail = this.detail();
-    if (!detail || !confirm(`Delete the album "${detail.title}"? Photos are not affected.`)) {
+    if (!detail) {
+      return;
+    }
+    const confirmed = await this.confirms.ask({
+      title: `Delete “${detail.title}”?`,
+      message: 'The album goes away for good. The photos in it are not affected.',
+      confirmLabel: 'Delete album',
+    });
+    if (!confirmed) {
       return;
     }
     await this.api.remove(detail.id);

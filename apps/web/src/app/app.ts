@@ -1,13 +1,14 @@
 import { Component, inject } from '@angular/core';
 import { NavigationEnd, NavigationError, Router, RouterOutlet } from '@angular/router';
+import { ConfirmDrawer } from './shared/confirm-drawer';
 
 /** sessionStorage flag preventing a reload loop when recovery itself fails. */
 const RELOAD_GUARD_KEY = 'rc-chunk-reload';
 
 @Component({
-  imports: [RouterOutlet],
+  imports: [ConfirmDrawer, RouterOutlet],
   selector: 'app-root',
-  template: '<router-outlet />',
+  template: '<router-outlet /><app-confirm-drawer />',
 })
 export class App {
   private readonly router = inject(Router);

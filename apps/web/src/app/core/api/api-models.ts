@@ -48,6 +48,8 @@ export interface AssetDetail {
   cameraMake: string | null;
   cameraModel: string | null;
   lensModel: string | null;
+  /** Who took it, per the camera→owner mapping in Settings. */
+  takenBy: string | null;
   gpsLat: number | null;
   gpsLon: number | null;
   relPath: string | null;

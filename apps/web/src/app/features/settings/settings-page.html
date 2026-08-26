@@ -60,6 +60,35 @@
     }
   </section>
 
+  @if (isAdmin && devices().length > 0) {
+    <section aria-label="Cameras">
+      <div class="section-head">
+        <h2>Cameras</h2>
+      </div>
+      <p class="hint">
+        Name who each camera belongs to and photos will show who took them.
+      </p>
+      @for (device of devices(); track deviceKey(device)) {
+        <form class="card device-row" (ngSubmit)="saveDeviceOwner(device)">
+          <div class="info">
+            <h3>{{ deviceLabel(device) }}</h3>
+            <p class="muted">{{ device.assetCount }} photos &amp; videos</p>
+          </div>
+          <input
+            class="owner-input"
+            [name]="'owner-' + deviceKey(device)"
+            [(ngModel)]="deviceDrafts[deviceKey(device)]"
+            placeholder="Whose camera?"
+            autocomplete="off"
+          />
+          <button type="submit" class="outline">
+            {{ deviceJustSaved() === deviceKey(device) ? 'Saved ✓' : 'Save' }}
+          </button>
+        </form>
+      }
+    </section>
+  }
+
   @if (isAdmin) {
     <section aria-label="Household members">
       <div class="section-head">

@@ -91,6 +91,12 @@
             </div>
           }
           <dl>
+            @if (info.takenBy) {
+              <div>
+                <dt>Taken by</dt>
+                <dd>{{ info.takenBy }}</dd>
+              </div>
+            }
             @if (info.cameraMake || info.cameraModel) {
               <div>
                 <dt>Camera</dt>

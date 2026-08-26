@@ -4,6 +4,7 @@ import { AssetsModule } from './assets/assets.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
+import { DevicesModule } from './devices/devices.module';
 import { FoldersModule } from './folders/folders.module';
 import { HealthController } from './health/health.controller';
 import { JobsModule } from './jobs/jobs.module';
@@ -26,6 +27,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     LibraryModule,
     AssetsModule,
+    DevicesModule,
     FoldersModule,
     MemoriesModule,
     AlbumsModule,

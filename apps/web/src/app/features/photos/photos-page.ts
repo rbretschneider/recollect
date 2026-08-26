@@ -15,13 +15,12 @@ import { LibraryStatus, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { TrashApiService } from '../../core/api/trash-api.service';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
-import { EditModeService } from '../../core/edit-mode.service';
 import { formatDuration } from '../../core/format-duration';
 import { AlbumPicker } from '../../shared/album-picker';
 import { AppDrawer } from '../../shared/app-drawer';
 import { ActivitySpinner } from '../../shared/activity-spinner';
 import { Brand } from '../../shared/brand';
-import { EditToggle } from '../../shared/edit-toggle';
+import { ConfirmService } from '../../shared/confirm.service';
 import { BottomNav } from '../../shared/bottom-nav';
 import { LongPressDirective } from '../../shared/long-press.directive';
 import { AssetViewer } from '../viewer/asset-viewer';
@@ -61,7 +60,6 @@ const STATUS_POLL_MS = 4000;
     AssetViewer,
     BottomNav,
     Brand,
-    EditToggle,
     LongPressDirective,
     RouterLink,
   ],
@@ -74,8 +72,8 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
   private readonly trashApi = inject(TrashApiService);
   private readonly albumsApi = inject(AlbumsApiService);
   private readonly auth = inject(AuthStateService);
+  private readonly confirms = inject(ConfirmService);
   private readonly destroyRef = inject(DestroyRef);
-  protected readonly editMode = inject(EditModeService);
   private undoTimer: ReturnType<typeof setTimeout> | null = null;
 
   private readonly sentinel = viewChild.required<ElementRef<HTMLElement>>('sentinel');
@@ -178,9 +176,9 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
     }
   }
 
-  /** PhotoPrism-PWA gesture: press-and-hold a tile starts selection with it (edit mode only). */
+  /** PhotoPrism-PWA gesture: press-and-hold a tile starts selection with it. */
   onTileLongPress(asset: TimelineAsset): void {
-    if (!this.editMode.isEditing() || this.isSelecting()) {
+    if (!this.canWrite || this.isSelecting()) {
       return;
     }
     this.isSelecting.set(true);
@@ -230,10 +228,19 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
     return this.selectedIds().has(assetId);
   }
 
-  /** Trashes the selection optimistically and offers a timed Undo (S5.1). */
+  /** Trashes the selection (after confirming) and offers a timed Undo (S5.1). */
   async deleteSelected(): Promise<void> {
     const ids = [...this.selectedIds()];
     if (ids.length === 0) {
+      return;
+    }
+    const confirmed = await this.confirms.ask({
+      title: `Move ${ids.length === 1 ? 'this photo' : `${ids.length} photos`} to Trash?`,
+      message:
+        'They leave your library now and are permanently deleted after the holding period. You can restore them from Trash until then.',
+      confirmLabel: 'Move to Trash',
+    });
+    if (!confirmed) {
       return;
     }
     this.cancelSelecting();

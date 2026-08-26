@@ -2,6 +2,7 @@ import { Component, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SharingApiService } from '../core/api/sharing-api.service';
 import { ShareLinkView } from '../core/api/api-models';
+import { ConfirmService } from './confirm.service';
 
 /** Expiration choices offered when making something public. */
 const EXPIRY_OPTIONS = [
@@ -25,6 +26,7 @@ const EXPIRY_OPTIONS = [
 })
 export class ShareButton {
   private readonly api = inject(SharingApiService);
+  private readonly confirms = inject(ConfirmService);
 
   readonly targetType = input.required<'memory' | 'album'>();
   readonly targetId = input.required<string>();
@@ -82,6 +84,14 @@ export class ShareButton {
   }
 
   async turnOff(link: ShareLinkView): Promise<void> {
+    const confirmed = await this.confirms.ask({
+      title: 'Turn off this link?',
+      message: 'Anyone with the link loses access immediately. This link can never be turned back on — you can always create a new one.',
+      confirmLabel: 'Turn off',
+    });
+    if (!confirmed) {
+      return;
+    }
     await this.api.revoke(link.id);
     this.links.update((existing) => existing.filter((item) => item.id !== link.id));
   }

@@ -4,7 +4,7 @@ import { access, stat } from 'fs/promises';
 import { join, resolve } from 'path';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
-import { asset, assetFile, libraryRoot } from '../database/schema';
+import { asset, assetFile, deviceOwner, libraryRoot } from '../database/schema';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { MetadataExtractorService } from '../media/metadata-extractor.service';
 import { ThumbnailSize, ThumbnailStore } from '../media/thumbnail-store';
@@ -49,6 +49,8 @@ export interface AssetDetail {
   cameraMake: string | null;
   cameraModel: string | null;
   lensModel: string | null;
+  /** Who took it, per the camera→owner mapping in Settings. */
+  takenBy: string | null;
   gpsLat: number | null;
   gpsLon: number | null;
   relPath: string | null;
@@ -127,6 +129,19 @@ export class AssetsService {
       .from(assetFile)
       .where(and(eq(assetFile.assetId, assetId), eq(assetFile.state, 'present')))
       .limit(1);
+    const [owner] =
+      row.cameraMake !== null || row.cameraModel !== null
+        ? await this.db
+            .select({ ownerName: deviceOwner.ownerName })
+            .from(deviceOwner)
+            .where(
+              and(
+                eq(deviceOwner.cameraMake, row.cameraMake ?? ''),
+                eq(deviceOwner.cameraModel, row.cameraModel ?? ''),
+              ),
+            )
+            .limit(1)
+        : [];
     return {
       id: row.id,
       mediaType: row.mediaType as 'image' | 'video',
@@ -138,6 +153,7 @@ export class AssetsService {
       cameraMake: row.cameraMake,
       cameraModel: row.cameraModel,
       lensModel: row.lensModel,
+      takenBy: owner?.ownerName ?? null,
       gpsLat: row.gpsLat,
       gpsLon: row.gpsLon,
       relPath: file?.relPath ?? null,

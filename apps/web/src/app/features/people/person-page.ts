@@ -5,6 +5,7 @@ import { PeopleApiService, PersonFace, PersonSummary } from '../../core/api/peop
 import { TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { EditModeService } from '../../core/edit-mode.service';
+import { ConfirmService } from '../../shared/confirm.service';
 import { BottomNav } from '../../shared/bottom-nav';
 import { EditToggle } from '../../shared/edit-toggle';
 import { AssetViewer } from '../viewer/asset-viewer';
@@ -22,6 +23,7 @@ export class PersonPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStateService);
+  private readonly confirms = inject(ConfirmService);
   protected readonly editMode = inject(EditModeService);
 
   readonly person = signal<PersonSummary | null>(null);
@@ -114,6 +116,14 @@ export class PersonPage implements OnInit {
     if (faceIds.length === 0 || this.isBusy()) {
       return;
     }
+    const confirmed = await this.confirms.ask({
+      title: `Ignore ${faceIds.length === 1 ? 'this face' : `these ${faceIds.length} faces`}?`,
+      message: 'Ignored faces disappear from People for good. The photos themselves stay put.',
+      confirmLabel: 'Ignore',
+    });
+    if (!confirmed) {
+      return;
+    }
     this.isBusy.set(true);
     try {
       await this.api.ignoreFaces(faceIds);
@@ -130,7 +140,13 @@ export class PersonPage implements OnInit {
       return;
     }
     const label = target.name ?? 'this unnamed person';
-    if (!confirm(`Merge all ${person.faceCount} photos of "${this.title()}" into ${label}?`)) {
+    const confirmed = await this.confirms.ask({
+      title: `Merge into ${label}?`,
+      message: `All ${person.faceCount} photos of “${this.title()}” will belong to ${label}. This can't be undone.`,
+      confirmLabel: 'Merge',
+      danger: false,
+    });
+    if (!confirmed) {
       return;
     }
     this.isBusy.set(true);
@@ -148,7 +164,12 @@ export class PersonPage implements OnInit {
     if (!person) {
       return;
     }
-    if (!confirm('Hide this person from People? Their photos stay in the library.')) {
+    const confirmed = await this.confirms.ask({
+      title: 'Hide this person?',
+      message: 'They disappear from People. Their photos stay in the library.',
+      confirmLabel: 'Hide',
+    });
+    if (!confirmed) {
       return;
     }
     await this.api.hide(person.id);

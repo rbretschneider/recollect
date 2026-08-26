@@ -1,0 +1,18 @@
+@if (confirms.pending(); as pending) {
+  <div class="scrim" (click)="confirms.settle(false)"></div>
+  <div class="confirm-drawer" role="alertdialog" [attr.aria-label]="pending.title">
+    <h2>{{ pending.title }}</h2>
+    <p>{{ pending.message }}</p>
+    <div class="actions">
+      <button type="button" class="ghost" (click)="confirms.settle(false)">Cancel</button>
+      <button
+        type="button"
+        class="confirm"
+        [class.danger]="pending.danger !== false"
+        (click)="confirms.settle(true)"
+      >
+        {{ pending.confirmLabel }}
+      </button>
+    </div>
+  </div>
+}
