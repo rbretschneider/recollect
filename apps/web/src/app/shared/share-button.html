@@ -1,4 +1,7 @@
+<button type="button" class="share" (click)="open()">Share</button>
+
 @if (isOpen()) {
+  <div class="scrim" (click)="close()"></div>
   <div class="share-sheet" role="dialog" aria-label="Sharing">
     <p class="hint">
       This {{ targetType() }} is private. Creating a link makes it viewable
@@ -36,6 +39,4 @@
 
     <button type="button" class="ghost" (click)="close()">Done</button>
   </div>
-} @else {
-  <button type="button" class="share" (click)="open()">Share</button>
 }
