@@ -15,6 +15,9 @@ import { ExtractedMetadata, MetadataExtractorService } from '../media/metadata-e
 import { ThumbnailService } from '../media/thumbnail.service';
 import { DETECT_EVENTS_JOB } from '../memories/handlers/detect-events.handler';
 import { JobQueueService } from '../jobs/job-queue.service';
+import { TRANSCODE_PLAYBACK_JOB } from '../assets/assets.service';
+import { isWebSafeVideoCodec } from '../media/transcode.service';
+import { TRANSCODE_BACKGROUND_PRIORITY } from './library-job-types';
 import { IngestFilePayload } from './scanner.service';
 
 /**
@@ -51,6 +54,7 @@ export class IngestService {
     await this.recomputeAssetStatus(assetId);
     if (!existing) {
       await this.runThumbnailStage(assetId, absolutePath, typeInfo);
+      await this.queuePlaybackTranscodeIfNeeded(assetId);
     }
     // Same priority as ingest with a short delay: during a large import,
     // detection interleaves every ~90s so suggestions appear while indexing
@@ -219,6 +223,27 @@ export class IngestService {
   }
 
   /** Full status derivation (data-model.md §3.2): present → active, else trashed → trashed, else missing. */
+  /**
+   * The last pipeline step for videos browsers can't decode: a background
+   * playback transcode, behind ingest work so photos appear first. Opening
+   * the video before it runs upgrades the queued job to user priority.
+   */
+  private async queuePlaybackTranscodeIfNeeded(assetId: string): Promise<void> {
+    const [row] = await this.db
+      .select({ mediaType: asset.mediaType, videoCodec: asset.videoCodec })
+      .from(asset)
+      .where(eq(asset.id, assetId))
+      .limit(1);
+    if (!row || row.mediaType !== 'video' || isWebSafeVideoCodec(row.videoCodec)) {
+      return;
+    }
+    await this.queue.enqueue(
+      TRANSCODE_PLAYBACK_JOB,
+      { assetId },
+      { dedupeKey: `${TRANSCODE_PLAYBACK_JOB}:${assetId}`, priority: TRANSCODE_BACKGROUND_PRIORITY },
+    );
+  }
+
   private async recomputeAssetStatus(assetId: string): Promise<void> {
     const files = await this.db
       .select({ state: assetFile.state })

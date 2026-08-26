@@ -48,9 +48,16 @@ export class JobQueueService {
         runAt: options.runAt ?? new Date(),
         maxAttempts: options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
       })
-      .onConflictDoNothing({
+      .onConflictDoUpdate({
         target: job.dedupeKey,
-        where: sql`status in ('queued', 'running')`,
+        targetWhere: sql`status in ('queued', 'running')`,
+        // A duplicate enqueue never duplicates work, but an urgent request
+        // (e.g. a user opening a video queued for background transcode)
+        // upgrades the waiting job's priority and runs it sooner.
+        set: {
+          priority: sql`least(${job.priority}, excluded.priority)`,
+          runAt: sql`least(${job.runAt}, excluded.run_at)`,
+        },
       });
   }
 

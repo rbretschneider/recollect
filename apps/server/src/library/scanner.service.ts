@@ -9,6 +9,7 @@ import { asset, assetFile, libraryRoot } from '../database/schema';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { classifyMediaFile } from '../media/media-types';
 import { DETECT_EVENTS_JOB } from '../memories/handlers/detect-events.handler';
+import { TRANSCODE_BACKFILL_JOB } from '../assets/handlers/transcode-backfill.handler';
 import { PURGE_TRASH_JOB } from '../trash/handlers/purge-trash.handler';
 import { INGEST_FILE_JOB } from './library-job-types';
 import { classifyScannedFile, isExcludedDirectory, KnownFileState } from './scan-classifier';
@@ -54,6 +55,12 @@ export class ScannerService {
     await this.queue.enqueue(PURGE_TRASH_JOB, {}, { dedupeKey: PURGE_TRASH_JOB, priority: 250 });
     // A prompt detection pass once the scan itself is done.
     await this.queue.enqueue(DETECT_EVENTS_JOB, {}, { dedupeKey: DETECT_EVENTS_JOB, priority: 100 });
+    // Sweep for videos still missing playback renditions (pre-transcode era, etc).
+    await this.queue.enqueue(
+      TRANSCODE_BACKFILL_JOB,
+      {},
+      { dedupeKey: TRANSCODE_BACKFILL_JOB, priority: 140 },
+    );
     this.logger.log(`Scan of ${root.path}: ${enqueued} enqueued, ${missing} missing.`);
     return { enqueued, missing };
   }

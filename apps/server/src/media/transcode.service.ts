@@ -9,6 +9,12 @@ import type { AppConfig } from '../config/app-config';
 
 const execFileAsync = promisify(execFile);
 
+/**
+ * ffmpeg defaults to all cores, which starves playback streaming and the rest
+ * of the pipeline on busy self-hosted boxes (observed as stutter mid-video).
+ */
+const TRANSCODE_THREADS = '2';
+
 /** Codec ids browsers decode natively — these stream as the original file. */
 const WEB_SAFE_VIDEO_CODECS = new Set(['avc1', 'avc3', 'h264', 'vp08', 'vp8', 'vp09', 'vp9', 'av01']);
 
@@ -44,6 +50,7 @@ export class TranscodeService {
     this.logger.log(`Transcoding ${sourcePath} for playback…`);
     await execFileAsync(ffmpegPath, [
       '-y',
+      '-threads', TRANSCODE_THREADS,
       '-i', sourcePath,
       '-map_metadata', '0',
       '-c:v', 'libx264',
