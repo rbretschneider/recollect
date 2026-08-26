@@ -21,11 +21,12 @@ html {
 }
 
 // The page never scrolls horizontally; anything wide scrolls inside its own
-// container. A crowded flex row must shrink, not push the viewport.
+// container. `clip` (not `hidden`): hidden creates a scroll container, which
+// silently disables every position: sticky header below it.
 html,
 body {
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Motion is decoration here, never information — honor the OS setting wholesale. */
