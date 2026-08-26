@@ -87,6 +87,27 @@
   }
 }
 
+.image-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+
+  .spinner {
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 3px solid rgb(255 255 255 / 25%);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+}
+
+.stage img.loading {
+  opacity: 0;
+}
+
 .preparing {
   display: grid;
   place-items: center;

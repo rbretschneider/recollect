@@ -1,9 +1,12 @@
-import { Component, inject, OnInit, output, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AlbumsApiService } from '../core/api/albums-api.service';
 import { AlbumSummary } from '../core/api/api-models';
 
-/** Overlay for choosing an existing album or creating a new one on the spot. */
+/**
+ * Typeahead album picker: one box filters existing albums as you type, and the
+ * same text becomes the name of a new album when nothing matches exactly.
+ */
 @Component({
   selector: 'app-album-picker',
   imports: [FormsModule],
@@ -18,11 +21,32 @@ export class AlbumPicker implements OnInit {
   readonly cancelled = output<void>();
 
   readonly albums = signal<AlbumSummary[]>([]);
+  readonly filterText = signal('');
+  readonly isBusy = signal(false);
 
-  newTitle = '';
+  readonly filtered = computed(() => {
+    const needle = this.filterText().trim().toLowerCase();
+    if (needle.length === 0) {
+      return this.albums();
+    }
+    return this.albums().filter((album) => album.title.toLowerCase().includes(needle));
+  });
+
+  /** Offer creation only when the typed name isn't already an exact album. */
+  readonly canCreate = computed(() => {
+    const name = this.filterText().trim();
+    return (
+      name.length > 0 &&
+      !this.albums().some((album) => album.title.toLowerCase() === name.toLowerCase())
+    );
+  });
 
   ngOnInit(): void {
     void this.load();
+  }
+
+  coverUrl(album: AlbumSummary): string | null {
+    return album.coverAssetId ? `/api/v1/assets/${album.coverAssetId}/thumb/240` : null;
   }
 
   choose(albumId: string): void {
@@ -30,12 +54,17 @@ export class AlbumPicker implements OnInit {
   }
 
   async createAndChoose(): Promise<void> {
-    const title = this.newTitle.trim();
-    if (title.length === 0) {
+    const title = this.filterText().trim();
+    if (title.length === 0 || this.isBusy()) {
       return;
     }
-    const { albumId } = await this.api.create(title, []);
-    this.picked.emit(albumId);
+    this.isBusy.set(true);
+    try {
+      const { albumId } = await this.api.create(title, []);
+      this.picked.emit(albumId);
+    } finally {
+      this.isBusy.set(false);
+    }
   }
 
   private async load(): Promise<void> {

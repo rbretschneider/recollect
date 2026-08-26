@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, count, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
 import { v7 as uuidv7 } from 'uuid';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
@@ -36,6 +36,13 @@ export class AlbumsService {
         coverAssetId: album.coverAssetId,
         updatedAt: album.updatedAt,
         assetCount: count(albumAsset.assetId),
+        // Albums without a chosen cover borrow their first member photo.
+        firstMember: sql<string | null>`(
+          select aa.asset_id from album_asset aa
+          join asset a on a.id = aa.asset_id and a.status = 'active'
+          where aa.album_id = ${album.id}
+          order by aa.sort_order limit 1
+        )`,
       })
       .from(album)
       .leftJoin(albumAsset, eq(albumAsset.albumId, album.id))
@@ -45,7 +52,7 @@ export class AlbumsService {
     return rows.map((row) => ({
       id: row.id,
       title: row.title,
-      coverAssetId: row.coverAssetId,
+      coverAssetId: row.coverAssetId ?? row.firstMember,
       assetCount: row.assetCount,
       updatedAt: row.updatedAt.toISOString(),
     }));

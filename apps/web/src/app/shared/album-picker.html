@@ -1,16 +1,36 @@
 <div class="scrim" (click)="cancelled.emit()"></div>
 <div class="picker" role="dialog" aria-label="Add to album">
   <h2>Add to album</h2>
-  <div class="list">
-    @for (album of albums(); track album.id) {
+
+  <input
+    name="filterText"
+    type="search"
+    placeholder="Find or name an album…"
+    autocomplete="off"
+    [ngModel]="filterText()"
+    (ngModelChange)="filterText.set($event)"
+  />
+
+  <div class="list" role="listbox" aria-label="Albums">
+    @for (album of filtered(); track album.id) {
       <button type="button" (click)="choose(album.id)">
+        @if (coverUrl(album); as cover) {
+          <img [src]="cover" alt="" loading="lazy" />
+        } @else {
+          <span class="cover-fallback">📔</span>
+        }
         <span class="title">{{ album.title }}</span>
         <span class="count">{{ album.assetCount }}</span>
       </button>
     }
+    @if (canCreate()) {
+      <button type="button" class="create" [disabled]="isBusy()" (click)="createAndChoose()">
+        <span class="cover-fallback">＋</span>
+        <span class="title">Create “{{ filterText().trim() }}”</span>
+      </button>
+    }
+    @if (filtered().length === 0 && !canCreate()) {
+      <p class="hint">Type a name to create your first album.</p>
+    }
   </div>
-  <form class="create" (ngSubmit)="createAndChoose()">
-    <input name="newTitle" [(ngModel)]="newTitle" placeholder="New album name" />
-    <button type="submit">Create</button>
-  </form>
 </div>

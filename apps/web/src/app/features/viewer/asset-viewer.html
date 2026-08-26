@@ -28,11 +28,19 @@
       (click)="onStageClick($event)"
     >
       @if (asset.mediaType === 'image') {
+        @if (isImageLoading()) {
+          <div class="image-loading" aria-label="Loading photo">
+            <div class="spinner" aria-hidden="true"></div>
+          </div>
+        }
         <img
           [src]="imageUrl(asset.id)"
           [alt]="'Photo taken ' + formatDate(asset.capturedAt)"
           [style.transform]="mediaTransform()"
+          [class.loading]="isImageLoading()"
           draggable="false"
+          (load)="isImageLoading.set(false)"
+          (error)="isImageLoading.set(false)"
         />
       } @else if (isPreparingVideo()) {
         <div class="preparing" role="status">

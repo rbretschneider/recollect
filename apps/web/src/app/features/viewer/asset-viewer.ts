@@ -56,6 +56,8 @@ export class AssetViewer implements OnInit, OnDestroy {
   readonly isPreparingVideo = signal(false);
   /** Reprocess retry state for the current item. */
   readonly reprocessState = signal<'idle' | 'running' | 'done'>('idle');
+  /** True until the current image's full-size file has arrived. */
+  readonly isImageLoading = signal(true);
   /** Bumped when a prepared rendition becomes available, to reload the <video>. */
   readonly videoReloadKey = signal(0);
 
@@ -106,6 +108,7 @@ export class AssetViewer implements OnInit, OnDestroy {
       this.current(); // Moving to another item resets any preparing state and the zoom.
       this.stopPreparePolling();
       this.isPreparingVideo.set(false);
+      this.isImageLoading.set(true);
       this.resetZoom();
     });
   }
