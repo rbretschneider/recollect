@@ -1,17 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Recollect: a photo becoming a memory (frame + sun/hills + memory spark). -->
+  <!--
+    Recollect: a fanned stack of polaroids, the front one captioned by hand —
+    photos becoming written memories.
+  -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#8fb3ff"/>
-      <stop offset="1" stop-color="#5b7fd4"/>
+      <stop offset="0" stop-color="#6d92e8"/>
+      <stop offset="1" stop-color="#45619f"/>
+    </linearGradient>
+    <linearGradient id="shot" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffb36b"/>
+      <stop offset="0.55" stop-color="#f7768e"/>
+      <stop offset="1" stop-color="#8a5aa8"/>
     </linearGradient>
   </defs>
+
   <rect x="16" y="16" width="480" height="480" rx="112" fill="url(#bg)"/>
-  <!-- sun -->
-  <circle cx="340" cy="182" r="46" fill="#fff" opacity="0.95"/>
-  <!-- hills -->
-  <path d="M96 356 L208 236 L282 312 L338 260 L416 356 Z" fill="#fff" opacity="0.95"/>
-  <path d="M96 356 h320 v28 a24 24 0 0 1 -24 24 H120 a24 24 0 0 1 -24 -24 Z" fill="#fff" opacity="0.55"/>
-  <!-- memory spark -->
-  <path d="M150 150 l10 -34 10 34 34 10 -34 10 -10 34 -10 -34 -34 -10 Z" fill="#fff" opacity="0.9"/>
+
+  <!-- back polaroid -->
+  <g transform="rotate(-16 256 268)">
+    <rect x="146" y="120" width="220" height="268" rx="14" fill="#0d1220" opacity="0.28"/>
+    <rect x="140" y="114" width="220" height="268" rx="14" fill="#e8e6df" opacity="0.55"/>
+  </g>
+
+  <!-- middle polaroid -->
+  <g transform="rotate(9 256 268)">
+    <rect x="146" y="122" width="220" height="268" rx="14" fill="#0d1220" opacity="0.28"/>
+    <rect x="140" y="116" width="220" height="268" rx="14" fill="#f2f0ea" opacity="0.8"/>
+  </g>
+
+  <!-- front polaroid -->
+  <g transform="rotate(-4 256 268)">
+    <rect x="142" y="126" width="228" height="276" rx="14" fill="#0d1220" opacity="0.35"/>
+    <rect x="136" y="120" width="228" height="276" rx="14" fill="#fbfaf6"/>
+    <!-- the photo -->
+    <rect x="154" y="138" width="192" height="176" rx="6" fill="url(#shot)"/>
+    <circle cx="306" cy="176" r="20" fill="#fff8ef" opacity="0.9"/>
+    <!-- handwritten caption -->
+    <path d="M162 352 q14 -16 28 0 t28 0 t28 0 t28 0"
+          fill="none" stroke="#8b8677" stroke-width="9" stroke-linecap="round" opacity="0.85"/>
+    <circle cx="322" cy="352" r="6" fill="#8b8677" opacity="0.85"/>
+  </g>
 </svg>
