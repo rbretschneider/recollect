@@ -96,14 +96,6 @@
       }
     </div>
 
-    @if (isAddingFolder()) {
-      <p class="hint">Indexing starts automatically as soon as you add a folder.</p>
-      <div class="card">
-        <app-folder-picker (picked)="addFolder($event)" />
-        <button type="button" class="ghost" (click)="isAddingFolder.set(false)">Cancel</button>
-      </div>
-    }
-
     @if (isLoaded() && roots().length === 0 && !isAddingFolder()) {
       <p class="hint">No folders yet — Recollect has nothing to index.</p>
     }
@@ -142,5 +134,12 @@
     }
   </section>
 </main>
+
+@if (isAddingFolder()) {
+  <app-sheet sheetTitle="Add a photo folder" (closed)="isAddingFolder.set(false)">
+    <p class="hint">Indexing starts automatically as soon as you add a folder.</p>
+    <app-folder-picker (picked)="addFolder($event)" />
+  </app-sheet>
+}
 
 <app-bottom-nav />

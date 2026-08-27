@@ -120,7 +120,8 @@ export class SearchPage implements AfterViewInit {
     this.viewerIndex.set(null);
   }
 
-  viewerAssets(): TimelineAsset[] {
+  /** computed: the viewer needs a stable array reference (see person page). */
+  readonly viewerAssets = computed<TimelineAsset[]>(() => {
     const r = this.results();
     const hits = this.viewerSource() === 'semantic' ? (r?.semantic ?? []) : (r?.assets ?? []);
     return hits.map((hit: SearchAssetHit) => ({
@@ -134,7 +135,7 @@ export class SearchPage implements AfterViewInit {
       hasThumbnail: true,
       isFavorite: false,
     }));
-  }
+  });
 
   private async run(query: string): Promise<void> {
     try {

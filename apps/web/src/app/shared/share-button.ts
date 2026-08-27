@@ -4,6 +4,7 @@ import { SharingApiService } from '../core/api/sharing-api.service';
 import { ShareLinkView } from '../core/api/api-models';
 import { ConfirmService } from './confirm.service';
 import { Icon } from './icon';
+import { Sheet } from './sheet';
 
 /** Expiration choices offered when making something public. */
 const EXPIRY_OPTIONS = [
@@ -21,7 +22,7 @@ const EXPIRY_OPTIONS = [
  */
 @Component({
   selector: 'app-share-button',
-  imports: [FormsModule, Icon],
+  imports: [FormsModule, Icon, Sheet],
   templateUrl: './share-button.html',
   styleUrl: './share-button.scss',
 })

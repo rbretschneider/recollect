@@ -7,11 +7,12 @@ import { UserProfile } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
+import { Sheet } from '../../shared/sheet';
 
 /** Admin settings: cameras and household members. The library has its own page. */
 @Component({
   selector: 'app-settings-page',
-  imports: [BackButton, BottomNav, FormsModule, RouterLink],
+  imports: [BackButton, BottomNav, FormsModule, RouterLink, Sheet],
   templateUrl: './settings-page.html',
   styleUrl: './settings-page.scss',
 })

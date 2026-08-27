@@ -14,6 +14,7 @@ import { PageLoading } from '../../shared/page-loading';
 import { ConfirmService } from '../../shared/confirm.service';
 import { EditToggle } from '../../shared/edit-toggle';
 import { ShareButton } from '../../shared/share-button';
+import { Sheet } from '../../shared/sheet';
 import { AssetViewer } from '../viewer/asset-viewer';
 
 /** One album: grid, viewer, share, remove-from-album. */
@@ -28,6 +29,7 @@ import { AssetViewer } from '../viewer/asset-viewer';
     FormsModule,
     RouterLink,
     ShareButton,
+    Sheet,
   ],
   templateUrl: './album-detail-page.html',
   styleUrl: './album-detail-page.scss',

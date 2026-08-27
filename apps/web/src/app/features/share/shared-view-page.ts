@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { SharingApiService } from '../../core/api/sharing-api.service';
 import { SharedView, TimelineAsset } from '../../core/api/api-models';
@@ -34,8 +34,8 @@ export class SharedViewPage implements OnInit {
     return this.api.sharedThumbUrl(this.token, assetId, 240);
   }
 
-  /** The viewer needs TimelineAsset shapes; shared views carry only ids. */
-  viewerAssets(): TimelineAsset[] {
+  /** computed: the viewer needs a stable array reference (see person page). */
+  readonly viewerAssets = computed<TimelineAsset[]>(() => {
     const view = this.view();
     if (!view) {
       return [];
@@ -51,7 +51,7 @@ export class SharedViewPage implements OnInit {
       hasThumbnail: true,
       isFavorite: false,
     }));
-  }
+  });
 
   formatSpan(view: SharedView): string {
     if (!view.startAt || !view.endAt) {

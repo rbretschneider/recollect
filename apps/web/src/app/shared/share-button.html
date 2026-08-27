@@ -7,8 +7,8 @@
 }
 
 @if (isOpen()) {
-  <div class="scrim" (click)="close()"></div>
-  <div class="share-sheet" role="dialog" aria-label="Sharing">
+  <app-sheet [sheetTitle]="'Share this ' + targetType()" (closed)="close()">
+    <div class="share-content">
     <p class="hint">
       This {{ targetType() }} is private. Creating a link makes it viewable
       (read-only) by anyone who has the URL, until it expires or you turn it off.
@@ -43,6 +43,6 @@
       </button>
     </div>
 
-    <button type="button" class="ghost" (click)="close()">Done</button>
-  </div>
+    </div>
+  </app-sheet>
 }

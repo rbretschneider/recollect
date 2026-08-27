@@ -55,67 +55,69 @@
 }
 
 @if (isDownloadSheetOpen()) {
-  <div class="scrim" (click)="isDownloadSheetOpen.set(false)"></div>
-  <div class="download-sheet" role="dialog" aria-label="Download album">
-    <h2>Download {{ detail()?.assetIds?.length }} photos</h2>
-    <p class="hint">
-      Files are named by date and who took them, so nothing lands as PXL_20260823….
-    </p>
-    <button type="button" class="option" (click)="downloadZip()">
-      One ZIP file
-      <span class="sub">Everything in a single download</span>
-    </button>
-    <button type="button" class="option" [disabled]="downloadProgress() !== null" (click)="downloadEach()">
-      @if (downloadProgress(); as progress) {
-        Downloading… {{ progress }}
-      } @else {
-        Each photo separately
-      }
-      <span class="sub">Saves ready-to-use files, no unzipping</span>
-    </button>
-    <button type="button" class="ghost" (click)="isDownloadSheetOpen.set(false)">Cancel</button>
-  </div>
+  <app-sheet
+    [sheetTitle]="'Download ' + (detail()?.assetIds?.length ?? 0) + ' photos'"
+    (closed)="isDownloadSheetOpen.set(false)"
+  >
+    <div class="download-options">
+      <p class="hint">
+        Files are named by date and who took them, so nothing lands as PXL_20260823….
+      </p>
+      <button type="button" class="option" (click)="downloadZip()">
+        One ZIP file
+        <span class="sub">Everything in a single download</span>
+      </button>
+      <button type="button" class="option" [disabled]="downloadProgress() !== null" (click)="downloadEach()">
+        @if (downloadProgress(); as progress) {
+          Downloading… {{ progress }}
+        } @else {
+          Each photo separately
+        }
+        <span class="sub">Saves ready-to-use files, no unzipping</span>
+      </button>
+    </div>
+  </app-sheet>
 }
 
 @if (isMemorySheetOpen()) {
-  <div class="scrim" (click)="isMemorySheetOpen.set(false)"></div>
-  <div class="memory-sheet" role="dialog" aria-label="Make a memory from this album">
-    <h2>Make a memory</h2>
-    <p class="hint">
-      A memory is the story of a moment — usually fewer photos than the whole
-      album. Tap photos to leave them out, then give it a name.
-    </p>
-    <input
-      name="memoryTitle"
-      [(ngModel)]="memoryTitleDraft"
-      placeholder="Name the moment"
-      maxlength="200"
-    />
-    <div class="pick-grid">
-      @for (assetId of detail()?.assetIds ?? []; track assetId) {
+  <app-sheet sheetTitle="Make a memory" (closed)="isMemorySheetOpen.set(false)">
+    <div class="memory-convert">
+      <p class="hint">
+        A memory is the story of a moment — usually fewer photos than the whole
+        album. Tap photos to leave them out, then give it a name.
+      </p>
+      <input
+        name="memoryTitle"
+        [(ngModel)]="memoryTitleDraft"
+        placeholder="Name the moment"
+        maxlength="200"
+      />
+      <div class="pick-grid">
+        @for (assetId of detail()?.assetIds ?? []; track assetId) {
+          <button
+            type="button"
+            class="pick"
+            [class.excluded]="!memorySelection().has(assetId)"
+            [attr.aria-pressed]="memorySelection().has(assetId)"
+            (click)="toggleMemoryAsset(assetId)"
+          >
+            <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
+          </button>
+        }
+      </div>
+      <div class="sheet-actions">
+        <button type="button" class="ghost" (click)="isMemorySheetOpen.set(false)">Cancel</button>
         <button
           type="button"
-          class="pick"
-          [class.excluded]="!memorySelection().has(assetId)"
-          [attr.aria-pressed]="memorySelection().has(assetId)"
-          (click)="toggleMemoryAsset(assetId)"
+          class="primary"
+          [disabled]="isCreatingMemory() || memorySelection().size === 0 || !memoryTitleDraft.trim()"
+          (click)="createMemoryFromAlbum()"
         >
-          <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
+          {{ isCreatingMemory() ? 'Creating…' : 'Create memory (' + memorySelection().size + ')' }}
         </button>
-      }
+      </div>
     </div>
-    <div class="sheet-actions">
-      <button type="button" class="ghost" (click)="isMemorySheetOpen.set(false)">Cancel</button>
-      <button
-        type="button"
-        class="primary"
-        [disabled]="isCreatingMemory() || memorySelection().size === 0 || !memoryTitleDraft.trim()"
-        (click)="createMemoryFromAlbum()"
-      >
-        {{ isCreatingMemory() ? 'Creating…' : 'Create memory (' + memorySelection().size + ')' }}
-      </button>
-    </div>
-  </div>
+  </app-sheet>
 }
 
 @if (viewerIndex() !== null) {

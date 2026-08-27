@@ -106,6 +106,7 @@ export class AssetViewer implements OnInit, OnDestroy {
   } | null = null;
   private didDrag = false;
   private didPinch = false;
+  private lastResetAssetId: string | null = null;
   private hasHistoryEntry = false;
   private prepareTimer: ReturnType<typeof setInterval> | null = null;
   private readonly onPopState = (): void => {
@@ -127,7 +128,13 @@ export class AssetViewer implements OnInit, OnDestroy {
       }
     });
     effect(() => {
-      this.current(); // Moving to another item resets any preparing state and the zoom.
+      // Reset only when the SHOWN PHOTO changes — hosts may rebuild the
+      // assets array each tick, and resetting then leaves an eternal spinner.
+      const assetId = this.current()?.id ?? null;
+      if (assetId === this.lastResetAssetId) {
+        return;
+      }
+      this.lastResetAssetId = assetId;
       this.stopPreparePolling();
       this.isPreparingVideo.set(false);
       this.isImageLoading.set(true);

@@ -7,6 +7,7 @@ import { BottomNav } from '../../shared/bottom-nav';
 import { ConfirmService } from '../../shared/confirm.service';
 import { FolderPicker } from '../../shared/folder-picker';
 import { PageLoading } from '../../shared/page-loading';
+import { Sheet } from '../../shared/sheet';
 
 const STATUS_POLL_MS = 2500;
 
@@ -32,7 +33,7 @@ const JOB_LABELS: Record<string, string> = {
  */
 @Component({
   selector: 'app-library-page',
-  imports: [BackButton, BottomNav, FolderPicker, PageLoading],
+  imports: [BackButton, BottomNav, FolderPicker, PageLoading, Sheet],
   templateUrl: './library-page.html',
   styleUrl: './library-page.scss',
 })

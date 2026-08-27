@@ -58,39 +58,6 @@
         }
       </div>
 
-      @if (isAddingUser()) {
-        <form class="card" (ngSubmit)="createUser()">
-          <label>
-            Name
-            <input name="displayName" [(ngModel)]="newUser.displayName" required />
-          </label>
-          <label>
-            Email
-            <input name="email" type="email" [(ngModel)]="newUser.email" required />
-          </label>
-          <label>
-            Password
-            <input name="password" type="password" [(ngModel)]="newUser.password" required minlength="8" />
-          </label>
-          <label>
-            Can they…
-            <select name="permission" [(ngModel)]="newUser.permission">
-              <option value="read">Look at photos (read only)</option>
-              <option value="write">Organize &amp; journal (read + write)</option>
-              <option value="delete">Everything, including delete</option>
-            </select>
-          </label>
-          <label class="check">
-            <input name="isAdmin" type="checkbox" [(ngModel)]="newUser.isAdmin" />
-            Admin (manage settings and members)
-          </label>
-          <div class="actions">
-            <button type="submit" class="primary">Create account</button>
-            <button type="button" class="ghost" (click)="isAddingUser.set(false)">Cancel</button>
-          </div>
-        </form>
-      }
-
       @for (user of users(); track user.id) {
         <div class="card row">
           <div class="info">
@@ -103,5 +70,40 @@
     </section>
   }
 </main>
+
+@if (isAddingUser()) {
+  <app-sheet sheetTitle="Add a household member" (closed)="isAddingUser.set(false)">
+    <form class="member-form" (ngSubmit)="createUser()">
+      <label>
+        Name
+        <input name="displayName" [(ngModel)]="newUser.displayName" required />
+      </label>
+      <label>
+        Email
+        <input name="email" type="email" [(ngModel)]="newUser.email" required />
+      </label>
+      <label>
+        Password
+        <input name="password" type="password" [(ngModel)]="newUser.password" required minlength="8" />
+      </label>
+      <label>
+        Can they…
+        <select name="permission" [(ngModel)]="newUser.permission">
+          <option value="read">Look at photos (read only)</option>
+          <option value="write">Organize &amp; journal (read + write)</option>
+          <option value="delete">Everything, including delete</option>
+        </select>
+      </label>
+      <label class="check">
+        <input name="isAdmin" type="checkbox" [(ngModel)]="newUser.isAdmin" />
+        Admin (manage settings and members)
+      </label>
+      <div class="actions">
+        <button type="button" class="ghost" (click)="isAddingUser.set(false)">Cancel</button>
+        <button type="submit" class="primary">Create account</button>
+      </div>
+    </form>
+  </app-sheet>
+}
 
 <app-bottom-nav />

@@ -9,20 +9,6 @@
   @if (!isLoaded()) {
     <app-page-loading label="Loading albums…" />
   }
-  @if (isCreating()) {
-    <form class="create" (ngSubmit)="create()">
-      <input
-        name="title"
-        [(ngModel)]="newTitle"
-        placeholder="Album name"
-        required
-        autofocus
-      />
-      <button type="submit" class="primary">Create</button>
-      <button type="button" class="ghost" (click)="isCreating.set(false)">Cancel</button>
-    </form>
-  }
-
   @if (isLoaded() && albums().length === 0 && !isCreating()) {
     <section class="empty">
       <h2>No albums yet</h2>
@@ -44,5 +30,23 @@
     }
   </div>
 </main>
+
+@if (isCreating()) {
+  <app-sheet sheetTitle="New album" (closed)="isCreating.set(false)">
+    <form class="create" (ngSubmit)="create()">
+      <input
+        name="title"
+        [(ngModel)]="newTitle"
+        placeholder="Album name"
+        required
+        autofocus
+      />
+      <div class="create-actions">
+        <button type="button" class="ghost" (click)="isCreating.set(false)">Cancel</button>
+        <button type="submit" class="primary">Create</button>
+      </div>
+    </form>
+  </app-sheet>
+}
 
 <app-bottom-nav />

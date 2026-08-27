@@ -10,13 +10,14 @@ import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
 import { PageLoading } from '../../shared/page-loading';
 import { EditToggle } from '../../shared/edit-toggle';
+import { Sheet } from '../../shared/sheet';
 import { AssetViewer } from '../viewer/asset-viewer';
 
 /** One person: name them, browse their photos, and in edit mode curate the
  *  cluster — split wrong faces out, ignore junk, merge duplicates, hide. */
 @Component({
   selector: 'app-person-page',
-  imports: [PageLoading, BackButton, AssetViewer, BottomNav, EditToggle, FormsModule, RouterLink],
+  imports: [PageLoading, BackButton, AssetViewer, BottomNav, EditToggle, FormsModule, RouterLink, Sheet],
   templateUrl: './person-page.html',
   styleUrl: './person-page.scss',
 })
@@ -221,8 +222,10 @@ export class PersonPage implements OnInit {
     this.assetIds.update((ids) => ids.filter((id) => id !== assetId));
   }
 
-  viewerAssets(): TimelineAsset[] {
-    return this.assetIds().map((id) => ({
+  /** computed: the viewer needs a STABLE array — a method here would rebuild
+   *  it every change detection and permanently reset the viewer's spinner. */
+  readonly viewerAssets = computed<TimelineAsset[]>(() =>
+    this.assetIds().map((id) => ({
       id,
       mediaType: 'image' as const,
       capturedAt: new Date(0).toISOString(),
@@ -232,8 +235,8 @@ export class PersonPage implements OnInit {
       durationMs: null,
       hasThumbnail: true,
       isFavorite: false,
-    }));
-  }
+    })),
+  );
 
   private async load(): Promise<void> {
     const personId = this.route.snapshot.paramMap.get('id');

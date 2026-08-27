@@ -95,29 +95,28 @@
 </main>
 
 @if (isMergePickerOpen()) {
-  <div class="scrim" (click)="isMergePickerOpen.set(false)"></div>
-  <div class="merge-picker" role="dialog" aria-label="Merge into another person">
-    <h2>Merge “{{ title() }}” into…</h2>
-    <input
-      type="search"
-      placeholder="Filter by name…"
-      autocomplete="off"
-      [value]="mergeFilter()"
-      (input)="mergeFilter.set($any($event.target).value)"
-    />
-    <div class="candidates">
-      @for (candidate of mergeCandidates(); track candidate.id) {
-        <button type="button" [disabled]="isBusy()" (click)="mergeInto(candidate)">
-          @if (candidate.coverFaceId; as cover) {
-            <img [src]="cropUrl(cover)" alt="" loading="lazy" />
-          }
-          <span class="name">{{ candidate.name ?? 'Who’s this?' }}</span>
-          <span class="count">{{ candidate.faceCount }}</span>
-        </button>
-      }
+  <app-sheet [sheetTitle]="'Merge “' + title() + '” into…'" (closed)="isMergePickerOpen.set(false)">
+    <div class="merge-content">
+      <input
+        type="search"
+        placeholder="Filter by name…"
+        autocomplete="off"
+        [value]="mergeFilter()"
+        (input)="mergeFilter.set($any($event.target).value)"
+      />
+      <div class="candidates">
+        @for (candidate of mergeCandidates(); track candidate.id) {
+          <button type="button" [disabled]="isBusy()" (click)="mergeInto(candidate)">
+            @if (candidate.coverFaceId; as cover) {
+              <img [src]="cropUrl(cover)" alt="" loading="lazy" />
+            }
+            <span class="name">{{ candidate.name ?? 'Who’s this?' }}</span>
+            <span class="count">{{ candidate.faceCount }}</span>
+          </button>
+        }
+      </div>
     </div>
-    <button type="button" class="ghost" (click)="isMergePickerOpen.set(false)">Cancel</button>
-  </div>
+  </app-sheet>
 }
 
 @if (viewerIndex() !== null) {

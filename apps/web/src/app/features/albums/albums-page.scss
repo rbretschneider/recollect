@@ -47,9 +47,14 @@
 }
 
 .create {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  display: grid;
+  gap: 0.6rem;
+
+  .create-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+  }
 
   input {
     flex: 1;

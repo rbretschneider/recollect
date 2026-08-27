@@ -6,12 +6,13 @@ import { AlbumSummary } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { AppTopbar } from '../../shared/app-topbar';
 import { BottomNav } from '../../shared/bottom-nav';
+import { Sheet } from '../../shared/sheet';
 import { PageLoading } from '../../shared/page-loading';
 
 /** The Albums tab: manual collections, PhotoPrism-style. */
 @Component({
   selector: 'app-albums-page',
-  imports: [PageLoading, AppTopbar, BottomNav, FormsModule, RouterLink],
+  imports: [PageLoading, AppTopbar, BottomNav, FormsModule, RouterLink, Sheet],
   templateUrl: './albums-page.html',
   styleUrl: './albums-page.scss',
 })

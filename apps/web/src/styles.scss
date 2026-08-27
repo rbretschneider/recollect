@@ -52,3 +52,32 @@ body {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
 }
+
+/* --- Motion & polish ------------------------------------------------------ */
+
+/* Buttons and links respond to touch: quick color/transform feedback. */
+button,
+a {
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.1s ease;
+}
+
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+/* One focus language for keyboard users. */
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+/* Router view transitions: a quick cross-fade between pages. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.16s;
+}
