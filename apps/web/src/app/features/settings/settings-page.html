@@ -8,57 +8,17 @@
     <p class="error" role="alert">{{ message }}</p>
   }
 
-  <section aria-label="Photo folders">
-    <div class="section-head">
-      <h2>Photo folders</h2>
-      @if (pendingCount() > 0) {
-        <span class="chip" aria-live="polite">Indexing · {{ pendingCount() }} left</span>
-      }
-      @if (isAdmin && !isAddingFolder()) {
-        <button type="button" class="outline" (click)="isAddingFolder.set(true)">Add folder</button>
-      }
-    </div>
-    @if (isAddingFolder()) {
-      <p class="hint">Indexing starts automatically as soon as you add a folder.</p>
-    }
-
-    @if (isAddingFolder()) {
-      <div class="card">
-        <app-folder-picker (picked)="addFolder($event)" />
-        <button type="button" class="ghost" (click)="isAddingFolder.set(false)">Cancel</button>
-      </div>
-    }
-
-    @if (roots().length === 0 && !isAddingFolder()) {
-      <p class="hint">No folders yet — Recollect has nothing to index.</p>
-    }
-
-    @for (root of roots(); track root.id) {
-      <div class="card row">
+  @if (isAdmin) {
+    <section aria-label="Library">
+      <a class="card row link-card" routerLink="/library">
         <div class="info">
-          <h3>{{ root.name }}</h3>
-          <p>{{ root.path }}</p>
-          <p class="muted">
-            @if (justQueuedRootId() === root.id || pendingCount() > 0) {
-              Indexing — new photos appear as they're processed
-            } @else {
-              {{ lastScanLabel(root) }}
-            }
-          </p>
+          <h3>Library</h3>
+          <p class="muted">Folders, indexing state, scans — moved to its own page.</p>
         </div>
-        @if (isAdmin) {
-          <button
-            type="button"
-            class="outline"
-            [disabled]="pendingCount() > 0 || justQueuedRootId() === root.id"
-            (click)="scanNow(root)"
-          >
-            {{ scanButtonLabel(root) }}
-          </button>
-        }
-      </div>
-    }
-  </section>
+        <span class="chevron" aria-hidden="true">›</span>
+      </a>
+    </section>
+  }
 
   @if (isAdmin && devices().length > 0) {
     <section aria-label="Cameras">

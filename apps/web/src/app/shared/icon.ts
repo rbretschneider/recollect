@@ -17,7 +17,8 @@ export type IconName =
   | 'file'
   | 'image'
   | 'aperture'
-  | 'map-pin';
+  | 'map-pin'
+  | 'share';
 
 /**
  * Crisp stroke icons, inlined so the app stays dependency-free. Sized by the
@@ -114,6 +115,13 @@ export type IconName =
           <path d="M9.69 16 3.95 6.06" />
           <path d="M14.31 16H2.83" />
           <path d="m16.62 12-5.74 9.94" />
+        }
+        @case ('share') {
+          <circle cx="18" cy="5" r="3" />
+          <circle cx="6" cy="12" r="3" />
+          <circle cx="18" cy="19" r="3" />
+          <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" />
+          <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />
         }
         @case ('map-pin') {
           <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />

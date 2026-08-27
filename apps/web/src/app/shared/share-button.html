@@ -1,4 +1,10 @@
-<button type="button" class="share" (click)="open()">Share</button>
+@if (variant() === 'overlay') {
+  <button type="button" class="share-overlay" aria-label="Share" (click)="open()">
+    <app-icon name="share" [size]="19" />
+  </button>
+} @else {
+  <button type="button" class="share" (click)="open()">Share</button>
+}
 
 @if (isOpen()) {
   <div class="scrim" (click)="close()"></div>

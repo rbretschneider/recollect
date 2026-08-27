@@ -61,8 +61,6 @@ export class MemoryDetailPage implements OnInit {
   readonly isEditingTitle = signal(false);
   readonly journalDraft = signal('');
   readonly saveState = signal<'idle' | 'saving' | 'saved'>('idle');
-  readonly isAddingQuote = signal(false);
-
   titleDraft = '';
   quoteTextDraft = '';
   quoteSaidByDraft = '';
@@ -194,7 +192,6 @@ export class MemoryDetailPage implements OnInit {
     this.detail.set({ ...detail, quotes: [...detail.quotes, quote] });
     this.quoteTextDraft = '';
     this.quoteSaidByDraft = '';
-    this.isAddingQuote.set(false);
   }
 
   async deleteQuote(quote: MemoryQuote): Promise<void> {
@@ -212,13 +209,6 @@ export class MemoryDetailPage implements OnInit {
     }
     await this.api.deleteQuote(detail.id, quote.id);
     this.detail.set({ ...detail, quotes: detail.quotes.filter((entry) => entry.id !== quote.id) });
-  }
-
-  /** The "write the story" prompt drops the cursor straight into the journal. */
-  focusJournal(): void {
-    const element = this.editor()?.nativeElement;
-    element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    element?.focus({ preventScroll: true });
   }
 
   /** The journal grows with the writing instead of scrolling inside a box. */

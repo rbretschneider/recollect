@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { SharingApiService } from '../core/api/sharing-api.service';
 import { ShareLinkView } from '../core/api/api-models';
 import { ConfirmService } from './confirm.service';
+import { Icon } from './icon';
 
 /** Expiration choices offered when making something public. */
 const EXPIRY_OPTIONS = [
@@ -20,7 +21,7 @@ const EXPIRY_OPTIONS = [
  */
 @Component({
   selector: 'app-share-button',
-  imports: [FormsModule],
+  imports: [FormsModule, Icon],
   templateUrl: './share-button.html',
   styleUrl: './share-button.scss',
 })
@@ -32,6 +33,8 @@ export class ShareButton {
   readonly targetId = input.required<string>();
   /** For memories: whether the shared page includes journal text. */
   readonly includeJournal = input<boolean>(false);
+  /** 'overlay' renders a circular icon button for photo chrome (memory hero). */
+  readonly variant = input<'button' | 'overlay'>('button');
 
   readonly isOpen = signal(false);
   readonly links = signal<ShareLinkView[]>([]);

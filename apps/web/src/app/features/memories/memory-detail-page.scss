@@ -34,6 +34,13 @@
     z-index: 2;
   }
 
+  .hero-share {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 2;
+  }
+
   .hero-text {
     position: relative;
     z-index: 1;
@@ -69,19 +76,6 @@
     background: var(--surface);
     color: var(--text);
   }
-}
-
-// A soft invitation to write, shown only while the journal is empty.
-.story-prompt {
-  display: block;
-  margin: 1.25rem auto 0;
-  padding: 0.6rem 1.1rem;
-  border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--border));
-  border-radius: 2rem;
-  background: none;
-  color: var(--accent);
-  font-size: 0.9rem;
-  cursor: pointer;
 }
 
 // The journal reads and writes like a story, not a form.
@@ -230,18 +224,6 @@
       color: var(--danger);
       cursor: pointer;
     }
-  }
-
-  .quote-prompt {
-    display: block;
-    margin: 0.75rem 0;
-    padding: 0.5rem 1rem;
-    border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--border));
-    border-radius: 2rem;
-    background: none;
-    color: var(--accent);
-    font-size: 0.9rem;
-    cursor: pointer;
   }
 
   .quote-form {

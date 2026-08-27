@@ -1,0 +1,249 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+  padding-bottom: 4.5rem;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+
+  h1 {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+}
+
+.library {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 1rem;
+
+  section {
+    margin-bottom: 1.75rem;
+  }
+}
+
+.error {
+  padding: 0.75rem 1rem;
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--danger) 18%, var(--surface));
+  color: var(--text);
+}
+
+.section-head,
+.state-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+
+  h2 {
+    margin: 0 auto 0 0;
+    font-size: 1rem;
+  }
+}
+
+.chip {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 1rem;
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+.state {
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+
+  .bar {
+    height: 6px;
+    margin: 0.5rem 0 0.9rem;
+    border-radius: 3px;
+    background: var(--surface-raised);
+    overflow: hidden;
+
+    .fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 3px;
+      transition: width 0.6s ease;
+    }
+  }
+
+  .counts {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin: 0.75rem 0 0;
+
+    dt {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+    }
+
+    dd {
+      margin: 0.15rem 0 0;
+      font-size: 1.05rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .link {
+      padding: 0;
+      border: none;
+      background: none;
+      color: var(--danger);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+    }
+  }
+
+  .failures {
+    margin: 0.75rem 0 0;
+    padding: 0.6rem 0.8rem;
+    list-style: none;
+    max-height: 14rem;
+    overflow-y: auto;
+    border-radius: 0.6rem;
+    background: var(--surface-raised);
+    font-size: 0.8rem;
+    display: grid;
+    gap: 0.4rem;
+    word-break: break-word;
+  }
+
+  .work {
+    margin: 0.9rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.45rem;
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      font-size: 0.85rem;
+      color: var(--text);
+
+      .count {
+        margin-left: auto;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--text-muted);
+
+        &.running {
+          background: var(--accent);
+          animation: library-pulse 1.2s ease-in-out infinite;
+        }
+      }
+    }
+  }
+}
+
+@keyframes library-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  padding: 0.9rem;
+  margin-bottom: 0.6rem;
+  display: grid;
+  gap: 0.75rem;
+
+  &.row {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
+  &.disabled {
+    opacity: 0.65;
+  }
+
+  .info {
+    min-width: 0;
+
+    h3 {
+      margin: 0;
+      font-size: 0.95rem;
+    }
+
+    p {
+      margin: 0.1rem 0 0;
+      font-size: 0.8rem;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .muted {
+      color: var(--text-muted);
+    }
+  }
+
+  .actions {
+    display: grid;
+    gap: 0.4rem;
+  }
+}
+
+.outline {
+  min-height: 38px;
+  padding: 0 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface-raised);
+  color: var(--text);
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &.danger {
+    color: var(--danger);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+.ghost {
+  min-height: 40px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}

@@ -177,3 +177,15 @@ input[type='checkbox'] {
   color: var(--danger);
   font-size: 0.9rem;
 }
+
+// Pointer card to the Library page.
+.link-card {
+  text-decoration: none;
+  color: var(--text);
+  cursor: pointer;
+
+  .chevron {
+    font-size: 1.4rem;
+    color: var(--text-muted);
+  }
+}

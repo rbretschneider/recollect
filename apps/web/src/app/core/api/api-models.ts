@@ -194,6 +194,7 @@ export interface LibraryStatus {
   runningJobs: number;
   ingestPending: number;
   batchTotal: number;
+  byType: Array<{ type: string; queued: number; running: number }>;
 }
 
 /** Mirrors the server's LibraryFailure. */

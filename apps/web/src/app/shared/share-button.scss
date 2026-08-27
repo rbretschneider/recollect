@@ -1,3 +1,16 @@
+// Circular chrome button for photo overlays, matching the back button.
+.share-overlay {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 45%);
+  color: white;
+  cursor: pointer;
+}
+
 .share {
   min-height: 40px;
   padding: 0 0.9rem;

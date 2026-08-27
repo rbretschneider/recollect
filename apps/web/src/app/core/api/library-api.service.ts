@@ -28,6 +28,16 @@ export class LibraryApiService {
     );
   }
 
+  cancelScan(): Promise<{ canceled: number }> {
+    return firstValueFrom(this.http.post<{ canceled: number }>('/api/v1/library/scan/cancel', {}));
+  }
+
+  setRootEnabled(rootId: string, enabled: boolean): Promise<{ root: LibraryRootView }> {
+    return firstValueFrom(
+      this.http.patch<{ root: LibraryRootView }>(`/api/v1/library/roots/${rootId}`, { enabled }),
+    );
+  }
+
   listFailures(): Promise<{ failures: LibraryFailure[] }> {
     return firstValueFrom(
       this.http.get<{ failures: LibraryFailure[] }>('/api/v1/library/failures'),

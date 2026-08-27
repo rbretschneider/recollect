@@ -51,6 +51,8 @@ export interface LibraryStatus {
   /** Files still waiting on ingest, and the size of the batch they belong to. */
   ingestPending: number;
   batchTotal: number;
+  /** Live queue breakdown so the Library page can narrate what's happening. */
+  byType: Array<{ type: string; queued: number; running: number }>;
 }
 
 /** Manages library roots and kicks off scans. */
@@ -114,7 +116,43 @@ export class LibraryService {
     const [batch] = await this.db
       .select({ batchTotal: sql<number>`coalesce(sum(${libraryRoot.lastScanEnqueued}), 0)::int` })
       .from(libraryRoot);
-    return { ...assets, ...jobs, batchTotal: batch.batchTotal };
+    const byType = await this.db
+      .select({
+        type: job.type,
+        queued: count(sql`case when ${job.status} = 'queued' then 1 end`),
+        running: count(sql`case when ${job.status} = 'running' then 1 end`),
+      })
+      .from(job)
+      .where(sql`${job.status} in ('queued', 'running')`)
+      .groupBy(job.type)
+      .orderBy(sql`count(*) desc`);
+    return { ...assets, ...jobs, batchTotal: batch.batchTotal, byType };
+  }
+
+  /**
+   * Cancels the current indexing pass: queued scan/ingest jobs are dropped
+   * (running ones finish their file). A later "Scan now" redoes the sweep —
+   * scans are idempotent, so canceling never loses data.
+   */
+  async cancelScan(): Promise<{ canceled: number }> {
+    const rows = await this.db
+      .delete(job)
+      .where(sql`${job.status} = 'queued' and ${job.type} in ('scan_root', 'ingest_file')`)
+      .returning({ id: job.id });
+    return { canceled: rows.length };
+  }
+
+  /** Disables (or re-enables) a root: kept, browsable, but skipped by scans. */
+  async setRootEnabled(rootId: string, enabled: boolean): Promise<LibraryRootView> {
+    const [row] = await this.db
+      .update(libraryRoot)
+      .set({ enabled })
+      .where(eq(libraryRoot.id, rootId))
+      .returning();
+    if (!row) {
+      throw new NotFoundException(`Library root ${rootId} does not exist.`);
+    }
+    return this.toView(row);
   }
 
   /** What went wrong, in human terms: failed processing stages and failed jobs. */

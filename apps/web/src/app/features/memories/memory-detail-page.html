@@ -5,6 +5,15 @@
         <img [src]="cover" alt="" />
       }
       <app-back class="overlay" to="/memories" label="Back to memories" />
+      @if (canWrite) {
+        <app-share-button
+          class="hero-share"
+          variant="overlay"
+          targetType="memory"
+          [targetId]="memory.id"
+          [includeJournal]="true"
+        />
+      }
       <div class="hero-text">
         @if (isEditingTitle()) {
           <input
@@ -26,12 +35,6 @@
         </p>
       </div>
     </header>
-
-    @if (canWrite && journalDraft().length === 0) {
-      <button type="button" class="story-prompt" (click)="focusJournal()">
-        ✎ Write the story of this day
-      </button>
-    }
 
     <section class="story" aria-label="Journal">
       @if (canWrite) {
@@ -79,31 +82,23 @@
         </blockquote>
       }
       @if (canWrite) {
-        @if (isAddingQuote()) {
-          <form class="quote-form" (ngSubmit)="addQuote()">
+        <form class="quote-form" (ngSubmit)="addQuote()">
+          <input
+            name="quoteText"
+            [(ngModel)]="quoteTextDraft"
+            placeholder="Quote of the day — the funny thing somebody said…"
+            maxlength="500"
+          />
+          <div class="quote-form-row">
             <input
-              name="quoteText"
-              [(ngModel)]="quoteTextDraft"
-              placeholder="“We should live at the beach forever.”"
-              maxlength="500"
-              autofocus
+              name="quoteSaidBy"
+              [(ngModel)]="quoteSaidByDraft"
+              placeholder="Who said it?"
+              maxlength="80"
             />
-            <div class="quote-form-row">
-              <input
-                name="quoteSaidBy"
-                [(ngModel)]="quoteSaidByDraft"
-                placeholder="Who said it?"
-                maxlength="80"
-              />
-              <button type="submit" class="primary" [disabled]="!canSubmitQuote">Add</button>
-              <button type="button" class="ghost" (click)="isAddingQuote.set(false)">Cancel</button>
-            </div>
-          </form>
-        } @else {
-          <button type="button" class="quote-prompt" (click)="isAddingQuote.set(true)">
-            ❝ Add a quote of the day
-          </button>
-        }
+            <button type="submit" class="primary" [disabled]="!canSubmitQuote">Add quote</button>
+          </div>
+        </form>
       }
     </section>
 
@@ -137,7 +132,6 @@
 
     <section class="manage">
       @if (canWrite) {
-        <app-share-button targetType="memory" [targetId]="memory.id" [includeJournal]="true" />
         <app-edit-toggle />
       }
       @if (editMode.isEditing()) {

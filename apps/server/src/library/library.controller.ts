@@ -6,11 +6,13 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
 import { RequireAdmin } from '../auth/decorators/require-admin.decorator';
 import { CreateRootRequestDto } from './dto/create-root-request.dto';
+import { SetRootEnabledRequestDto } from './dto/set-root-enabled-request.dto';
 import {
   BrowseListing,
   LibraryFailure,
@@ -42,6 +44,22 @@ export class LibraryController {
   async scan(@Param('id', ParseUUIDPipe) id: string): Promise<{ accepted: true }> {
     await this.library.enqueueScan(id);
     return { accepted: true };
+  }
+
+  @RequireAdmin()
+  @Patch('roots/:id')
+  async setEnabled(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: SetRootEnabledRequestDto,
+  ): Promise<{ root: LibraryRootView }> {
+    return { root: await this.library.setRootEnabled(id, body.enabled) };
+  }
+
+  /** Cancels the current indexing pass (queued scan/ingest jobs are dropped). */
+  @RequireAdmin()
+  @Post('scan/cancel')
+  async cancelScan(): Promise<{ canceled: number }> {
+    return this.library.cancelScan();
   }
 
   @Get('status')

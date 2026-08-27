@@ -1,0 +1,146 @@
+<header class="topbar">
+  <app-back to="/" label="Back to photos" />
+  <h1>Library</h1>
+</header>
+
+<main class="library">
+  @if (!isLoaded()) {
+    <app-page-loading label="Loading library…" />
+  }
+
+  @if (error(); as message) {
+    <p class="error" role="alert">{{ message }}</p>
+  }
+
+  @if (status(); as s) {
+    <section class="state" aria-label="Indexing state">
+      <div class="state-head">
+        <h2>
+          @if (pendingCount() > 0) {
+            Indexing
+          } @else {
+            Up to date
+          }
+        </h2>
+        @if (pendingCount() > 0) {
+          <span class="chip" aria-live="polite">{{ pendingCount() }} tasks</span>
+          @if (isAdmin) {
+            <button
+              type="button"
+              class="outline danger"
+              [disabled]="isCancelling()"
+              (click)="cancelScan()"
+            >
+              {{ isCancelling() ? 'Cancelling…' : 'Cancel' }}
+            </button>
+          }
+        }
+      </div>
+
+      @if (batchProgress(); as progress) {
+        <div class="bar" role="progressbar" [attr.aria-valuenow]="(progress * 100).toFixed(0)">
+          <div class="fill" [style.width.%]="progress * 100"></div>
+        </div>
+      }
+
+      <dl class="counts">
+        <div>
+          <dt>Photos & videos</dt>
+          <dd>{{ s.totalAssets.toLocaleString() }}</dd>
+        </div>
+        <div>
+          <dt>With thumbnails</dt>
+          <dd>{{ s.thumbnailed.toLocaleString() }}</dd>
+        </div>
+        <div>
+          <dt>Problems</dt>
+          <dd>
+            @if (s.failedStages > 0) {
+              <button type="button" class="link" (click)="toggleFailures()">
+                {{ s.failedStages.toLocaleString() }} — what failed?
+              </button>
+            } @else {
+              0
+            }
+          </dd>
+        </div>
+      </dl>
+
+      @if (failures(); as list) {
+        <ul class="failures">
+          @for (failure of list; track failure.name + failure.reason) {
+            <li><strong>{{ failure.name }}</strong> — {{ failure.reason }}</li>
+          }
+        </ul>
+      }
+
+      @if (activeWork().length > 0) {
+        <ul class="work" aria-label="What's happening now">
+          @for (work of activeWork(); track work.label) {
+            <li>
+              <span class="dot" [class.running]="work.isRunning" aria-hidden="true"></span>
+              {{ work.label }}
+              <span class="count">{{ work.count.toLocaleString() }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+
+  <section aria-label="Library folders">
+    <div class="section-head">
+      <h2>Folders</h2>
+      @if (isAdmin && !isAddingFolder()) {
+        <button type="button" class="outline" (click)="isAddingFolder.set(true)">Add folder</button>
+      }
+    </div>
+
+    @if (isAddingFolder()) {
+      <p class="hint">Indexing starts automatically as soon as you add a folder.</p>
+      <div class="card">
+        <app-folder-picker (picked)="addFolder($event)" />
+        <button type="button" class="ghost" (click)="isAddingFolder.set(false)">Cancel</button>
+      </div>
+    }
+
+    @if (isLoaded() && roots().length === 0 && !isAddingFolder()) {
+      <p class="hint">No folders yet — Recollect has nothing to index.</p>
+    }
+
+    @for (root of roots(); track root.id) {
+      <div class="card row" [class.disabled]="!root.enabled">
+        <div class="info">
+          <h3>{{ root.name }}</h3>
+          <p>{{ root.path }}</p>
+          <p class="muted">
+            @if (!root.enabled) {
+              Paused — not scanned
+            } @else if (justQueuedRootId() === root.id || pendingCount() > 0) {
+              Indexing — new photos appear as they're processed
+            } @else {
+              {{ lastScanLabel(root) }}
+            }
+          </p>
+        </div>
+        @if (isAdmin) {
+          <div class="actions">
+            <button
+              type="button"
+              class="outline"
+              [disabled]="!root.enabled || pendingCount() > 0 || justQueuedRootId() === root.id"
+              (click)="scanNow(root)"
+            >
+              {{ scanButtonLabel(root) }}
+            </button>
+            <button type="button" class="outline" (click)="toggleEnabled(root)">
+              {{ root.enabled ? 'Pause' : 'Resume' }}
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </section>
+</main>
+
+<app-bottom-nav />
