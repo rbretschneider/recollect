@@ -1,6 +1,9 @@
 <app-topbar />
 
 <main class="memories">
+  @if (!isLoaded()) {
+    <app-page-loading label="Loading memories…" />
+  }
   @if (suggestionCount() > 0) {
     <a class="inbox-banner" routerLink="/memories/inbox">
       <span class="badge">{{ suggestionCount() }}</span>

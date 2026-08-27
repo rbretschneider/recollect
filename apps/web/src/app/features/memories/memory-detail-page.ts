@@ -18,6 +18,7 @@ import { AuthStateService } from '../../core/auth/auth-state.service';
 import { EditModeService } from '../../core/edit-mode.service';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
+import { PageLoading } from '../../shared/page-loading';
 import { ConfirmService } from '../../shared/confirm.service';
 import { EditToggle } from '../../shared/edit-toggle';
 import { SafeResourcePipe } from '../../shared/safe-resource.pipe';
@@ -29,7 +30,7 @@ const JOURNAL_AUTOSAVE_MS = 1500;
 /** One Memory: hero, editable title, media grid, and the journal. */
 @Component({
   selector: 'app-memory-detail-page',
-  imports: [BackButton, 
+  imports: [PageLoading, BackButton, 
     AssetViewer,
     BottomNav,
     EditToggle,
@@ -243,27 +244,12 @@ export class MemoryDetailPage implements OnInit {
     }
   }
 
-  /** The viewer needs TimelineAsset shapes; fetch details for the memory's assets. */
+  /** The viewer needs TimelineAsset shapes; one batch request loads them all. */
   private async loadViewerAssets(assetIds: string[]): Promise<void> {
-    const assets: TimelineAsset[] = [];
-    for (const id of assetIds) {
-      try {
-        const detail = await firstValueFrom(
-          this.http.get<{
-            id: string;
-            mediaType: 'image' | 'video';
-            capturedAt: string;
-            width: number | null;
-            height: number | null;
-            durationMs: number | null;
-            isFavorite: boolean;
-          }>(`/api/v1/assets/${id}/detail`),
-        );
-        assets.push({ ...detail, capturedDay: detail.capturedAt.slice(0, 10), hasThumbnail: true });
-      } catch {
-        // Missing assets render as tombstones; skip them in the viewer.
-      }
-    }
-    this.viewerAssets.set(assets);
+    const { items } = await firstValueFrom(
+      this.http.post<{ items: TimelineAsset[] }>('/api/v1/assets/items', { assetIds }),
+    );
+    this.viewerAssets.set(items);
   }
+
 }

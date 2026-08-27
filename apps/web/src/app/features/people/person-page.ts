@@ -8,6 +8,7 @@ import { EditModeService } from '../../core/edit-mode.service';
 import { ConfirmService } from '../../shared/confirm.service';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
+import { PageLoading } from '../../shared/page-loading';
 import { EditToggle } from '../../shared/edit-toggle';
 import { AssetViewer } from '../viewer/asset-viewer';
 
@@ -15,7 +16,7 @@ import { AssetViewer } from '../viewer/asset-viewer';
  *  cluster — split wrong faces out, ignore junk, merge duplicates, hide. */
 @Component({
   selector: 'app-person-page',
-  imports: [BackButton, AssetViewer, BottomNav, EditToggle, FormsModule, RouterLink],
+  imports: [PageLoading, BackButton, AssetViewer, BottomNav, EditToggle, FormsModule, RouterLink],
   templateUrl: './person-page.html',
   styleUrl: './person-page.scss',
 })
@@ -28,6 +29,7 @@ export class PersonPage implements OnInit {
   protected readonly editMode = inject(EditModeService);
 
   readonly person = signal<PersonSummary | null>(null);
+  readonly isLoaded = signal(false);
   readonly everyone = signal<PersonSummary[]>([]);
   readonly faces = signal<PersonFace[]>([]);
   readonly assetIds = signal<string[]>([]);
@@ -250,5 +252,6 @@ export class PersonPage implements OnInit {
     this.nameDraft = person?.name ?? '';
     this.assetIds.set(assetIds);
     this.faces.set(faces);
+    this.isLoaded.set(true);
   }
 }

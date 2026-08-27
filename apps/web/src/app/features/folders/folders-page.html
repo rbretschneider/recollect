@@ -4,6 +4,9 @@
 </header>
 
 <main class="folders">
+  @if (!isLoaded() && !listing()) {
+    <app-page-loading label="Loading folders…" />
+  }
   @if (crumbs().length > 0) {
     <nav class="crumbs" aria-label="Folder path">
       @for (crumb of crumbs(); track crumb.path; let isLast = $last) {

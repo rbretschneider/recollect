@@ -19,7 +19,17 @@ export const PG_POOL = Symbol('PG_POOL');
     {
       provide: PG_POOL,
       inject: [APP_CONFIG],
-      useFactory: (config: AppConfig): Pool => new Pool({ connectionString: config.databaseUrl }),
+      useFactory: (config: AppConfig): Pool =>
+        new Pool({
+          connectionString: config.databaseUrl,
+          max: 16,
+          idleTimeoutMillis: 30_000,
+          // Fail fast instead of queueing forever when the pool is exhausted.
+          connectionTimeoutMillis: 5_000,
+          keepAlive: true,
+          statement_timeout: 15_000,
+          application_name: 'recollect',
+        }),
     },
     {
       provide: DATABASE,

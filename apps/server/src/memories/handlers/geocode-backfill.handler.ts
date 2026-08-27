@@ -16,9 +16,6 @@ const GEOCODE_BACKFILL_PRIORITY = 200;
 const BATCH_SIZE = 30;
 const REQUEST_SPACING_MS = 1200;
 
-/** SQL for the cache cell key, matching GeocodeService's lat.toFixed(2) format. */
-const CELL_KEY_SQL = sql`to_char(round(${asset.gpsLat}::numeric, 2), 'FM990.00') || ',' || to_char(round(${asset.gpsLon}::numeric, 2), 'FM990.00')`;
-
 /**
  * Walks every photo grid cell without a cached place name and resolves it via
  * the (rate-limited, cached-forever) geocoder, so timeline cards can show
@@ -48,7 +45,7 @@ export class GeocodeBackfillHandler implements JobHandler, OnModuleInit {
       where ${asset.gpsLat} is not null
         and ${asset.status} = 'active'
         and not exists (
-          select 1 from geocode_cache g where g.cell_key = ${CELL_KEY_SQL}
+          select 1 from geocode_cache g where g.cell_key = ${asset.geocodeCellKey}
         )
       limit ${BATCH_SIZE}
     `);

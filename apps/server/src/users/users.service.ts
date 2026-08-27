@@ -27,12 +27,30 @@ export class UsersService {
     return rows.filter((row) => row.disabledAt === null).map((row) => this.toProfile(row));
   }
 
+  /**
+   * Short-lived profile memo: the auth guard calls this on EVERY request —
+   * including each of the ~100 thumbnails a grid screen loads — so a 30s
+   * cache removes ~99% of those lookups. Writes call invalidateProfile().
+   */
+  private readonly profileCache = new Map<
+    string,
+    { profile: UserProfile | null; expiresAt: number }
+  >();
+
   async findById(id: string): Promise<UserProfile | null> {
-    const [row] = await this.db.select().from(userAccount).where(eq(userAccount.id, id)).limit(1);
-    if (!row || row.disabledAt !== null) {
-      return null;
+    const cached = this.profileCache.get(id);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.profile;
     }
-    return this.toProfile(row);
+    const [row] = await this.db.select().from(userAccount).where(eq(userAccount.id, id)).limit(1);
+    const profile = !row || row.disabledAt !== null ? null : this.toProfile(row);
+    this.profileCache.set(id, { profile, expiresAt: Date.now() + 30_000 });
+    return profile;
+  }
+
+  /** Drops a memoized profile after any account change (grant edits, disable). */
+  invalidateProfile(id: string): void {
+    this.profileCache.delete(id);
   }
 
   async findByEmailWithHash(

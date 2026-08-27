@@ -8,7 +8,8 @@ import { ThumbnailStore, THUMBNAIL_SIZES } from './thumbnail-store';
 
 const execFileAsync = promisify(execFile);
 
-const WEBP_QUALITY = 80;
+/** Grid tiles (240) read fine at q68 and halve the grid's byte weight. */
+const WEBP_QUALITY_BY_SIZE: Record<number, number> = { 240: 68, 720: 80, 1440: 80 };
 const VIDEO_POSTER_SEEK_SECONDS = 1;
 const FFMPEG_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
 
@@ -38,13 +39,15 @@ export class ThumbnailService {
     await this.store.ensureDirectoryFor(assetId);
     const pipeline = sharp(source, { failOn: 'truncated' }).rotate();
     const metadata = await pipeline.metadata();
-    for (const size of THUMBNAIL_SIZES) {
-      await pipeline
-        .clone()
-        .resize({ width: size, height: size, fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: WEBP_QUALITY })
-        .toFile(this.store.pathFor(assetId, size));
-    }
+    await Promise.all(
+      THUMBNAIL_SIZES.map((size) =>
+        pipeline
+          .clone()
+          .resize({ width: size, height: size, fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: WEBP_QUALITY_BY_SIZE[size] ?? 80 })
+          .toFile(this.store.pathFor(assetId, size)),
+      ),
+    );
     return this.orientedDimensions(metadata);
   }
 

@@ -9,6 +9,7 @@ import {
 import { TimelineAsset } from '../../core/api/api-models';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
+import { PageLoading } from '../../shared/page-loading';
 import { AssetViewer } from '../viewer/asset-viewer';
 
 /** A breadcrumb segment in the folder path. */
@@ -23,7 +24,7 @@ interface Crumb {
  */
 @Component({
   selector: 'app-folders-page',
-  imports: [BackButton, AssetViewer, BottomNav, RouterLink],
+  imports: [PageLoading, BackButton, AssetViewer, BottomNav, RouterLink],
   templateUrl: './folders-page.html',
   styleUrl: './folders-page.scss',
 })

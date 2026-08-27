@@ -1,6 +1,7 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
@@ -41,14 +42,32 @@ function serveWebApp(app: NestExpressApplication, config: AppConfig): void {
   if (!config.webDistDir || !existsSync(config.webDistDir)) {
     return;
   }
-  app.useStaticAssets(config.webDistDir, { maxAge: '1h', index: false });
-  app.use((req: { path: string }, res: { sendFile: (p: string) => void }, next: () => void) => {
-    if (req.path.startsWith('/api/')) {
-      next();
-      return;
-    }
-    res.sendFile(join(config.webDistDir, 'index.html'));
+  app.useStaticAssets(config.webDistDir, {
+    index: false,
+    setHeaders: (res, path) => {
+      // Angular content-hashes its bundles; those never change under a name.
+      const isHashed = /-[0-9A-Z]{8,}\.(js|css)$|\.(woff2?|webp|png|svg|ico)$/i.test(path);
+      res.setHeader(
+        'Cache-Control',
+        isHashed ? 'public, max-age=31536000, immutable' : 'public, max-age=3600',
+      );
+    },
   });
+  app.use(
+    (
+      req: { path: string },
+      res: { sendFile: (p: string) => void; setHeader: (k: string, v: string) => void },
+      next: () => void,
+    ) => {
+      if (req.path.startsWith('/api/')) {
+        next();
+        return;
+      }
+      // The app shell must revalidate so deploys reach users immediately.
+      res.setHeader('Cache-Control', 'no-cache');
+      res.sendFile(join(config.webDistDir, 'index.html'));
+    },
+  );
 }
 
 async function bootstrap(): Promise<void> {
@@ -60,6 +79,8 @@ async function bootstrap(): Promise<void> {
   });
   const config = app.get<AppConfig>(APP_CONFIG);
   app.setGlobalPrefix('api/v1');
+  // Slow-link essential: JSON compresses 8-10x, the web bundle ~4x.
+  app.use(compression({ threshold: 1024 }));
   app.use(cookieParser());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.enableShutdownHooks();

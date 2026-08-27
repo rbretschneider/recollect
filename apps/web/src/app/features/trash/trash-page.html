@@ -4,6 +4,9 @@
 </header>
 
 <main class="trash">
+  @if (!isLoaded()) {
+    <app-page-loading label="Loading trash…" />
+  }
   @if (isLoaded() && items().length === 0) {
     <section class="empty">
       <h2>Trash is empty</h2>

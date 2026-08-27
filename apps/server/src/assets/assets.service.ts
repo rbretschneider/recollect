@@ -134,14 +134,7 @@ export class AssetsService {
       })
       .from(asset)
       .leftJoin(favorite, and(eq(favorite.assetId, asset.id), eq(favorite.userId, userId)))
-      .leftJoin(
-        geocodeCache,
-        // Same "lat,lon" 2-decimal key format GeocodeService writes.
-        eq(
-          geocodeCache.cellKey,
-          sql`to_char(round(${asset.gpsLat}::numeric, 2), 'FM990.00') || ',' || to_char(round(${asset.gpsLon}::numeric, 2), 'FM990.00')`,
-        ),
-      )
+      .leftJoin(geocodeCache, eq(geocodeCache.cellKey, asset.geocodeCellKey))
       .where(
         and(
           eq(asset.status, 'active'),
@@ -155,8 +148,10 @@ export class AssetsService {
     const hasMore = rows.length > pageSize;
     const items = rows.slice(0, pageSize);
     const last = items[items.length - 1];
-    const fileByAsset = await this.loadFilesFor(items.map((row) => row.id));
-    const ownerByDevice = await this.loadDeviceOwners();
+    const [fileByAsset, ownerByDevice] = await Promise.all([
+      this.loadFilesFor(items.map((row) => row.id)),
+      this.loadDeviceOwners(),
+    ]);
     return {
       items: items.map((row) => {
         const file = fileByAsset.get(row.id);
@@ -224,22 +219,29 @@ export class AssetsService {
 
   /** Detail for one asset: metadata plus camera info for the viewer's info sheet. */
   async getDetail(assetId: string, userId?: string): Promise<AssetDetail> {
-    const [row] = await this.db.select().from(asset).where(eq(asset.id, assetId)).limit(1);
+    // Independent lookups run together — one round-trip time, not three.
+    const [[row], [heart], [file]] = await Promise.all([
+      this.db.select().from(asset).where(eq(asset.id, assetId)).limit(1),
+      userId
+        ? this.db
+            .select({ assetId: favorite.assetId })
+            .from(favorite)
+            .where(and(eq(favorite.assetId, assetId), eq(favorite.userId, userId)))
+            .limit(1)
+        : Promise.resolve([]),
+      this.db
+        .select({
+          relPath: assetFile.relPath,
+          rootId: assetFile.rootId,
+          sizeBytes: assetFile.sizeBytes,
+        })
+        .from(assetFile)
+        .where(and(eq(assetFile.assetId, assetId), eq(assetFile.state, 'present')))
+        .limit(1),
+    ]);
     if (!row) {
       throw new NotFoundException('That photo does not exist.');
     }
-    const [heart] = userId
-      ? await this.db
-          .select({ assetId: favorite.assetId })
-          .from(favorite)
-          .where(and(eq(favorite.assetId, assetId), eq(favorite.userId, userId)))
-          .limit(1)
-      : [];
-    const [file] = await this.db
-      .select({ relPath: assetFile.relPath, rootId: assetFile.rootId, sizeBytes: assetFile.sizeBytes })
-      .from(assetFile)
-      .where(and(eq(assetFile.assetId, assetId), eq(assetFile.state, 'present')))
-      .limit(1);
     const [owner] =
       row.cameraMake !== null || row.cameraModel !== null
         ? await this.db
@@ -276,9 +278,73 @@ export class AssetsService {
     };
   }
 
+  /** Timeline-shaped rows for an explicit id set (album/memory viewers). */
+  async getTimelineItems(assetIds: string[], userId: string): Promise<TimelineAsset[]> {
+    if (assetIds.length === 0) {
+      return [];
+    }
+    const rows = await this.db
+      .select({
+        id: asset.id,
+        mediaType: asset.mediaType,
+        capturedAt: asset.capturedAt,
+        capturedDay: asset.capturedDay,
+        width: asset.width,
+        height: asset.height,
+        durationMs: asset.durationMs,
+        stageThumbsAt: asset.stageThumbsAt,
+        favoritedAt: favorite.createdAt,
+        mime: asset.mime,
+      })
+      .from(asset)
+      .leftJoin(favorite, and(eq(favorite.assetId, asset.id), eq(favorite.userId, userId)))
+      .where(inArray(asset.id, assetIds));
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    // Preserve the caller's ordering (album sort order, memory order).
+    return assetIds.flatMap((id) => {
+      const row = byId.get(id);
+      if (!row) {
+        return [];
+      }
+      return [
+        {
+          id: row.id,
+          mediaType: row.mediaType as 'image' | 'video',
+          capturedAt: row.capturedAt.toISOString(),
+          capturedDay: row.capturedDay,
+          width: row.width,
+          height: row.height,
+          durationMs: row.durationMs,
+          hasThumbnail: row.stageThumbsAt !== null,
+          isFavorite: row.favoritedAt !== null,
+          mime: row.mime,
+          cameraMake: null,
+          cameraModel: null,
+          lensModel: null,
+          iso: null,
+          exposureTime: null,
+          fNumber: null,
+          focalLength35: null,
+          takenBy: null,
+          fileName: null,
+          folder: null,
+          sizeBytes: null,
+          place: null,
+        },
+      ];
+    });
+  }
+
   /** Hearts or un-hearts a photo for one user (personal, never shared). */
   async setFavorite(userId: string, assetId: string, on: boolean): Promise<void> {
-    await this.getDetail(assetId); // 404 for unknown ids.
+    const [exists] = await this.db
+      .select({ id: asset.id })
+      .from(asset)
+      .where(eq(asset.id, assetId))
+      .limit(1);
+    if (!exists) {
+      throw new NotFoundException('That photo does not exist.');
+    }
     if (on) {
       await this.db
         .insert(favorite)

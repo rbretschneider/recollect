@@ -3,11 +3,12 @@ import { RouterLink } from '@angular/router';
 import { TrashApiService, TrashItem } from '../../core/api/trash-api.service';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
+import { PageLoading } from '../../shared/page-loading';
 
 /** The Trash view: what's held, when it purges, and restore (S5.2/S5.3). */
 @Component({
   selector: 'app-trash-page',
-  imports: [BackButton, BottomNav, RouterLink],
+  imports: [PageLoading, BackButton, BottomNav, RouterLink],
   templateUrl: './trash-page.html',
   styleUrl: './trash-page.scss',
 })

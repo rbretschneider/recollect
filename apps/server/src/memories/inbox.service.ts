@@ -43,25 +43,40 @@ export class InboxService {
   ) {}
 
   async listSuggestions(): Promise<InboxSuggestion[]> {
-    const clusters = await this.db
-      .select()
-      .from(eventCluster)
-      .where(eq(eventCluster.status, 'suggested'))
-      .orderBy(desc(eventCluster.startAt));
-    const suggestions: InboxSuggestion[] = [];
-    for (const cluster of clusters) {
-      const memberIds = await this.loadMemberIdsOldestFirst(cluster.id);
-      suggestions.push({
-        id: cluster.id,
-        seedTitle: cluster.seedTitle,
-        startAt: cluster.startAt.toISOString(),
-        endAt: cluster.endAt.toISOString(),
-        assetCount: memberIds.length,
-        previewAssetIds: memberIds.slice(0, PREVIEW_ASSET_COUNT),
-        score: cluster.score,
-      });
-    }
-    return suggestions;
+    // Lateral aggregate instead of a member query per cluster — an inbox of
+    // hundreds of suggestions used to cost hundreds of round trips.
+    const result = await this.db.execute<{
+      id: string;
+      seed_title: string;
+      start_at: Date;
+      end_at: Date;
+      score: number;
+      asset_count: number;
+      preview_ids: string[] | null;
+    }>(sql`
+      select c.id, c.seed_title, c.start_at, c.end_at, c.score,
+             coalesce(m.asset_count, 0)::int as asset_count,
+             m.preview_ids
+      from event_cluster c
+      left join lateral (
+        select count(*) as asset_count,
+               (array_agg(eca.asset_id order by a.captured_at, a.id))[1:${PREVIEW_ASSET_COUNT}] as preview_ids
+        from event_cluster_asset eca
+        join asset a on a.id = eca.asset_id
+        where eca.cluster_id = c.id
+      ) m on true
+      where c.status = 'suggested'
+      order by c.start_at desc
+    `);
+    return result.rows.map((row) => ({
+      id: row.id,
+      seedTitle: row.seed_title,
+      startAt: new Date(row.start_at).toISOString(),
+      endAt: new Date(row.end_at).toISOString(),
+      assetCount: row.asset_count,
+      previewAssetIds: row.preview_ids ?? [],
+      score: row.score,
+    }));
   }
 
   /** Full member list of one suggestion, for the preview grid. */

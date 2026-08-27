@@ -62,27 +62,46 @@ export class MemoriesService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   async list(): Promise<MemorySummary[]> {
-    const rows = await this.db
-      .select()
-      .from(memory)
-      .where(isNull(memory.deletedAt))
-      .orderBy(desc(memory.startAt));
-    const summaries: MemorySummary[] = [];
-    for (const row of rows) {
-      const assetIds = await this.loadAssetIds(row.id);
-      const preview = await this.loadJournalPreview(row.id);
-      summaries.push({
-        id: row.id,
-        title: row.title,
-        startAt: row.startAt.toISOString(),
-        endAt: row.endAt.toISOString(),
-        coverAssetId: row.coverAssetId ?? assetIds[0] ?? null,
-        assetCount: assetIds.length,
-        journalPreview: preview,
-        locationLabel: row.locationLabel,
-      });
-    }
-    return summaries;
+    // One statement with lateral aggregates — the old shape was 2 queries per
+    // memory, which multiplied badly over a slow home-server link.
+    const result = await this.db.execute<{
+      id: string;
+      title: string;
+      start_at: Date;
+      end_at: Date;
+      location_label: string | null;
+      cover_asset_id: string | null;
+      asset_count: number;
+      journal_preview: string | null;
+    }>(sql`
+      select m.id, m.title, m.start_at, m.end_at, m.location_label,
+             coalesce(m.cover_asset_id, mm.first_asset) as cover_asset_id,
+             coalesce(mm.asset_count, 0)::int as asset_count,
+             j.journal_preview
+      from memory m
+      left join lateral (
+        select count(*) as asset_count,
+               (array_agg(ma.asset_id order by ma.sort_order))[1] as first_asset
+        from memory_asset ma where ma.memory_id = m.id
+      ) mm on true
+      left join lateral (
+        select left(je.body_md, ${JOURNAL_PREVIEW_LENGTH}) as journal_preview
+        from journal_entry je where je.memory_id = m.id
+        order by je.created_at limit 1
+      ) j on true
+      where m.deleted_at is null
+      order by m.start_at desc
+    `);
+    return result.rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      startAt: new Date(row.start_at).toISOString(),
+      endAt: new Date(row.end_at).toISOString(),
+      coverAssetId: row.cover_asset_id,
+      assetCount: row.asset_count,
+      journalPreview: row.journal_preview,
+      locationLabel: row.location_label,
+    }));
   }
 
   async getDetail(memoryId: string): Promise<MemoryDetail> {

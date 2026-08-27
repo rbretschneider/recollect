@@ -11,6 +11,9 @@
 </header>
 
 <main class="review">
+  @if (!isLoaded()) {
+    <app-page-loading label="Loading suggestions…" />
+  }
   @if (queue().length > 0) {
     <div class="cards">
       @for (suggestion of queue(); track suggestion.id) {

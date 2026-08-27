@@ -6,6 +6,9 @@
 </app-topbar>
 
 <main class="albums">
+  @if (!isLoaded()) {
+    <app-page-loading label="Loading albums…" />
+  }
   @if (isCreating()) {
     <form class="create" (ngSubmit)="create()">
       <input

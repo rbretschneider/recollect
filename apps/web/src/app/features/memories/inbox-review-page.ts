@@ -5,6 +5,7 @@ import { InboxSuggestion } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
+import { PageLoading } from '../../shared/page-loading';
 import { ConfirmService } from '../../shared/confirm.service';
 import { SuggestionCard, SuggestionOutcome } from './suggestion-card';
 
@@ -14,7 +15,7 @@ import { SuggestionCard, SuggestionOutcome } from './suggestion-card';
  */
 @Component({
   selector: 'app-inbox-review-page',
-  imports: [BackButton, BottomNav, RouterLink, SuggestionCard],
+  imports: [PageLoading, BackButton, BottomNav, RouterLink, SuggestionCard],
   templateUrl: './inbox-review-page.html',
   styleUrl: './inbox-review-page.scss',
 })

@@ -8,6 +8,7 @@ import { AuthStateService } from '../../core/auth/auth-state.service';
 import { EditModeService } from '../../core/edit-mode.service';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
+import { PageLoading } from '../../shared/page-loading';
 import { ConfirmService } from '../../shared/confirm.service';
 import { EditToggle } from '../../shared/edit-toggle';
 import { ShareButton } from '../../shared/share-button';
@@ -16,7 +17,7 @@ import { AssetViewer } from '../viewer/asset-viewer';
 /** One album: grid, viewer, share, remove-from-album. */
 @Component({
   selector: 'app-album-detail-page',
-  imports: [BackButton, AssetViewer, BottomNav, EditToggle, RouterLink, ShareButton],
+  imports: [PageLoading, BackButton, AssetViewer, BottomNav, EditToggle, RouterLink, ShareButton],
   templateUrl: './album-detail-page.html',
   styleUrl: './album-detail-page.scss',
 })
@@ -143,25 +144,10 @@ export class AlbumDetailPage implements OnInit {
   }
 
   private async loadViewerAssets(assetIds: string[]): Promise<void> {
-    const assets: TimelineAsset[] = [];
-    for (const id of assetIds) {
-      try {
-        const detail = await firstValueFrom(
-          this.http.get<{
-            id: string;
-            mediaType: 'image' | 'video';
-            capturedAt: string;
-            width: number | null;
-            height: number | null;
-            durationMs: number | null;
-            isFavorite: boolean;
-          }>(`/api/v1/assets/${id}/detail`),
-        );
-        assets.push({ ...detail, capturedDay: detail.capturedAt.slice(0, 10), hasThumbnail: true });
-      } catch {
-        // Skip missing assets in the viewer.
-      }
-    }
-    this.viewerAssets.set(assets);
+    // One batch request; the old per-asset loop cost N round trips.
+    const { items } = await firstValueFrom(
+      this.http.post<{ items: TimelineAsset[] }>('/api/v1/assets/items', { assetIds }),
+    );
+    this.viewerAssets.set(items);
   }
 }

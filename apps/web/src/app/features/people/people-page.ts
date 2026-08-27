@@ -3,11 +3,12 @@ import { RouterLink } from '@angular/router';
 import { PeopleApiService, PersonSummary } from '../../core/api/people-api.service';
 import { AppTopbar } from '../../shared/app-topbar';
 import { BottomNav } from '../../shared/bottom-nav';
+import { PageLoading } from '../../shared/page-loading';
 
 /** Everyone face clustering has found, most-photographed first. */
 @Component({
   selector: 'app-people-page',
-  imports: [AppTopbar, BottomNav, RouterLink],
+  imports: [PageLoading, AppTopbar, BottomNav, RouterLink],
   templateUrl: './people-page.html',
   styleUrl: './people-page.scss',
 })

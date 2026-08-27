@@ -97,10 +97,12 @@ export class SharingService {
   /** Resolves a public token into its view payload; counts the view. */
   async getSharedView(token: string): Promise<SharedView> {
     const link = await this.requireActiveLink(token);
-    await this.db
+    // Counting the view must never slow the view down.
+    void this.db
       .update(shareLink)
       .set({ viewCount: sql`${shareLink.viewCount} + 1` })
-      .where(eq(shareLink.id, link.id));
+      .where(eq(shareLink.id, link.id))
+      .catch(() => undefined);
     if (link.targetType === 'memory') {
       const detail = await this.memories.getDetail(link.targetId);
       return {
@@ -127,11 +129,26 @@ export class SharingService {
     };
   }
 
-  /** Guards public media endpoints: the asset must belong to the shared target. */
+  /**
+   * Guards public media endpoints: the asset must belong to the shared target.
+   * One EXISTS query — this runs for every thumbnail on a public share page,
+   * so it must not rebuild the whole memory/album detail each time.
+   */
   async assertAssetShared(token: string, assetId: string): Promise<void> {
-    const link = await this.requireActiveLink(token);
-    const assetIds = await this.loadTargetAssetIds(link.targetType as ShareTargetType, link.targetId);
-    if (!assetIds.includes(assetId)) {
+    const result = await this.db.execute<{ ok: number }>(sql`
+      select 1 as ok
+      from share_link sl
+      left join memory_asset ma
+        on sl.target_type = 'memory' and ma.memory_id = sl.target_id and ma.asset_id = ${assetId}
+      left join album_asset aa
+        on sl.target_type = 'album' and aa.album_id = sl.target_id and aa.asset_id = ${assetId}
+      where sl.token = ${token}
+        and sl.revoked_at is null
+        and (sl.expires_at is null or sl.expires_at > now())
+        and (ma.asset_id is not null or aa.asset_id is not null)
+      limit 1
+    `);
+    if (result.rows.length === 0) {
       throw new ForbiddenException('That photo is not part of this share.');
     }
   }

@@ -22,7 +22,9 @@ import { JobQueueService } from '../jobs/job-queue.service';
 import { REPROCESS_ASSET_JOB } from '../library/handlers/reprocess-asset.handler';
 import { isThumbnailSize } from '../media/thumbnail-store';
 import { AssetsService, TimelinePage } from './assets.service';
-import type { AssetDetail } from './assets.service';
+import type { AssetDetail, TimelineAsset } from './assets.service';
+import { AssetIdsRequestDto } from './dto/asset-ids-request.dto';
+import { Body } from '@nestjs/common';
 
 /** Read endpoints for the photo timeline and thumbnails. */
 @Controller('assets')
@@ -44,6 +46,16 @@ export class AssetsController {
       throw new BadRequestException('limit must be a positive integer.');
     }
     return this.assets.listTimeline(cursor, parsedLimit, user.id, favorites === '1');
+  }
+
+  /** Batch lookup: one round trip for a whole album/memory viewer list. */
+  @Post('items')
+  @HttpCode(HttpStatus.OK)
+  async items(
+    @Body() body: AssetIdsRequestDto,
+    @CurrentUser() user: UserProfile,
+  ): Promise<{ items: TimelineAsset[] }> {
+    return { items: await this.assets.getTimelineItems(body.assetIds, user.id) };
   }
 
   @Get(':id/detail')
@@ -97,6 +109,7 @@ export class AssetsController {
 
   /** Streams the original file. express sendFile handles Range requests for video. */
   @Get(':id/original')
+  @Header('Cache-Control', 'private, max-age=31536000, immutable')
   async original(@Param('id', ParseUUIDPipe) id: string, @Res() res: Response): Promise<void> {
     const file = await this.assets.getOriginalFile(id);
     res.type(file.mime);
@@ -114,6 +127,10 @@ export class AssetsController {
   @Get(':id/playback')
   async playback(@Param('id', ParseUUIDPipe) id: string, @Res() res: Response): Promise<void> {
     const resolution = await this.assets.getPlayback(id);
+    if (resolution.kind === 'file') {
+      // Asset content is hash-identified; a playable rendition never changes.
+      res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
+    }
     if (resolution.kind === 'preparing') {
       res.status(HttpStatus.ACCEPTED).json({ status: 'preparing' });
       return;

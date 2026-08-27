@@ -56,6 +56,12 @@ export const asset = pgTable(
     gpsLat: doublePrecision('gps_lat'),
     gpsLon: doublePrecision('gps_lon'),
     gpsAltM: real('gps_alt_m'),
+    /** Precomputed geocode_cache key ("44.03,-69.89"), kept by Postgres. */
+    geocodeCellKey: text('geocode_cell_key').generatedAlwaysAs(
+      // round(numeric,2)::text keeps two decimals ("44.03"), matching the JS
+      // lat.toFixed(2) keys GeocodeService writes; to_char is not immutable.
+      sql`case when gps_lat is null or gps_lon is null then null else round(gps_lat::numeric, 2)::text || ',' || round(gps_lon::numeric, 2)::text end`,
+    ),
     /** Video codec id from container metadata (e.g. 'hvc1', 'avc1'); drives playback transcoding. */
     videoCodec: text('video_codec'),
     cameraMake: text('camera_make'),
