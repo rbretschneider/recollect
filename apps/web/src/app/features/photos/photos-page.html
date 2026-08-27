@@ -19,26 +19,34 @@
       [attr.aria-pressed]="favoritesOnly()"
       aria-label="Show only favorites"
       (click)="toggleFavoritesOnly()"
-    >{{ favoritesOnly() ? '♥' : '♡' }}</button>
+    >
+      <app-icon [name]="favoritesOnly() ? 'heart-filled' : 'heart'" [size]="18" />
+    </button>
     <div class="view-switch" role="group" aria-label="Grid style">
+      <button
+        type="button"
+        [class.active]="viewMode() === 'cards'"
+        aria-label="Cards with details"
+        (click)="setViewMode('cards')"
+      >
+        <app-icon name="view-cards" [size]="17" />
+      </button>
       <button
         type="button"
         [class.active]="viewMode() === 'mosaic'"
         aria-label="Mosaic view"
         (click)="setViewMode('mosaic')"
-      >▤</button>
+      >
+        <app-icon name="view-mosaic" [size]="17" />
+      </button>
       <button
         type="button"
-        [class.active]="viewMode() === 'grid'"
-        aria-label="Grid view"
-        (click)="setViewMode('grid')"
-      >▦</button>
-      <button
-        type="button"
-        [class.active]="viewMode() === 'small'"
-        aria-label="Small squares view"
-        (click)="setViewMode('small')"
-      >▩</button>
+        [class.active]="viewMode() === 'large'"
+        aria-label="Large mosaic view"
+        (click)="setViewMode('large')"
+      >
+        <app-icon name="view-large" [size]="17" />
+      </button>
     </div>
     @if (canWrite) {
       <button type="button" class="topbar-action" (click)="startSelecting()">Select</button>
@@ -84,9 +92,14 @@
       } @else {
         <h2>{{ group.label }}</h2>
       }
-      <div class="grid" [class.mosaic]="viewMode() === 'mosaic'" [class.small]="viewMode() === 'small'">
+      <div
+        class="grid"
+        [class.cards]="viewMode() === 'cards'"
+        [class.mosaic]="viewMode() !== 'cards'"
+        [class.large]="viewMode() === 'large'"
+      >
         @for (asset of group.items; track asset.id) {
-          <figure class="tile" [style.--ar]="aspectOf(asset)">
+          <figure class="tile" [class.card]="viewMode() === 'cards'" [style.--ar]="aspectOf(asset)">
             <button
               type="button"
               class="tile-button"
@@ -113,6 +126,14 @@
                 </span>
               }
             </button>
+            @if (viewMode() === 'cards') {
+              <figcaption class="meta">
+                <span class="line">{{ cardMeta(asset) }}</span>
+                @if (asset.isFavorite) {
+                  <app-icon name="heart-filled" [size]="13" class="fav" />
+                }
+              </figcaption>
+            }
           </figure>
         }
       </div>

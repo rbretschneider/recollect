@@ -21,6 +21,7 @@ import { AppDrawer } from '../../shared/app-drawer';
 import { ActivitySpinner } from '../../shared/activity-spinner';
 import { Brand } from '../../shared/brand';
 import { ConfirmService } from '../../shared/confirm.service';
+import { Icon } from '../../shared/icon';
 import { BottomNav } from '../../shared/bottom-nav';
 import { LongPressDirective } from '../../shared/long-press.directive';
 import { AssetViewer } from '../viewer/asset-viewer';
@@ -33,15 +34,18 @@ interface DayGroup {
   items: TimelineAsset[];
 }
 
-/** The available grid presentations. */
-export type GridViewMode = 'mosaic' | 'grid' | 'small';
+/**
+ * The grid presentations: PhotoPrism-style cards with metadata underneath,
+ * the justified mosaic, and a larger-tile mosaic.
+ */
+export type GridViewMode = 'cards' | 'mosaic' | 'large';
 
 const VIEW_MODE_KEY = 'rc-grid-view';
 
 function loadViewMode(): GridViewMode {
   try {
     const stored = localStorage.getItem(VIEW_MODE_KEY);
-    return stored === 'grid' || stored === 'small' ? stored : 'mosaic';
+    return stored === 'cards' || stored === 'large' ? stored : 'mosaic';
   } catch {
     return 'mosaic';
   }
@@ -60,6 +64,7 @@ const STATUS_POLL_MS = 4000;
     AssetViewer,
     BottomNav,
     Brand,
+    Icon,
     LongPressDirective,
     RouterLink,
   ],
@@ -193,6 +198,17 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
 
   durationLabel(asset: TimelineAsset): string {
     return asset.durationMs === null ? '' : formatDuration(asset.durationMs);
+  }
+
+  /** Card footer line: capture time, plus dimensions when known. */
+  cardMeta(asset: TimelineAsset): string {
+    const time = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' }).format(
+      new Date(asset.capturedAt),
+    );
+    if (asset.mediaType === 'video') {
+      return `${time} · ${this.durationLabel(asset)}`;
+    }
+    return asset.width && asset.height ? `${time} · ${asset.width} × ${asset.height}` : time;
   }
 
   toggleFavoritesOnly(): void {

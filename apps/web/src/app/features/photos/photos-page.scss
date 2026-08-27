@@ -267,14 +267,6 @@
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   }
 
-  &.small {
-    grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
-
-    @media (min-width: 768px) {
-      grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
-    }
-  }
-
   // Justified mosaic (Flickr/PhotoPrism style): rows fill edge to edge,
   // each tile keeps its own aspect ratio via the --ar custom property.
   &.mosaic {
@@ -294,6 +286,60 @@
 
       @media (max-width: 767px) {
         flex-basis: calc(var(--ar, 1) * 6.5rem);
+      }
+    }
+
+    // The same mosaic, roomier: fewer, larger tiles per row.
+    &.large .tile {
+      flex-basis: calc(var(--ar, 1) * 17rem);
+
+      @media (max-width: 767px) {
+        flex-basis: calc(var(--ar, 1) * 11rem);
+      }
+    }
+  }
+
+  // PhotoPrism-style cards: rounded tiles with the details underneath.
+  &.cards {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.6rem;
+    padding: 0 0.6rem;
+
+    @media (min-width: 768px) {
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    }
+
+    .tile.card {
+      aspect-ratio: auto;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--border);
+
+      .tile-button {
+        aspect-ratio: 1;
+      }
+
+      .meta {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 0.65rem;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+
+        .line {
+          flex: 1;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .fav {
+          color: #ff5c74;
+          flex-shrink: 0;
+        }
       }
     }
   }

@@ -9,15 +9,14 @@
         [attr.aria-pressed]="isCurrentFavorite()"
         [attr.aria-label]="isCurrentFavorite() ? 'Remove from favorites' : 'Add to favorites'"
         (click)="toggleFavorite()"
-      >{{ isCurrentFavorite() ? '♥' : '♡' }}</button>
+      >
+        <app-icon [name]="isCurrentFavorite() ? 'heart-filled' : 'heart'" />
+      </button>
     }
     @if (canDelete) {
-      <button
-        type="button"
-        class="icon"
-        aria-label="Move to Trash"
-        (click)="deleteCurrent()"
-      >🗑</button>
+      <button type="button" class="icon" aria-label="Move to Trash" (click)="deleteCurrent()">
+        <app-icon name="trash" />
+      </button>
     }
     @if (allowInfo()) {
       <button
@@ -27,9 +26,13 @@
         [attr.aria-pressed]="showInfo()"
         aria-label="Photo details"
         (click)="toggleInfo()"
-      >ⓘ</button>
+      >
+        <app-icon name="info" />
+      </button>
     }
-    <button type="button" class="icon" aria-label="Close" (click)="close()">✕</button>
+    <button type="button" class="icon" aria-label="Close" (click)="close()">
+      <app-icon name="close" />
+    </button>
   </header>
 
   @if (current(); as asset) {

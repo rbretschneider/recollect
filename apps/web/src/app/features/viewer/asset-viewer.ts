@@ -18,6 +18,7 @@ import { PhotosApiService } from '../../core/api/photos-api.service';
 import { TrashApiService } from '../../core/api/trash-api.service';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { ConfirmService } from '../../shared/confirm.service';
+import { Icon } from '../../shared/icon';
 
 /** Minimum horizontal swipe distance (px) that counts as navigation. */
 const SWIPE_THRESHOLD_PX = 60;
@@ -36,7 +37,7 @@ const DRAG_THRESHOLD_PX = 8;
  */
 @Component({
   selector: 'app-asset-viewer',
-  imports: [RouterLink],
+  imports: [Icon, RouterLink],
   templateUrl: './asset-viewer.html',
   styleUrl: './asset-viewer.scss',
 })
