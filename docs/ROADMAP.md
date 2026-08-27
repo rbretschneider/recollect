@@ -82,9 +82,11 @@ real-library testing (~18.5k assets on hawaii) teaches us things.
 
 ## Later
 
+- **Places v2**: interactive pin-cluster map (Leaflet) over the shipped
+  place-card view; per-place date ranges; places in search results
 - **ML auto-tagging** (zero-shot CLIP over a tag vocabulary) + a download
   button that names files from tags + original name (yearly family book flow)
-- Places view, smarter clustering, On This Day / year-in-review
+- Smarter clustering, year-in-review
 - Housekeeping: hawaii doc (`hawaii/docs/recollect.md`), delete unused
   `production` GitHub environment, fix red CI (Linux lockfile / `npm ci`)
 
