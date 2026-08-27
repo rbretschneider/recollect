@@ -358,7 +358,13 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
   }
 
   get showEmptyState(): boolean {
-    return this.hasLoadedFirstPage && this.items().length === 0 && this.pendingCount() === 0;
+    // An empty favorites filter means "no hearts yet", not "no library".
+    return (
+      !this.favoritesOnly() &&
+      this.hasLoadedFirstPage &&
+      this.items().length === 0 &&
+      this.pendingCount() === 0
+    );
   }
 
   private async pollStatus(): Promise<void> {
