@@ -64,4 +64,10 @@ export class PeopleApiService {
   hide(personId: string): Promise<void> {
     return firstValueFrom(this.http.post<void>(`/api/v1/people/${personId}/hide`, {}));
   }
+
+  disband(personId: string): Promise<{ reclustered: number }> {
+    return firstValueFrom(
+      this.http.post<{ reclustered: number }>(`/api/v1/people/${personId}/disband`, {}),
+    );
+  }
 }

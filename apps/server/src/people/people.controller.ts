@@ -90,6 +90,13 @@ export class PeopleController {
     await this.people.ignoreFaces(body.faceIds);
   }
 
+  /** "These are all different people": re-cluster every auto face from scratch. */
+  @RequireGrant('write')
+  @Post(':id/disband')
+  async disband(@Param('id', ParseUUIDPipe) id: string): Promise<{ reclustered: number }> {
+    return this.people.disband(id);
+  }
+
   @RequireGrant('write')
   @Post(':id/hide')
   @HttpCode(HttpStatus.NO_CONTENT)

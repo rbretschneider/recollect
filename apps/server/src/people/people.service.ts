@@ -4,6 +4,7 @@ import { v7 as uuidv7 } from 'uuid';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
 import { face, person } from '../database/schema';
+import { MlProcessingService } from './ml-processing.service';
 
 /** A person row in the People view. */
 export interface PersonSummary {
@@ -24,7 +25,10 @@ export interface PersonFace {
 /** Everyone detected in the library, most-photographed first. */
 @Injectable()
 export class PeopleService {
-  constructor(@Inject(DATABASE) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Database,
+    private readonly mlProcessing: MlProcessingService,
+  ) {}
 
   async list(): Promise<PersonSummary[]> {
     const result = await this.db.execute(sql`
@@ -111,6 +115,45 @@ export class PeopleService {
   /** Ignored faces vanish from people, counts, and future clustering. */
   async ignoreFaces(faceIds: string[]): Promise<void> {
     await this.db.update(face).set({ ignored: true }).where(inArray(face.id, faceIds));
+  }
+
+  /**
+   * "This cluster is simply wrong": detaches every auto-assigned face and
+   * re-clusters each against the rest of the library from scratch — similar
+   * faces regroup (possibly into several correct people), the hopeless ones
+   * become their own clusters. User-pinned faces stay put; if none remain,
+   * the person row is deleted.
+   */
+  async disband(personId: string): Promise<{ reclustered: number }> {
+    await this.requirePerson(personId);
+    // Detach first so re-clustering can't match a face against its old pals.
+    const detached = await this.db
+      .update(face)
+      .set({ personId: null })
+      .where(and(eq(face.personId, personId), eq(face.assignment, 'auto'), eq(face.ignored, false)))
+      .returning({ id: face.id });
+    const detachedIds = detached.map((row) => row.id);
+    for (const faceId of detachedIds) {
+      const [row] = await this.db.execute<{ embedding: string }>(
+        sql`select embedding::text as embedding from face where id = ${faceId}`,
+      ).then((result) => result.rows);
+      if (!row) {
+        continue;
+      }
+      const newPersonId = await this.mlProcessing.clusterIntoPerson(
+        JSON.parse(row.embedding) as number[],
+      );
+      await this.db.update(face).set({ personId: newPersonId }).where(eq(face.id, faceId));
+    }
+    // No pinned faces left behind → the identity itself was a mistake; drop it.
+    const [remaining] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(face)
+      .where(eq(face.personId, personId));
+    if (remaining.count === 0) {
+      await this.db.delete(person).where(eq(person.id, personId));
+    }
+    return { reclustered: detachedIds.length };
   }
 
   /** Hides a person from the People view entirely (e.g. strangers in backgrounds). */

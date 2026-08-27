@@ -192,6 +192,31 @@ export class PersonPage implements OnInit {
     }
   }
 
+  /** The whole cluster is a jumble: send every auto face back for re-sorting. */
+  async disbandPerson(): Promise<void> {
+    const person = this.person();
+    if (!person || this.isBusy()) {
+      return;
+    }
+    const confirmed = await this.confirms.ask({
+      title: 'Split this jumble apart?',
+      message:
+        'Every automatically-grouped face here gets re-sorted from scratch — lookalikes regroup into their own people. Faces you pinned by hand stay. No photos are affected.',
+      confirmLabel: 'Re-sort faces',
+      danger: false,
+    });
+    if (!confirmed) {
+      return;
+    }
+    this.isBusy.set(true);
+    try {
+      await this.api.disband(person.id);
+      await this.router.navigateByUrl('/people');
+    } finally {
+      this.isBusy.set(false);
+    }
+  }
+
   async hidePerson(): Promise<void> {
     const person = this.person();
     if (!person) {
