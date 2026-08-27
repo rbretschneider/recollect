@@ -14,6 +14,10 @@
 .stage img,
 .stage video {
   transition: opacity 0.2s ease, transform 0.2s ease;
+  // Android: without this the browser may claim horizontal touch moves for
+  // itself and stop delivering the pointer events our swipe-nav listens to.
+  // Native control taps and seek-bar drags are pointer-driven and unaffected.
+  touch-action: none;
 
   @starting-style {
     opacity: 0;

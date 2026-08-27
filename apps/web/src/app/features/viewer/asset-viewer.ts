@@ -31,6 +31,9 @@ const DOUBLE_TAP_ZOOM = 2.5;
 /** Movement beyond this (px) makes a gesture a drag, not a tap/click. */
 const DRAG_THRESHOLD_PX = 8;
 
+/** Bottom band of the stage reserved for the native video seek bar. */
+const VIDEO_CONTROLS_STRIP_PX = 72;
+
 /**
  * Fullscreen media viewer (FRD story S4.3): swipe/arrow navigation, video
  * playback, and an info sheet. Rendered as an overlay above the current page.
@@ -107,6 +110,8 @@ export class AssetViewer implements OnInit, OnDestroy {
   private didDrag = false;
   private didPinch = false;
   private lastResetAssetId: string | null = null;
+  /** Swipe-over-video tracking; native controls stay untouched. */
+  private videoSwipeStart: { x: number; y: number } | null = null;
   private hasHistoryEntry = false;
   private prepareTimer: ReturnType<typeof setInterval> | null = null;
   private readonly onPopState = (): void => {
@@ -231,7 +236,14 @@ export class AssetViewer implements OnInit, OnDestroy {
 
   onPointerDown(event: PointerEvent): void {
     if ((event.target as HTMLElement).tagName === 'VIDEO') {
-      return; // Leave video controls alone.
+      // Videos keep their native controls (no capture, no preventDefault),
+      // but a horizontal swipe across the picture still navigates. The
+      // bottom strip is exempt — that's the seek bar.
+      const stage = (event.currentTarget as HTMLElement).getBoundingClientRect();
+      if (event.clientY < stage.bottom - VIDEO_CONTROLS_STRIP_PX) {
+        this.videoSwipeStart = { x: event.clientX, y: event.clientY };
+      }
+      return;
     }
     this.activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
@@ -266,6 +278,20 @@ export class AssetViewer implements OnInit, OnDestroy {
   }
 
   onPointerUp(event: PointerEvent): void {
+    if (this.videoSwipeStart) {
+      const deltaX = event.clientX - this.videoSwipeStart.x;
+      const deltaY = event.clientY - this.videoSwipeStart.y;
+      this.videoSwipeStart = null;
+      // Horizontal and decisive — vertical drags and taps stay the video's.
+      if (Math.abs(deltaX) > SWIPE_THRESHOLD_PX && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+        if (deltaX < 0) {
+          this.next();
+        } else {
+          this.previous();
+        }
+      }
+      return;
+    }
     const wasSingle = this.activePointers.size === 1;
     const start = this.gestureStart;
     this.activePointers.delete(event.pointerId);
