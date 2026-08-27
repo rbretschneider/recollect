@@ -13,6 +13,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { userAccount } from './identity';
 import { asset } from './library';
+import { person } from './people';
 
 /**
  * A machine-detected candidate event (Memory suggestion). Regenerable and
@@ -127,6 +128,10 @@ export const memoryQuote = pgTable(
     text: text('text').notNull(),
     /** Who said it — free text ("Emma, 4"), not an account. */
     saidBy: text('said_by').notNull(),
+    /** Optional link to the Person (face cluster) who said it. */
+    saidByPersonId: uuid('said_by_person_id').references(() => person.id, {
+      onDelete: 'set null',
+    }),
     createdBy: uuid('created_by')
       .notNull()
       .references(() => userAccount.id, { onDelete: 'restrict' }),

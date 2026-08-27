@@ -213,6 +213,15 @@
       margin-top: 0.35rem;
       font-size: 0.9rem;
       color: var(--text-muted);
+
+      .said-by {
+        color: var(--accent);
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
     }
 
     .quote-delete {
@@ -248,6 +257,34 @@
       input {
         flex: 1;
         min-width: 0;
+      }
+    }
+
+    // Named people matching the attribution — one tap links the quote.
+    .said-by-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+
+      button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        min-height: 40px;
+        padding: 0.2rem 0.8rem 0.2rem 0.3rem;
+        border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+        border-radius: 2rem;
+        background: var(--surface-raised);
+        color: var(--text);
+        font-size: 0.85rem;
+        cursor: pointer;
+
+        img {
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          object-fit: cover;
+        }
       }
     }
 

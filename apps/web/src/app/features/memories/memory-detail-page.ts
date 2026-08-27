@@ -13,6 +13,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
+import { PeopleApiService, PersonSummary } from '../../core/api/people-api.service';
 import { MemoryDetail, MemoryQuote, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { EditModeService } from '../../core/edit-mode.service';
@@ -44,6 +45,7 @@ const JOURNAL_AUTOSAVE_MS = 1500;
 })
 export class MemoryDetailPage implements OnInit {
   private readonly api = inject(MemoriesApiService);
+  private readonly peopleApi = inject(PeopleApiService);
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -64,9 +66,43 @@ export class MemoryDetailPage implements OnInit {
   titleDraft = '';
   quoteTextDraft = '';
   quoteSaidByDraft = '';
+  /** Person explicitly picked from the who-said-it typeahead. */
+  quoteSaidByPersonId: string | null = null;
+  /** Mirrors the who-said-it input so the typeahead reacts. */
+  readonly saidByQuery = signal('');
+  private readonly namedPeople = signal<PersonSummary[]>([]);
+  private peopleLoaded = false;
+
+  readonly saidBySuggestions = computed(() => {
+    const needle = this.saidByQuery().trim().toLowerCase();
+    if (needle.length === 0) {
+      return [];
+    }
+    return this.namedPeople()
+      .filter((candidate) => candidate.name?.toLowerCase().includes(needle))
+      .slice(0, 4);
+  });
 
   get canSubmitQuote(): boolean {
     return this.quoteTextDraft.trim().length > 0 && this.quoteSaidByDraft.trim().length > 0;
+  }
+
+  /** Typing again unlinks; a fresh pick (or server auto-match) relinks. */
+  onSaidByInput(value: string): void {
+    this.quoteSaidByPersonId = null;
+    this.saidByQuery.set(value);
+    if (!this.peopleLoaded) {
+      this.peopleLoaded = true;
+      void this.peopleApi.list().then(({ people }) => {
+        this.namedPeople.set(people.filter((entry) => entry.name !== null));
+      });
+    }
+  }
+
+  pickSaidBy(candidate: PersonSummary): void {
+    this.quoteSaidByDraft = candidate.name ?? '';
+    this.quoteSaidByPersonId = candidate.id;
+    this.saidByQuery.set('');
   }
 
   readonly myJournalEntry = computed(() => {
@@ -91,6 +127,10 @@ export class MemoryDetailPage implements OnInit {
 
   thumbUrl(assetId: string): string {
     return `/api/v1/assets/${assetId}/thumb/240`;
+  }
+
+  cropUrl(faceId: string): string {
+    return this.peopleApi.faceCropUrl(faceId);
   }
 
   coverUrl(detail: MemoryDetail): string | null {
@@ -188,10 +228,13 @@ export class MemoryDetailPage implements OnInit {
       detail.id,
       this.quoteTextDraft.trim(),
       this.quoteSaidByDraft.trim(),
+      this.quoteSaidByPersonId ?? undefined,
     );
     this.detail.set({ ...detail, quotes: [...detail.quotes, quote] });
     this.quoteTextDraft = '';
     this.quoteSaidByDraft = '';
+    this.quoteSaidByPersonId = null;
+    this.saidByQuery.set('');
   }
 
   async deleteQuote(quote: MemoryQuote): Promise<void> {

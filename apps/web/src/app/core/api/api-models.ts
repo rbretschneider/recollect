@@ -131,6 +131,8 @@ export interface MemoryQuote {
   id: string;
   text: string;
   saidBy: string;
+  /** Linked Person, so the attribution can jump to their photos. */
+  saidByPersonId: string | null;
 }
 
 /** Mirrors the server's AlbumSummary. */

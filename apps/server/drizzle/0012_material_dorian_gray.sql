@@ -1,0 +1,2 @@
+ALTER TABLE "memory_quote" ADD COLUMN "said_by_person_id" uuid;--> statement-breakpoint
+ALTER TABLE "memory_quote" ADD CONSTRAINT "memory_quote_said_by_person_id_person_id_fk" FOREIGN KEY ("said_by_person_id") REFERENCES "public"."person"("id") ON DELETE set null ON UPDATE no action;

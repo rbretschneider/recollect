@@ -3,7 +3,15 @@ import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { v7 as uuidv7 } from 'uuid';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
-import { asset, journalEntry, memory, memoryAsset, memoryQuote, userAccount } from '../database/schema';
+import {
+  asset,
+  journalEntry,
+  memory,
+  memoryAsset,
+  memoryQuote,
+  person,
+  userAccount,
+} from '../database/schema';
 
 /** A Memory card on the timeline. */
 export interface MemorySummary {
@@ -40,6 +48,8 @@ export interface MemoryQuoteView {
   id: string;
   text: string;
   saidBy: string;
+  /** Linked Person (face cluster), so the attribution can jump to their photos. */
+  saidByPersonId: string | null;
 }
 
 /** A journal entry with attribution. */
@@ -141,17 +151,41 @@ export class MemoriesService {
     userId: string,
     quoteText: string,
     saidBy: string,
+    saidByPersonId?: string,
   ): Promise<MemoryQuoteView> {
     await this.requireMemory(memoryId);
+    const personId = saidByPersonId ?? (await this.matchPersonByName(saidBy));
     const id = uuidv7();
     await this.db.insert(memoryQuote).values({
       id,
       memoryId,
       text: quoteText.trim(),
       saidBy: saidBy.trim(),
+      saidByPersonId: personId,
       createdBy: userId,
     });
-    return { id, text: quoteText.trim(), saidBy: saidBy.trim() };
+    return { id, text: quoteText.trim(), saidBy: saidBy.trim(), saidByPersonId: personId };
+  }
+
+  /**
+   * Auto-link: a typed name that unambiguously matches ONE named Person
+   * becomes a link without any extra taps. "Emma, 4" matches person "Emma"
+   * via the first comma segment; two Emmas match nobody.
+   */
+  private async matchPersonByName(saidBy: string): Promise<string | null> {
+    const name = saidBy.split(',')[0]?.trim();
+    if (!name) {
+      return null;
+    }
+    const matches = await this.db
+      .select({ id: person.id })
+      .from(person)
+      .where(
+        sql`lower(${person.name}) = lower(${name})
+            and ${person.mergedIntoId} is null and ${person.hidden} = false`,
+      )
+      .limit(2);
+    return matches.length === 1 ? matches[0].id : null;
   }
 
   async deleteQuote(memoryId: string, quoteId: string): Promise<void> {
@@ -162,8 +196,15 @@ export class MemoriesService {
 
   private async loadQuotes(memoryId: string): Promise<MemoryQuoteView[]> {
     const rows = await this.db
-      .select({ id: memoryQuote.id, text: memoryQuote.text, saidBy: memoryQuote.saidBy })
+      .select({
+        id: memoryQuote.id,
+        text: memoryQuote.text,
+        saidBy: memoryQuote.saidBy,
+        // Follow a merge so the link lands on the surviving person.
+        saidByPersonId: sql<string | null>`coalesce(${person.mergedIntoId}, ${person.id})`,
+      })
       .from(memoryQuote)
+      .leftJoin(person, eq(person.id, memoryQuote.saidByPersonId))
       .where(eq(memoryQuote.memoryId, memoryId))
       .orderBy(asc(memoryQuote.createdAt));
     return rows;

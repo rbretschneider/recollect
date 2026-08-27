@@ -59,11 +59,17 @@ export class MemoriesApiService {
     return firstValueFrom(this.http.put<void>(`/api/v1/memories/${memoryId}/journal`, { bodyMd }));
   }
 
-  addQuote(memoryId: string, text: string, saidBy: string): Promise<{ quote: MemoryQuote }> {
+  addQuote(
+    memoryId: string,
+    text: string,
+    saidBy: string,
+    saidByPersonId?: string,
+  ): Promise<{ quote: MemoryQuote }> {
     return firstValueFrom(
       this.http.post<{ quote: MemoryQuote }>(`/api/v1/memories/${memoryId}/quotes`, {
         text,
         saidBy,
+        ...(saidByPersonId ? { saidByPersonId } : {}),
       }),
     );
   }

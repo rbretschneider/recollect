@@ -69,7 +69,14 @@
         <blockquote class="quote">
           <p>“{{ quote.text }}”</p>
           <footer>
-            — {{ quote.saidBy }}
+            —
+            @if (quote.saidByPersonId) {
+              <a class="said-by" [routerLink]="['/people', quote.saidByPersonId]">
+                {{ quote.saidBy }}
+              </a>
+            } @else {
+              {{ quote.saidBy }}
+            }
             @if (editMode.isEditing()) {
               <button
                 type="button"
@@ -93,11 +100,25 @@
             <input
               name="quoteSaidBy"
               [(ngModel)]="quoteSaidByDraft"
+              (ngModelChange)="onSaidByInput($event)"
               placeholder="Who said it?"
               maxlength="80"
+              autocomplete="off"
             />
             <button type="submit" class="primary" [disabled]="!canSubmitQuote">Add quote</button>
           </div>
+          @if (saidBySuggestions().length > 0) {
+            <div class="said-by-suggestions" role="listbox" aria-label="Link to a person">
+              @for (candidate of saidBySuggestions(); track candidate.id) {
+                <button type="button" (click)="pickSaidBy(candidate)">
+                  @if (candidate.coverFaceId; as cover) {
+                    <img [src]="cropUrl(cover)" alt="" loading="lazy" />
+                  }
+                  {{ candidate.name }}
+                </button>
+              }
+            </div>
+          }
         </form>
       }
     </section>

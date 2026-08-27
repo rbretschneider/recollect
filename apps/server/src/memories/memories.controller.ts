@@ -94,7 +94,15 @@ export class MemoriesController {
     @Body() body: AddQuoteRequestDto,
     @CurrentUser() user: UserProfile,
   ): Promise<{ quote: MemoryQuoteView }> {
-    return { quote: await this.memories.addQuote(id, user.id, body.text, body.saidBy) };
+    return {
+      quote: await this.memories.addQuote(
+        id,
+        user.id,
+        body.text,
+        body.saidBy,
+        body.saidByPersonId,
+      ),
+    };
   }
 
   @RequireGrant('write')
