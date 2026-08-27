@@ -77,109 +77,138 @@
     </section>
   }
 
-  @for (group of groups(); track group.day) {
-    <section class="day">
-      @if (isSelecting()) {
-        <button
-          type="button"
-          class="day-select"
-          [attr.aria-pressed]="isDayFullySelected(group)"
-          (click)="toggleDaySelection(group)"
-        >
-          <h2>{{ group.label }}</h2>
-          <span class="pick">{{ isDayFullySelected(group) ? '✓ Day selected' : 'Select day' }}</span>
-        </button>
-      } @else {
-        <h2>{{ group.label }}</h2>
-      }
-      <div
-        class="grid"
-        [class.cards]="viewMode() === 'cards'"
-        [class.mosaic]="viewMode() !== 'cards'"
-        [class.large]="viewMode() === 'large'"
-      >
-        @for (asset of group.items; track asset.id) {
-          <figure class="tile" [class.card]="viewMode() === 'cards'" [style.--ar]="aspectOf(asset)">
-            <button
-              type="button"
-              class="tile-button"
-              appLongPress
-              [class.selected]="isSelected(asset.id)"
-              [attr.aria-label]="'Open photo from ' + group.label"
-              [attr.aria-pressed]="isSelecting() ? isSelected(asset.id) : null"
-              (click)="onTileClick(asset)"
-              (longPress)="onTileLongPress(asset)"
-            >
-              @if (asset.hasThumbnail) {
-                <img
-                  [src]="thumbUrl(asset)"
-                  [alt]="'Photo from ' + group.label"
-                  loading="lazy"
-                  decoding="async"
-                />
-              } @else {
-                <div class="placeholder" aria-label="Photo still processing"></div>
-              }
-              @if (asset.mediaType === 'video') {
-                <span class="badge video-badge" [attr.aria-label]="'Video, ' + durationLabel(asset)">
-                  ▶ {{ durationLabel(asset) }}
-                </span>
-              }
-            </button>
-            @if (viewMode() === 'cards') {
-              <figcaption class="meta">
-                <span class="title">
-                  <span class="name">{{ cardTitle(asset) }}</span>
-                  @if (asset.isFavorite) {
-                    <app-icon name="heart-filled" [size]="15" class="fav" />
-                  }
-                </span>
-                <span class="row">
-                  <app-icon name="calendar" [size]="15" />
-                  {{ cardDate(asset) }}
-                </span>
-                @if (cardCamera(asset)) {
-                  <span class="row">
-                    <app-icon name="camera" [size]="15" />
-                    {{ cardCamera(asset) }}
-                  </span>
-                }
-                @if (cardLens(asset)) {
-                  <span class="row">
-                    <app-icon name="aperture" [size]="15" />
-                    {{ cardLens(asset) }}
-                  </span>
-                }
-                @if (asset.takenBy) {
-                  <span class="row">
-                    <app-icon name="user" [size]="15" />
-                    Taken by {{ asset.takenBy }}
-                  </span>
-                }
-                @if (cardFormat(asset)) {
-                  <span class="row">
-                    <app-icon name="image" [size]="15" />
-                    {{ cardFormat(asset) }}
-                  </span>
-                }
-                @if (asset.fileName) {
-                  <span class="row file">
-                    <app-icon name="file" [size]="15" />
-                    {{ asset.fileName }}
-                  </span>
-                }
-                @if (asset.place) {
-                  <span class="row">
-                    <app-icon name="map-pin" [size]="15" />
-                    {{ asset.place }}
-                  </span>
-                }
-              </figcaption>
+  @if (viewMode() === 'cards') {
+    <!-- PhotoPrism-style: one continuous stream of cards, no date sections. -->
+    <div class="grid cards">
+      @for (asset of items(); track asset.id) {
+        <figure class="tile card">
+          <button
+            type="button"
+            class="tile-button"
+            appLongPress
+            [class.selected]="isSelected(asset.id)"
+            [attr.aria-label]="'Open photo from ' + cardDate(asset)"
+            [attr.aria-pressed]="isSelecting() ? isSelected(asset.id) : null"
+            (click)="onTileClick(asset)"
+            (longPress)="onTileLongPress(asset)"
+          >
+            @if (asset.hasThumbnail) {
+              <img
+                [src]="thumbUrl(asset)"
+                [alt]="'Photo from ' + cardDate(asset)"
+                loading="lazy"
+                decoding="async"
+              />
+            } @else {
+              <div class="placeholder" aria-label="Photo still processing"></div>
             }
-          </figure>
+            @if (asset.mediaType === 'video') {
+              <span class="badge video-badge" [attr.aria-label]="'Video, ' + durationLabel(asset)">
+                ▶ {{ durationLabel(asset) }}
+              </span>
+            }
+          </button>
+          <figcaption class="meta">
+            <span class="title">
+              <span class="name">{{ cardTitle(asset) }}</span>
+              @if (asset.isFavorite) {
+                <app-icon name="heart-filled" [size]="15" class="fav" />
+              }
+            </span>
+            <span class="row">
+              <app-icon name="calendar" [size]="15" />
+              {{ cardDate(asset) }}
+            </span>
+            @if (cardCamera(asset)) {
+              <span class="row">
+                <app-icon name="camera" [size]="15" />
+                {{ cardCamera(asset) }}
+              </span>
+            }
+            @if (cardLens(asset)) {
+              <span class="row">
+                <app-icon name="aperture" [size]="15" />
+                {{ cardLens(asset) }}
+              </span>
+            }
+            @if (asset.takenBy) {
+              <span class="row">
+                <app-icon name="user" [size]="15" />
+                Taken by {{ asset.takenBy }}
+              </span>
+            }
+            @if (cardFormat(asset)) {
+              <span class="row">
+                <app-icon name="image" [size]="15" />
+                {{ cardFormat(asset) }}
+              </span>
+            }
+            @if (asset.fileName) {
+              <span class="row file">
+                <app-icon name="file" [size]="15" />
+                {{ asset.fileName }}
+              </span>
+            }
+            @if (asset.place) {
+              <span class="row">
+                <app-icon name="map-pin" [size]="15" />
+                {{ asset.place }}
+              </span>
+            }
+          </figcaption>
+        </figure>
+      }
+    </div>
+  } @else {
+    @for (group of groups(); track group.day) {
+      <section class="day">
+        @if (isSelecting()) {
+          <button
+            type="button"
+            class="day-select"
+            [attr.aria-pressed]="isDayFullySelected(group)"
+            (click)="toggleDaySelection(group)"
+          >
+            <h2>{{ group.label }}</h2>
+            <span class="pick">{{ isDayFullySelected(group) ? '✓ Day selected' : 'Select day' }}</span>
+          </button>
+        } @else {
+          <h2>{{ group.label }}</h2>
         }
-      </div>
-    </section>
+        <div class="grid mosaic" [class.large]="viewMode() === 'large'">
+          @for (asset of group.items; track asset.id) {
+            <figure class="tile" [style.--ar]="aspectOf(asset)">
+              <button
+                type="button"
+                class="tile-button"
+                appLongPress
+                [class.selected]="isSelected(asset.id)"
+                [attr.aria-label]="'Open photo from ' + group.label"
+                [attr.aria-pressed]="isSelecting() ? isSelected(asset.id) : null"
+                (click)="onTileClick(asset)"
+                (longPress)="onTileLongPress(asset)"
+              >
+                @if (asset.hasThumbnail) {
+                  <img
+                    [src]="thumbUrl(asset)"
+                    [alt]="'Photo from ' + group.label"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                } @else {
+                  <div class="placeholder" aria-label="Photo still processing"></div>
+                }
+                @if (asset.mediaType === 'video') {
+                  <span class="badge video-badge" [attr.aria-label]="'Video, ' + durationLabel(asset)">
+                    ▶ {{ durationLabel(asset) }}
+                  </span>
+                }
+              </button>
+            </figure>
+          }
+        </div>
+      </section>
+    }
   }
 
   @if (isLoading()) {
