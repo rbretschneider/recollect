@@ -69,3 +69,51 @@
     line-height: 1.6;
   }
 }
+
+// Named people vs "who's this?": unmistakably different sections.
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.5rem 0 0.9rem;
+  font-size: 1rem;
+
+  .count {
+    font-size: 0.75rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 1rem;
+    background: var(--surface-raised);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &.unnamed-title {
+    color: var(--accent);
+
+    .count {
+      background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+      color: var(--accent);
+    }
+  }
+}
+
+.hint {
+  margin: -0.4rem 0 0.9rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+// Unnamed cards: dashed accent ring + accent label, clearly "needs you".
+.person.unnamed {
+  img,
+  .fallback {
+    border: 2px dashed color-mix(in srgb, var(--accent) 60%, transparent);
+    padding: 2px;
+  }
+
+  h3 {
+    color: var(--accent);
+    font-style: italic;
+    font-weight: 500;
+  }
+}

@@ -14,19 +14,47 @@
     </section>
   }
 
-  <div class="grid">
-    @for (person of people(); track person.id) {
-      <a class="person" [routerLink]="['/people', person.id]">
-        @if (avatarUrl(person); as avatar) {
-          <img [src]="avatar" alt="" loading="lazy" />
-        } @else {
-          <span class="fallback">🙂</span>
+  @if (named().length > 0) {
+    <section aria-label="Named people">
+      <h2 class="section-title">People <span class="count">{{ named().length }}</span></h2>
+      <div class="grid">
+        @for (person of named(); track person.id) {
+          <a class="person" [routerLink]="['/people', person.id]">
+            @if (avatarUrl(person); as avatar) {
+              <img [src]="avatar" alt="" loading="lazy" />
+            } @else {
+              <span class="fallback">🙂</span>
+            }
+            <h3>{{ person.name }}</h3>
+            <p>{{ person.faceCount }} photos</p>
+          </a>
         }
-        <h3>{{ person.name ?? 'Who’s this?' }}</h3>
-        <p>{{ person.faceCount }} photos</p>
-      </a>
-    }
-  </div>
+      </div>
+    </section>
+  }
+
+  @if (unnamed().length > 0) {
+    <section aria-label="Unnamed face groups">
+      <h2 class="section-title unnamed-title">
+        Who's this?
+        <span class="count">{{ unnamed().length }}</span>
+      </h2>
+      <p class="hint">Face groups waiting for a name — tap one to say who it is.</p>
+      <div class="grid">
+        @for (person of unnamed(); track person.id) {
+          <a class="person unnamed" [routerLink]="['/people', person.id]">
+            @if (avatarUrl(person); as avatar) {
+              <img [src]="avatar" alt="" loading="lazy" />
+            } @else {
+              <span class="fallback">🙂</span>
+            }
+            <h3>Who's this?</h3>
+            <p>{{ person.faceCount }} photos</p>
+          </a>
+        }
+      </div>
+    </section>
+  }
 </main>
 
 <app-bottom-nav />

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { PeopleApiService, PersonSummary } from '../../core/api/people-api.service';
 import { AppTopbar } from '../../shared/app-topbar';
@@ -17,6 +17,10 @@ export class PeoplePage implements OnInit {
 
   readonly people = signal<PersonSummary[]>([]);
   readonly isLoaded = signal(false);
+
+  /** Real people first; anonymous clusters live in their own section below. */
+  readonly named = computed(() => this.people().filter((person) => person.name !== null));
+  readonly unnamed = computed(() => this.people().filter((person) => person.name === null));
 
   ngOnInit(): void {
     void this.load();
