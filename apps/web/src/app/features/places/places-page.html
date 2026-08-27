@@ -1,0 +1,75 @@
+<header class="topbar">
+  @if (selectedLabel()) {
+    <app-back to="/places" label="Back to all places" />
+    <h1>{{ selectedPlace()?.town ?? 'Place' }}</h1>
+  } @else {
+    <app-back to="/" label="Back to photos" />
+    <h1>Places</h1>
+  }
+  <span class="spacer"></span>
+  <app-avatar-menu />
+</header>
+
+<main class="places">
+  @if (!isLoaded()) {
+    <app-page-loading label="Loading places…" />
+  }
+
+  @if (isLoaded() && places().length === 0) {
+    <section class="empty">
+      <h2>No places yet</h2>
+      <p>
+        As photos with location data are indexed, the spots they were taken
+        appear here automatically.
+      </p>
+    </section>
+  }
+
+  @if (!selectedLabel()) {
+    <div class="place-grid">
+      @for (place of places(); track place.label) {
+        <button type="button" class="place-card" (click)="openPlace(place)">
+          <img [src]="thumbUrl(place.coverAssetId, 720)" alt="" loading="lazy" />
+          <div class="veil"></div>
+          <div class="caption">
+            <h3>{{ place.town }}</h3>
+            <p>{{ place.assetCount.toLocaleString() }} photos</p>
+          </div>
+        </button>
+      }
+    </div>
+  } @else {
+    @if (selectedPlace(); as place) {
+      <p class="full-label">{{ place.label }}</p>
+      <iframe
+        class="map"
+        [src]="mapEmbedUrl(place) | safeResource"
+        title="Map of this place"
+        loading="lazy"
+      ></iframe>
+    }
+
+    @if (isLoadingPlace()) {
+      <app-page-loading label="Loading photos…" />
+    }
+
+    <div class="grid">
+      @for (asset of placeAssets(); track asset.id; let index = $index) {
+        <button type="button" class="tile" aria-label="Open photo" (click)="openViewer(index)">
+          <img [src]="thumbUrl(asset.id)" alt="" loading="lazy" />
+        </button>
+      }
+    </div>
+  }
+</main>
+
+@if (viewerIndex() !== null) {
+  <app-asset-viewer
+    [assets]="placeAssets()"
+    [startIndex]="viewerIndex()!"
+    (closed)="closeViewer()"
+    (deleted)="onViewerDeleted($event)"
+  />
+}
+
+<app-bottom-nav />

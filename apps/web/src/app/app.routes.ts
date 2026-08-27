@@ -65,6 +65,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/people/person-page').then((m) => m.PersonPage),
   },
   {
+    path: 'places',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/places/places-page').then((m) => m.PlacesPage),
+  },
+  {
     path: 'library',
     canActivate: [authGuard],
     loadComponent: () => import('./features/library/library-page').then((m) => m.LibraryPage),

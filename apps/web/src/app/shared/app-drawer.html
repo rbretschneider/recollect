@@ -21,9 +21,9 @@
     <a routerLink="/people" (click)="closed.emit()">
       <span class="icon">🙂</span> People
     </a>
-    <button type="button" disabled title="Coming soon">
-      <span class="icon">📍</span> Places <span class="soon">soon</span>
-    </button>
+    <a routerLink="/places" (click)="closed.emit()">
+      <span class="icon">📍</span> Places
+    </a>
     @if (isAdmin) {
       <a routerLink="/settings" (click)="closed.emit()">
         <span class="icon">⚙️</span> Settings
