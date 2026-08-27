@@ -1,9 +1,12 @@
 <header class="topbar">
-  <a class="back" routerLink="/memories" aria-label="Back to memories">‹</a>
+  <app-back to="/memories" label="Back to memories" />
   <h1>Suggested memories</h1>
   <span class="spacer"></span>
   @if (queue().length > 0) {
     <span class="remaining">{{ queue().length }} left</span>
+    @if (canWrite) {
+      <button type="button" class="dismiss-all" (click)="dismissAll()">Dismiss all</button>
+    }
   }
 </header>
 

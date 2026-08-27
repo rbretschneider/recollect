@@ -38,6 +38,13 @@ export class InboxController {
     await this.inbox.dismiss(id);
   }
 
+  /** Clears the whole inbox in one tap; dismissed clusters never resurface. */
+  @RequireGrant('write')
+  @Post('dismiss-all')
+  async dismissAll(): Promise<{ dismissed: number }> {
+    return this.inbox.dismissAll();
+  }
+
   @RequireGrant('write')
   @Post('merge')
   async merge(

@@ -49,6 +49,7 @@ export class SharedViewPage implements OnInit {
       height: null,
       durationMs: null,
       hasThumbnail: true,
+      isFavorite: false,
     }));
   }
 

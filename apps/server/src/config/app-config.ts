@@ -23,6 +23,11 @@ const configSchema = z.object({
   mlUrl: z.string().default(''),
   /** Cosine distance below which a face joins an existing person cluster. */
   faceClusterDistance: z.coerce.number().positive().default(0.45),
+  /** Reverse-geocoding of memory locations via Nominatim; 'off' disables. */
+  geocodeEnabled: z
+    .string()
+    .default('on')
+    .transform((value) => value !== 'off'),
   /** Comma-separated bases the library folder picker may browse (mounted volumes). */
   libraryBrowseBases: z
     .string()
@@ -58,6 +63,7 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     libraryBrowseBases: env.LIBRARY_BROWSE_BASES,
     mlUrl: env.RECOLLECT_ML_URL,
     faceClusterDistance: env.FACE_CLUSTER_DISTANCE,
+    geocodeEnabled: env.RECOLLECT_GEOCODE,
   });
   if (!parsed.success) {
     throw new Error(`Invalid configuration: ${parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ')}`);

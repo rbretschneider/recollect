@@ -12,6 +12,14 @@
     <app-brand />
     <app-activity-spinner />
     <span class="spacer"></span>
+    <button
+      type="button"
+      class="fav-filter"
+      [class.active]="favoritesOnly()"
+      [attr.aria-pressed]="favoritesOnly()"
+      aria-label="Show only favorites"
+      (click)="toggleFavoritesOnly()"
+    >{{ favoritesOnly() ? '♥' : '♡' }}</button>
     <div class="view-switch" role="group" aria-label="Grid style">
       <button
         type="button"
@@ -54,9 +62,28 @@
     </section>
   }
 
+  @if (favoritesOnly() && items().length === 0 && !isLoading()) {
+    <section class="empty">
+      <h2>No favorites yet</h2>
+      <p>Open a photo and tap the heart to keep it here.</p>
+    </section>
+  }
+
   @for (group of groups(); track group.day) {
     <section class="day">
-      <h2>{{ group.label }}</h2>
+      @if (isSelecting()) {
+        <button
+          type="button"
+          class="day-select"
+          [attr.aria-pressed]="isDayFullySelected(group)"
+          (click)="toggleDaySelection(group)"
+        >
+          <h2>{{ group.label }}</h2>
+          <span class="pick">{{ isDayFullySelected(group) ? '✓ Day selected' : 'Select day' }}</span>
+        </button>
+      } @else {
+        <h2>{{ group.label }}</h2>
+      }
       <div class="grid" [class.mosaic]="viewMode() === 'mosaic'" [class.small]="viewMode() === 'small'">
         @for (asset of group.items; track asset.id) {
           <figure class="tile" [style.--ar]="aspectOf(asset)">
@@ -133,6 +160,7 @@
     [assets]="items()"
     [startIndex]="viewerIndex()!"
     (closed)="closeViewer()"
+    (deleted)="onViewerDeleted($event)"
   />
 }
 

@@ -25,12 +25,17 @@ real-library testing (~18.5k assets on hawaii) teaches us things.
 
 ## Next up
 
-1. **People polish** — merge two people, "not the same person" split,
-   ignore a face, person↔user linking; face-crop avatars instead of
-   whole-photo thumbs.
-2. **Settings completeness** — edit/disable members, change password
+1. **On This Day** — resurface past years' photos for today's date on the
+   Memories page; cheap on existing clustering, big emotional payoff.
+2. **Share a single photo** — the most common share intent; extends
+   share_link to asset targets with the same private-until-action policy.
+3. **Selection → create memory/album** — multi-select currently only offers
+   album-add and trash.
+4. **Person ↔ user linking** ("this is Andrea") — data model reserves it;
+   unlocks "photos of us". Also: viewer info "Taken by" links to the person.
+5. **Settings completeness** — edit/disable members, change password
    (incl. forced first-login change), remove/re-enable library roots.
-3. **Favorites**; **Live Photos pairing** (needs real iPhone HEIC+MOV pairs).
+6. **Live Photos pairing** (needs real iPhone HEIC+MOV pairs).
 4. **Special photo types**: photospheres/panoramas currently display as flat
    wide images (correct data, no 360° projection) — add an interactive 360°
    viewer for assets with GPano XMP or `.PHOTOSPHERE.` names; Pixel motion

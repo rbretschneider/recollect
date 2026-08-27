@@ -1,12 +1,13 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TrashApiService, TrashItem } from '../../core/api/trash-api.service';
+import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
 
 /** The Trash view: what's held, when it purges, and restore (S5.2/S5.3). */
 @Component({
   selector: 'app-trash-page',
-  imports: [BottomNav, RouterLink],
+  imports: [BackButton, BottomNav, RouterLink],
   templateUrl: './trash-page.html',
   styleUrl: './trash-page.scss',
 })

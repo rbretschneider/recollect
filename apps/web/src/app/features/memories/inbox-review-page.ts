@@ -3,7 +3,9 @@ import { RouterLink } from '@angular/router';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { InboxSuggestion } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
+import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
+import { ConfirmService } from '../../shared/confirm.service';
 import { SuggestionCard, SuggestionOutcome } from './suggestion-card';
 
 /**
@@ -12,13 +14,14 @@ import { SuggestionCard, SuggestionOutcome } from './suggestion-card';
  */
 @Component({
   selector: 'app-inbox-review-page',
-  imports: [BottomNav, RouterLink, SuggestionCard],
+  imports: [BackButton, BottomNav, RouterLink, SuggestionCard],
   templateUrl: './inbox-review-page.html',
   styleUrl: './inbox-review-page.scss',
 })
 export class InboxReviewPage implements OnInit {
   private readonly api = inject(MemoriesApiService);
   private readonly auth = inject(AuthStateService);
+  private readonly confirms = inject(ConfirmService);
 
   readonly queue = signal<InboxSuggestion[]>([]);
   readonly isLoaded = signal(false);
@@ -39,6 +42,22 @@ export class InboxReviewPage implements OnInit {
     if (outcome !== 'later') {
       this.reviewedCount.update((count) => count + 1);
     }
+  }
+
+  /** Clears the whole inbox at once; dismissed suggestions never resurface. */
+  async dismissAll(): Promise<void> {
+    const count = this.queue().length;
+    const confirmed = await this.confirms.ask({
+      title: `Dismiss all ${count} suggestions?`,
+      message:
+        'The whole inbox clears and these exact suggestions never come back. Your photos are not affected, and new events will still be suggested.',
+      confirmLabel: 'Dismiss all',
+    });
+    if (!confirmed) {
+      return;
+    }
+    await this.api.dismissAllSuggestions();
+    this.queue.set([]);
   }
 
   private async load(): Promise<void> {

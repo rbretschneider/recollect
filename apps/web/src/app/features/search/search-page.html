@@ -14,6 +14,29 @@
     }
   </div>
 
+  @if (results() === null && !isSearching()) {
+    <section class="zero-state" aria-label="Search suggestions">
+      @if (recentSearches().length > 0) {
+        <h2>Recent</h2>
+        <div class="chips">
+          @for (query of recentSearches(); track query) {
+            <button type="button" class="chip" (click)="applySuggestion(query)">{{ query }}</button>
+          }
+        </div>
+      }
+      <h2>Try searching for</h2>
+      <div class="chips">
+        @for (query of exampleQueries; track query) {
+          <button type="button" class="chip" (click)="applySuggestion(query)">{{ query }}</button>
+        }
+      </div>
+      <p class="hint">
+        Search understands memories, albums, folders, file names, months like
+        “july 2025” — and what's <em>in</em> the photo, like “sunset on the water”.
+      </p>
+    </section>
+  }
+
   @if (results(); as r) {
     @if (!hasAnyHits()) {
       <p class="hint">Nothing matched “{{ r.query }}”.</p>

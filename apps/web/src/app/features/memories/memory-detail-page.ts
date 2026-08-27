@@ -16,6 +16,7 @@ import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { MemoryDetail, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { EditModeService } from '../../core/edit-mode.service';
+import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
 import { ConfirmService } from '../../shared/confirm.service';
 import { EditToggle } from '../../shared/edit-toggle';
@@ -28,7 +29,7 @@ const JOURNAL_AUTOSAVE_MS = 1500;
 /** One Memory: hero, editable title, media grid, and the journal. */
 @Component({
   selector: 'app-memory-detail-page',
-  imports: [
+  imports: [BackButton, 
     AssetViewer,
     BottomNav,
     EditToggle,
@@ -167,6 +168,13 @@ export class MemoryDetailPage implements OnInit {
     await this.router.navigateByUrl('/memories');
   }
 
+  /** The "write the story" prompt drops the cursor straight into the journal. */
+  focusJournal(): void {
+    const element = this.editor()?.nativeElement;
+    element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    element?.focus({ preventScroll: true });
+  }
+
   /** The journal grows with the writing instead of scrolling inside a box. */
   autoGrow(element: HTMLTextAreaElement): void {
     element.style.height = 'auto';
@@ -189,6 +197,15 @@ export class MemoryDetailPage implements OnInit {
 
   closeViewer(): void {
     this.viewerIndex.set(null);
+  }
+
+  /** The viewer trashed a photo: it leaves this memory's grid too. */
+  onViewerDeleted(assetId: string): void {
+    const detail = this.detail();
+    if (detail) {
+      this.detail.set({ ...detail, assetIds: detail.assetIds.filter((id) => id !== assetId) });
+    }
+    this.viewerAssets.update((assets) => assets.filter((asset) => asset.id !== assetId));
   }
 
   private async load(): Promise<void> {
@@ -239,6 +256,7 @@ export class MemoryDetailPage implements OnInit {
             width: number | null;
             height: number | null;
             durationMs: number | null;
+            isFavorite: boolean;
           }>(`/api/v1/assets/${id}/detail`),
         );
         assets.push({ ...detail, capturedDay: detail.capturedAt.slice(0, 10), hasThumbnail: true });

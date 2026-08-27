@@ -1,9 +1,10 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { v7 as uuidv7 } from 'uuid';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
 import { asset, eventCluster, eventClusterAsset, memory, memoryAsset } from '../database/schema';
+import { GeocodeService } from './geocode.service';
 
 /** A Memory suggestion card for the inbox. */
 export interface InboxSuggestion {
@@ -36,7 +37,10 @@ const PREVIEW_ASSET_COUNT = 4;
  */
 @Injectable()
 export class InboxService {
-  constructor(@Inject(DATABASE) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Database,
+    private readonly geocode: GeocodeService,
+  ) {}
 
   async listSuggestions(): Promise<InboxSuggestion[]> {
     const clusters = await this.db
@@ -104,6 +108,8 @@ export class InboxService {
         .set({ status: 'accepted', acceptedMemoryId: memoryId, updatedAt: new Date() })
         .where(eq(eventCluster.id, clusterId));
     });
+    // A date is a filename, not a memory: swap bare-date titles for the place.
+    await this.labelWithPlace(memoryId, memberIds, cluster.seedTitle, span.startAt);
     return { memoryId };
   }
 
@@ -114,6 +120,16 @@ export class InboxService {
       .update(eventCluster)
       .set({ status: 'dismissed', updatedAt: new Date() })
       .where(eq(eventCluster.id, clusterId));
+  }
+
+  /** Dismisses every open suggestion at once; none of them resurface (S8.5). */
+  async dismissAll(): Promise<{ dismissed: number }> {
+    const rows = await this.db
+      .update(eventCluster)
+      .set({ status: 'dismissed', updatedAt: new Date() })
+      .where(eq(eventCluster.status, 'suggested'))
+      .returning({ id: eventCluster.id });
+    return { dismissed: rows.length };
   }
 
   /** Merges several suggestions into one Memory (S8.3). */
@@ -156,7 +172,53 @@ export class InboxService {
         .set({ status: 'accepted', acceptedMemoryId: memoryId, updatedAt: new Date() })
         .where(inArray(eventCluster.id, clusterIds));
     });
+    await this.labelWithPlace(memoryId, memberIds, clusters[0].seedTitle, startAt);
     return { memoryId };
+  }
+
+  /**
+   * Best-effort place labeling for a fresh Memory: reverse-geocodes the median
+   * photo location, stores it, and upgrades a bare-date title to
+   * "Bowdoin · March 23". Never fails the accept.
+   */
+  private async labelWithPlace(
+    memoryId: string,
+    memberIds: string[],
+    seedTitle: string,
+    startAt: Date,
+  ): Promise<void> {
+    try {
+      if (memberIds.length === 0) {
+        return;
+      }
+      const [gps] = await this.db
+        .select({
+          lat: sql<number | null>`percentile_cont(0.5) within group (order by ${asset.gpsLat})`,
+          lon: sql<number | null>`percentile_cont(0.5) within group (order by ${asset.gpsLon})`,
+        })
+        .from(asset)
+        .where(and(inArray(asset.id, memberIds), sql`${asset.gpsLat} is not null`));
+      if (gps?.lat == null || gps?.lon == null) {
+        return;
+      }
+      const label = await this.geocode.reverse(gps.lat, gps.lon);
+      if (!label) {
+        return;
+      }
+      const day = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric' }).format(
+        startAt,
+      );
+      await this.db
+        .update(memory)
+        .set({
+          locationLabel: label,
+          // Only bare-date titles are upgraded; a human-chosen title stands.
+          title: sql`case when ${memory.title} = ${seedTitle} then ${`${label} · ${day}`} else ${memory.title} end`,
+        })
+        .where(eq(memory.id, memoryId));
+    } catch {
+      // Labeling is a garnish; the Memory is already saved.
+    }
   }
 
   private async requireSuggested(clusterId: string): Promise<typeof eventCluster.$inferSelect> {

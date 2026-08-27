@@ -1,6 +1,6 @@
 @if (detail(); as album) {
   <header class="topbar">
-    <a class="back" routerLink="/albums" aria-label="Back to albums">‹</a>
+    <app-back to="/albums" label="Back to albums" />
     <h1>{{ album.title }}</h1>
     <span class="spacer"></span>
   </header>
@@ -51,6 +51,7 @@
     [assets]="viewerAssets()"
     [startIndex]="viewerIndex()!"
     (closed)="closeViewer()"
+    (deleted)="onViewerDeleted($event)"
   />
 }
 

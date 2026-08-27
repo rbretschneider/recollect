@@ -31,6 +31,10 @@ export class MemoriesApiService {
     return firstValueFrom(this.http.post<void>(`/api/v1/inbox/${clusterId}/dismiss`, {}));
   }
 
+  dismissAllSuggestions(): Promise<{ dismissed: number }> {
+    return firstValueFrom(this.http.post<{ dismissed: number }>('/api/v1/inbox/dismiss-all', {}));
+  }
+
   getSuggestionAssets(clusterId: string): Promise<{ assetIds: string[] }> {
     return firstValueFrom(this.http.get<{ assetIds: string[] }>(`/api/v1/inbox/${clusterId}/assets`));
   }

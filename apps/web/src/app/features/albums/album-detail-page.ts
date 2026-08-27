@@ -6,6 +6,7 @@ import { AlbumsApiService } from '../../core/api/albums-api.service';
 import { AlbumDetail, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { EditModeService } from '../../core/edit-mode.service';
+import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
 import { ConfirmService } from '../../shared/confirm.service';
 import { EditToggle } from '../../shared/edit-toggle';
@@ -15,7 +16,7 @@ import { AssetViewer } from '../viewer/asset-viewer';
 /** One album: grid, viewer, share, remove-from-album. */
 @Component({
   selector: 'app-album-detail-page',
-  imports: [AssetViewer, BottomNav, EditToggle, RouterLink, ShareButton],
+  imports: [BackButton, AssetViewer, BottomNav, EditToggle, RouterLink, ShareButton],
   templateUrl: './album-detail-page.html',
   styleUrl: './album-detail-page.scss',
 })
@@ -61,6 +62,15 @@ export class AlbumDetailPage implements OnInit {
 
   closeViewer(): void {
     this.viewerIndex.set(null);
+  }
+
+  /** The viewer trashed a photo: it leaves this album's grid too. */
+  onViewerDeleted(assetId: string): void {
+    const detail = this.detail();
+    if (detail) {
+      this.detail.set({ ...detail, assetIds: detail.assetIds.filter((id) => id !== assetId) });
+    }
+    this.viewerAssets.update((assets) => assets.filter((asset) => asset.id !== assetId));
   }
 
   async removeFromAlbum(assetId: string): Promise<void> {
@@ -109,6 +119,7 @@ export class AlbumDetailPage implements OnInit {
             width: number | null;
             height: number | null;
             durationMs: number | null;
+            isFavorite: boolean;
           }>(`/api/v1/assets/${id}/detail`),
         );
         assets.push({ ...detail, capturedDay: detail.capturedAt.slice(0, 10), hasThumbnail: true });

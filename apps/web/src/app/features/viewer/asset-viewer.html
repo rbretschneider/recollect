@@ -1,6 +1,24 @@
 <div class="viewer" role="dialog" aria-label="Photo viewer">
   <header class="controls">
     <span class="spacer"></span>
+    @if (canFavorite) {
+      <button
+        type="button"
+        class="icon heart"
+        [class.active]="isCurrentFavorite()"
+        [attr.aria-pressed]="isCurrentFavorite()"
+        [attr.aria-label]="isCurrentFavorite() ? 'Remove from favorites' : 'Add to favorites'"
+        (click)="toggleFavorite()"
+      >{{ isCurrentFavorite() ? '♥' : '♡' }}</button>
+    }
+    @if (canDelete) {
+      <button
+        type="button"
+        class="icon"
+        aria-label="Move to Trash"
+        (click)="deleteCurrent()"
+      >🗑</button>
+    }
     @if (allowInfo()) {
       <button
         type="button"
@@ -40,8 +58,14 @@
           [class.loading]="isImageLoading()"
           draggable="false"
           (load)="isImageLoading.set(false)"
-          (error)="isImageLoading.set(false)"
+          (error)="isImageLoading.set(false); imageFailed.set(true)"
         />
+        @if (imageFailed()) {
+          <div class="image-failed" role="status">
+            <p>Couldn't display this photo.</p>
+            <p class="sub">The file may be damaged or incomplete on disk.</p>
+          </div>
+        }
       } @else if (isPreparingVideo()) {
         <div class="preparing" role="status">
           <div class="spinner" aria-hidden="true"></div>
@@ -112,13 +136,35 @@
             @if (info.relPath) {
               <div>
                 <dt>File</dt>
-                <dd class="path">{{ info.relPath }}</dd>
+                <dd class="path">
+                  @if (info.rootId) {
+                    <a
+                      [routerLink]="['/folders']"
+                      [queryParams]="{ root: info.rootId, path: folderOf(info) }"
+                    >{{ info.relPath }}</a>
+                  } @else {
+                    {{ info.relPath }}
+                  }
+                </dd>
               </div>
             }
             @if (info.gpsLat !== null) {
               <div>
                 <dt>Location</dt>
-                <dd>{{ info.gpsLat?.toFixed(4) }}, {{ info.gpsLon?.toFixed(4) }}</dd>
+                <dd>
+                  <a [href]="googleMapsUrl(info)" target="_blank" rel="noopener">
+                    {{ info.gpsLat?.toFixed(4) }}, {{ info.gpsLon?.toFixed(4) }} ↗
+                  </a>
+                </dd>
+              </div>
+            }
+            @if (isSuspiciouslySmall(info)) {
+              <div>
+                <dt>Note</dt>
+                <dd class="warn">
+                  Unusually small file ({{ formatSize(info.sizeBytes) }}) — the original may be an
+                  incomplete sync from the source device.
+                </dd>
               </div>
             }
           </dl>

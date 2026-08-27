@@ -141,3 +141,39 @@ section {
   padding: 2rem 1rem;
   line-height: 1.6;
 }
+
+// The empty search page teaches by example instead of sitting blank.
+.zero-state {
+  padding: 1rem 0.25rem;
+
+  h2 {
+    margin: 1rem 0 0.5rem;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .chip {
+    min-height: 38px;
+    padding: 0 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 2rem;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  .hint {
+    padding: 1.5rem 0.5rem;
+    text-align: left;
+    font-size: 0.85rem;
+  }
+}

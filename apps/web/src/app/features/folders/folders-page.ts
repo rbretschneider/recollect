@@ -7,6 +7,7 @@ import {
   RootEntry,
 } from '../../core/api/folders-api.service';
 import { TimelineAsset } from '../../core/api/api-models';
+import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
 import { AssetViewer } from '../viewer/asset-viewer';
 
@@ -22,7 +23,7 @@ interface Crumb {
  */
 @Component({
   selector: 'app-folders-page',
-  imports: [AssetViewer, BottomNav, RouterLink],
+  imports: [BackButton, AssetViewer, BottomNav, RouterLink],
   templateUrl: './folders-page.html',
   styleUrl: './folders-page.scss',
 })
@@ -117,6 +118,7 @@ export class FoldersPage implements OnInit {
       height: null,
       durationMs: null,
       hasThumbnail: asset.hasThumbnail,
+      isFavorite: false,
     };
   }
 }

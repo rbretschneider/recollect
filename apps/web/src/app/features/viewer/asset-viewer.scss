@@ -50,6 +50,31 @@
     background: var(--accent);
     color: var(--accent-contrast);
   }
+
+  // A hearted photo keeps its heart red even on the translucent chrome.
+  &.heart.active {
+    background: rgb(0 0 0 / 40%);
+    color: #ff5c74;
+  }
+}
+
+.image-failed {
+  position: absolute;
+  display: grid;
+  gap: 0.25rem;
+  place-items: center;
+  color: white;
+  text-align: center;
+  padding: 1rem;
+
+  p {
+    margin: 0;
+  }
+
+  .sub {
+    font-size: 0.85rem;
+    color: rgb(255 255 255 / 65%);
+  }
 }
 
 .stage {
@@ -238,9 +263,25 @@
     margin: 0;
     font-size: 0.95rem;
 
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
     &.path {
       word-break: break-all;
       color: var(--text-muted);
+
+      a {
+        color: var(--text-muted);
+        text-decoration: underline;
+        text-decoration-color: color-mix(in srgb, var(--text-muted) 40%, transparent);
+      }
+    }
+
+    &.warn {
+      font-size: 0.85rem;
+      color: var(--danger);
     }
   }
 }

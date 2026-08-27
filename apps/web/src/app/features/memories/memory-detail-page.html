@@ -4,7 +4,7 @@
       @if (coverUrl(memory); as cover) {
         <img [src]="cover" alt="" />
       }
-      <a class="back" routerLink="/memories" aria-label="Back to memories">‹</a>
+      <app-back class="overlay" to="/memories" label="Back to memories" />
       <div class="hero-text">
         @if (isEditingTitle()) {
           <input
@@ -18,9 +18,20 @@
         } @else {
           <h1 (click)="startEditingTitle()" [class.editable]="editMode.isEditing()">{{ memory.title }}</h1>
         }
-        <p>{{ formatSpan(memory) }} · {{ memory.assetIds.length }} photos</p>
+        <p>
+          @if (memory.locationLabel) {
+            {{ memory.locationLabel }} ·
+          }
+          {{ formatSpan(memory) }} · {{ memory.assetIds.length }} photos
+        </p>
       </div>
     </header>
+
+    @if (canWrite && journalDraft().length === 0) {
+      <button type="button" class="story-prompt" (click)="focusJournal()">
+        ✎ Write the story of this day
+      </button>
+    }
 
     <section class="story" aria-label="Journal">
       @if (canWrite) {
@@ -92,6 +103,7 @@
     [assets]="viewerAssets()"
     [startIndex]="viewerIndex()!"
     (closed)="closeViewer()"
+    (deleted)="onViewerDeleted($event)"
   />
 }
 

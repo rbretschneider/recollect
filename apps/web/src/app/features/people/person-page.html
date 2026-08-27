@@ -1,5 +1,5 @@
 <header class="topbar">
-  <a class="back" routerLink="/people" aria-label="Back to people">‹</a>
+  <app-back to="/people" label="Back to people" />
   <h1>{{ title() }}</h1>
   <span class="spacer"></span>
   @if (saveState() === 'saved') {
@@ -122,6 +122,7 @@
     [assets]="viewerAssets()"
     [startIndex]="viewerIndex()!"
     (closed)="closeViewer()"
+    (deleted)="onViewerDeleted($event)"
   />
 }
 

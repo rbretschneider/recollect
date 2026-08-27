@@ -44,6 +44,20 @@ export class AppDrawer implements OnInit {
     return this.auth.user()?.permission === 'delete';
   }
 
+  /** What this account can do, so "why can't I delete?" answers itself. */
+  get grantLabel(): string {
+    const user = this.auth.user();
+    if (!user) {
+      return '';
+    }
+    const grant = {
+      read: 'Can view',
+      write: 'Can view & organize',
+      delete: 'Can view, organize & delete',
+    }[user.permission];
+    return user.isAdmin ? `${grant} · Admin` : grant;
+  }
+
   get isAdmin(): boolean {
     return this.auth.user()?.isAdmin ?? false;
   }

@@ -194,6 +194,44 @@
   color: var(--text);
 }
 
+// Selection mode: the whole day header becomes a select-all toggle.
+.day-select {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+
+  .pick {
+    font-size: 0.8rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+}
+
+// Heart filter: only your favorites in the grid.
+.fav-filter {
+  display: grid;
+  place-items: center;
+  min-width: 38px;
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  cursor: pointer;
+
+  &.active {
+    color: #ff5c74;
+    border-color: color-mix(in srgb, #ff5c74 45%, var(--border));
+  }
+}
+
 .view-switch {
   display: flex;
   border: 1px solid var(--border);

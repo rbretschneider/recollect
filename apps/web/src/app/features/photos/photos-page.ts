@@ -87,6 +87,8 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
   /** Grid presentation: justified mosaic (default), uniform grid, or small squares. */
   readonly viewMode = signal<GridViewMode>(loadViewMode());
   readonly isSelecting = signal(false);
+  /** Show only the signed-in user's hearted photos. */
+  readonly favoritesOnly = signal(false);
   readonly selectedIds = signal<ReadonlySet<string>>(new Set());
   readonly isPickingAlbum = signal(false);
   readonly isDrawerOpen = signal(false);
@@ -193,6 +195,40 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
     return asset.durationMs === null ? '' : formatDuration(asset.durationMs);
   }
 
+  toggleFavoritesOnly(): void {
+    this.favoritesOnly.update((value) => !value);
+    void this.refreshFromStart();
+  }
+
+  /** The viewer trashed a photo: drop it from the grid and offer Undo. */
+  onViewerDeleted(assetId: string): void {
+    this.items.update((list) => list.filter((item) => item.id !== assetId));
+    this.showUndo([assetId]);
+  }
+
+  /** In selection mode, tapping a day header selects (or clears) that whole day. */
+  toggleDaySelection(group: DayGroup): void {
+    if (!this.isSelecting()) {
+      return;
+    }
+    this.selectedIds.update((current) => {
+      const next = new Set(current);
+      const allSelected = group.items.every((item) => next.has(item.id));
+      for (const item of group.items) {
+        if (allSelected) {
+          next.delete(item.id);
+        } else {
+          next.add(item.id);
+        }
+      }
+      return next;
+    });
+  }
+
+  isDayFullySelected(group: DayGroup): boolean {
+    return group.items.every((item) => this.selectedIds().has(item.id));
+  }
+
   setViewMode(mode: GridViewMode): void {
     this.viewMode.set(mode);
     try {
@@ -289,7 +325,11 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
     }
     this.isLoading.set(true);
     try {
-      const page = await this.photosApi.getTimelinePage(this.nextCursor, PAGE_SIZE);
+      const page = await this.photosApi.getTimelinePage(
+        this.nextCursor,
+        PAGE_SIZE,
+        this.favoritesOnly(),
+      );
       this.items.update((existing) => [...existing, ...page.items]);
       this.nextCursor = page.nextCursor;
       this.hasLoadedFirstPage = true;

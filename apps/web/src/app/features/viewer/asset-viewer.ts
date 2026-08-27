@@ -12,8 +12,12 @@ import {
 import { AssetDetail, TimelineAsset } from '../../core/api/api-models';
 import { inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { PhotosApiService } from '../../core/api/photos-api.service';
+import { TrashApiService } from '../../core/api/trash-api.service';
 import { AuthStateService } from '../../core/auth/auth-state.service';
+import { ConfirmService } from '../../shared/confirm.service';
 
 /** Minimum horizontal swipe distance (px) that counts as navigation. */
 const SWIPE_THRESHOLD_PX = 60;
@@ -32,13 +36,16 @@ const DRAG_THRESHOLD_PX = 8;
  */
 @Component({
   selector: 'app-asset-viewer',
-  imports: [],
+  imports: [RouterLink],
   templateUrl: './asset-viewer.html',
   styleUrl: './asset-viewer.scss',
 })
 export class AssetViewer implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthStateService);
+  private readonly photosApi = inject(PhotosApiService);
+  private readonly trashApi = inject(TrashApiService);
+  private readonly confirms = inject(ConfirmService);
 
   /** The list being browsed and the index to start at. */
   readonly assets = input.required<TimelineAsset[]>();
@@ -48,6 +55,8 @@ export class AssetViewer implements OnInit, OnDestroy {
   /** Info sheet requires the authed detail endpoint; share pages disable it. */
   readonly allowInfo = input<boolean>(true);
   readonly closed = output<void>();
+  /** Emitted after the current photo is moved to Trash from the viewer. */
+  readonly deleted = output<string>();
 
   readonly index = signal(0);
   readonly showInfo = signal(false);
@@ -58,10 +67,22 @@ export class AssetViewer implements OnInit, OnDestroy {
   readonly reprocessState = signal<'idle' | 'running' | 'done'>('idle');
   /** True until the current image's full-size file has arrived. */
   readonly isImageLoading = signal(true);
+  /** True when the current image failed to render at all. */
+  readonly imageFailed = signal(false);
+  /** Optimistic heart states the user has toggled this session. */
+  private readonly favoriteOverrides = signal<ReadonlyMap<string, boolean>>(new Map());
   /** Bumped when a prepared rendition becomes available, to reload the <video>. */
   readonly videoReloadKey = signal(0);
 
   readonly current = computed<TimelineAsset | null>(() => this.assets()[this.index()] ?? null);
+
+  readonly isCurrentFavorite = computed<boolean>(() => {
+    const asset = this.current();
+    if (!asset) {
+      return false;
+    }
+    return this.favoriteOverrides().get(asset.id) ?? asset.isFavorite;
+  });
 
   /** Pinch/scroll zoom state; 1 = fitted. Pan is in screen pixels. */
   readonly zoom = signal(1);
@@ -109,6 +130,7 @@ export class AssetViewer implements OnInit, OnDestroy {
       this.stopPreparePolling();
       this.isPreparingVideo.set(false);
       this.isImageLoading.set(true);
+      this.imageFailed.set(false);
       this.resetZoom();
     });
   }
@@ -371,6 +393,54 @@ export class AssetViewer implements OnInit, OnDestroy {
     return permission === 'write' || permission === 'delete';
   }
 
+  /** Hearts are personal, so any signed-in member gets one (not on share pages). */
+  get canFavorite(): boolean {
+    return this.allowInfo() && this.auth.user() !== null;
+  }
+
+  get canDelete(): boolean {
+    return this.allowInfo() && this.auth.user()?.permission === 'delete';
+  }
+
+  async toggleFavorite(): Promise<void> {
+    const asset = this.current();
+    if (!asset) {
+      return;
+    }
+    const next = !this.isCurrentFavorite();
+    this.favoriteOverrides.update((map) => new Map(map).set(asset.id, next));
+    try {
+      await this.photosApi.setFavorite(asset.id, next);
+    } catch {
+      this.favoriteOverrides.update((map) => new Map(map).set(asset.id, !next));
+    }
+  }
+
+  /** Moves the current photo to Trash (confirmed), then shows the next one. */
+  async deleteCurrent(): Promise<void> {
+    const asset = this.current();
+    if (!asset) {
+      return;
+    }
+    const confirmed = await this.confirms.ask({
+      title: 'Move this photo to Trash?',
+      message:
+        'It leaves your library now and is permanently deleted after the holding period. You can restore it from Trash until then.',
+      confirmLabel: 'Move to Trash',
+    });
+    if (!confirmed) {
+      return;
+    }
+    await this.trashApi.trashAssets([asset.id]);
+    // The parent removes it from the list; step off the doomed index first.
+    if (this.assets().length <= 1) {
+      this.close();
+    } else if (this.index() >= this.assets().length - 1) {
+      this.previous();
+    }
+    this.deleted.emit(asset.id);
+  }
+
   /** Human summary of what failed for this item, or empty when healthy. */
   processingProblem(info: AssetDetail): string {
     if (info.stageErrors) {
@@ -420,8 +490,25 @@ export class AssetViewer implements OnInit, OnDestroy {
     if (bytes === null) {
       return '';
     }
+    if (bytes < 1024 * 1024) {
+      return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+    }
     const megabytes = bytes / (1024 * 1024);
     return `${megabytes.toFixed(1)} MB`;
+  }
+
+  /** A file this small is almost never a real photo — likely a cloud-only stub. */
+  isSuspiciouslySmall(info: AssetDetail): boolean {
+    return info.mediaType === 'image' && info.sizeBytes !== null && info.sizeBytes < 16 * 1024;
+  }
+
+  googleMapsUrl(info: AssetDetail): string {
+    return `https://www.google.com/maps?q=${info.gpsLat},${info.gpsLon}`;
+  }
+
+  /** The folder holding this file, for linking into the folders view. */
+  folderOf(info: AssetDetail): string {
+    return (info.relPath ?? '').split('/').slice(0, -1).join('/');
   }
 
   private async loadDetail(assetId: string): Promise<void> {

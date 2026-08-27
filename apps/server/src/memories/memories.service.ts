@@ -14,6 +14,7 @@ export interface MemorySummary {
   coverAssetId: string | null;
   assetCount: number;
   journalPreview: string | null;
+  locationLabel: string | null;
 }
 
 /** Full Memory detail. */
@@ -78,6 +79,7 @@ export class MemoriesService {
         coverAssetId: row.coverAssetId ?? assetIds[0] ?? null,
         assetCount: assetIds.length,
         journalPreview: preview,
+        locationLabel: row.locationLabel,
       });
     }
     return summaries;

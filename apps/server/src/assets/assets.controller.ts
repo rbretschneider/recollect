@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Controller,
+  Delete,
   Get,
   Header,
   HttpCode,
@@ -9,11 +10,14 @@ import {
   ParseIntPipe,
   ParseUUIDPipe,
   Post,
+  Put,
   Query,
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequireGrant } from '../auth/decorators/require-grant.decorator';
+import type { UserProfile } from '../users/user.types';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { REPROCESS_ASSET_JOB } from '../library/handlers/reprocess-asset.handler';
 import { isThumbnailSize } from '../media/thumbnail-store';
@@ -30,19 +34,43 @@ export class AssetsController {
 
   @Get()
   async list(
+    @CurrentUser() user: UserProfile,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
+    @Query('favorites') favorites?: string,
   ): Promise<TimelinePage> {
     const parsedLimit = limit === undefined ? undefined : Number(limit);
     if (parsedLimit !== undefined && (!Number.isInteger(parsedLimit) || parsedLimit < 1)) {
       throw new BadRequestException('limit must be a positive integer.');
     }
-    return this.assets.listTimeline(cursor, parsedLimit);
+    return this.assets.listTimeline(cursor, parsedLimit, user.id, favorites === '1');
   }
 
   @Get(':id/detail')
-  async detail(@Param('id', ParseUUIDPipe) id: string): Promise<AssetDetail> {
-    return this.assets.getDetail(id);
+  async detail(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: UserProfile,
+  ): Promise<AssetDetail> {
+    return this.assets.getDetail(id, user.id);
+  }
+
+  /** Hearts a photo for the signed-in user. Personal — any member may favorite. */
+  @Put(':id/favorite')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async favorite(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: UserProfile,
+  ): Promise<void> {
+    await this.assets.setFavorite(user.id, id, true);
+  }
+
+  @Delete(':id/favorite')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async unfavorite(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: UserProfile,
+  ): Promise<void> {
+    await this.assets.setFavorite(user.id, id, false);
   }
 
   /** Queues a re-run of metadata + thumbnails for one item (user retry). */

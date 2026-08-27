@@ -18,6 +18,8 @@ export interface TimelineAsset {
   height: number | null;
   durationMs: number | null;
   hasThumbnail: boolean;
+  /** Whether the signed-in user has hearted this photo. */
+  isFavorite: boolean;
 }
 
 /** Mirrors the server's TimelinePage. */
@@ -50,9 +52,11 @@ export interface AssetDetail {
   lensModel: string | null;
   /** Who took it, per the camera→owner mapping in Settings. */
   takenBy: string | null;
+  isFavorite: boolean;
   gpsLat: number | null;
   gpsLon: number | null;
   relPath: string | null;
+  rootId: string | null;
   sizeBytes: number | null;
   hasThumbnail: boolean;
   stageErrors: Record<string, string> | null;
@@ -78,6 +82,7 @@ export interface MemorySummary {
   coverAssetId: string | null;
   assetCount: number;
   journalPreview: string | null;
+  locationLabel: string | null;
 }
 
 /** Mirrors the server's JournalEntryView. */

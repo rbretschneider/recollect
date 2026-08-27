@@ -4,7 +4,7 @@ import { access, stat } from 'fs/promises';
 import { join, resolve } from 'path';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
-import { asset, assetFile, deviceOwner, libraryRoot } from '../database/schema';
+import { asset, assetFile, deviceOwner, favorite, libraryRoot } from '../database/schema';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { MetadataExtractorService } from '../media/metadata-extractor.service';
 import { ThumbnailSize, ThumbnailStore } from '../media/thumbnail-store';
@@ -29,6 +29,8 @@ export interface TimelineAsset {
   height: number | null;
   durationMs: number | null;
   hasThumbnail: boolean;
+  /** Whether the requesting user has hearted this photo. */
+  isFavorite: boolean;
 }
 
 /** One page of the photo timeline. */
@@ -54,8 +56,12 @@ export interface AssetDetail {
   gpsLat: number | null;
   gpsLon: number | null;
   relPath: string | null;
+  /** Library root the file lives in — lets the UI link into the folders view. */
+  rootId: string | null;
   sizeBytes: number | null;
   hasThumbnail: boolean;
+  /** Whether the requesting user has hearted this photo. */
+  isFavorite: boolean;
   /** Per-stage failure reasons, e.g. { thumbs: "unsupported format" }. */
   stageErrors: Record<string, string> | null;
 }
@@ -74,7 +80,12 @@ export class AssetsService {
     private readonly queue: JobQueueService,
   ) {}
 
-  async listTimeline(cursorToken: string | undefined, limit: number | undefined): Promise<TimelinePage> {
+  async listTimeline(
+    cursorToken: string | undefined,
+    limit: number | undefined,
+    userId: string,
+    favoritesOnly = false,
+  ): Promise<TimelinePage> {
     const pageSize = Math.min(limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const cursor = cursorToken ? decodeTimelineCursor(cursorToken) : null;
     const cursorFilter = cursor
@@ -93,9 +104,17 @@ export class AssetsService {
         height: asset.height,
         durationMs: asset.durationMs,
         stageThumbsAt: asset.stageThumbsAt,
+        favoritedAt: favorite.createdAt,
       })
       .from(asset)
-      .where(and(eq(asset.status, 'active'), cursorFilter))
+      .leftJoin(favorite, and(eq(favorite.assetId, asset.id), eq(favorite.userId, userId)))
+      .where(
+        and(
+          eq(asset.status, 'active'),
+          cursorFilter,
+          favoritesOnly ? sql`${favorite.userId} is not null` : sql`true`,
+        ),
+      )
       .orderBy(desc(asset.capturedAt), desc(asset.id))
       .limit(pageSize + 1);
 
@@ -112,6 +131,7 @@ export class AssetsService {
         height: row.height,
         durationMs: row.durationMs,
         hasThumbnail: row.stageThumbsAt !== null,
+        isFavorite: row.favoritedAt !== null,
       })),
       nextCursor:
         hasMore && last ? encodeTimelineCursor({ capturedAt: last.capturedAt, id: last.id }) : null,
@@ -119,13 +139,20 @@ export class AssetsService {
   }
 
   /** Detail for one asset: metadata plus camera info for the viewer's info sheet. */
-  async getDetail(assetId: string): Promise<AssetDetail> {
+  async getDetail(assetId: string, userId?: string): Promise<AssetDetail> {
     const [row] = await this.db.select().from(asset).where(eq(asset.id, assetId)).limit(1);
     if (!row) {
       throw new NotFoundException('That photo does not exist.');
     }
+    const [heart] = userId
+      ? await this.db
+          .select({ assetId: favorite.assetId })
+          .from(favorite)
+          .where(and(eq(favorite.assetId, assetId), eq(favorite.userId, userId)))
+          .limit(1)
+      : [];
     const [file] = await this.db
-      .select({ relPath: assetFile.relPath, sizeBytes: assetFile.sizeBytes })
+      .select({ relPath: assetFile.relPath, rootId: assetFile.rootId, sizeBytes: assetFile.sizeBytes })
       .from(assetFile)
       .where(and(eq(assetFile.assetId, assetId), eq(assetFile.state, 'present')))
       .limit(1);
@@ -157,10 +184,27 @@ export class AssetsService {
       gpsLat: row.gpsLat,
       gpsLon: row.gpsLon,
       relPath: file?.relPath ?? null,
+      rootId: file?.rootId ?? null,
       sizeBytes: file?.sizeBytes ?? null,
       hasThumbnail: row.stageThumbsAt !== null,
+      isFavorite: heart !== undefined,
       stageErrors: row.stageErrors as Record<string, string> | null,
     };
+  }
+
+  /** Hearts or un-hearts a photo for one user (personal, never shared). */
+  async setFavorite(userId: string, assetId: string, on: boolean): Promise<void> {
+    await this.getDetail(assetId); // 404 for unknown ids.
+    if (on) {
+      await this.db
+        .insert(favorite)
+        .values({ userId, assetId })
+        .onConflictDoNothing({ target: [favorite.userId, favorite.assetId] });
+      return;
+    }
+    await this.db
+      .delete(favorite)
+      .where(and(eq(favorite.userId, userId), eq(favorite.assetId, assetId)));
   }
 
   /** Absolute path + mime of the original file, for streaming to the viewer. */

@@ -11,6 +11,20 @@ import { BottomNav } from '../../shared/bottom-nav';
 import { AssetViewer } from '../viewer/asset-viewer';
 
 const DEBOUNCE_MS = 300;
+const RECENT_SEARCHES_KEY = 'rc-recent-searches';
+const RECENT_SEARCHES_MAX = 5;
+
+/** Starter queries for the empty state, showing the kinds of things search understands. */
+const EXAMPLE_QUERIES = ['july 2025', 'christmas', 'beach', 'birthday'];
+
+function loadRecentSearches(): string[] {
+  try {
+    const stored = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) ?? '[]') as unknown;
+    return Array.isArray(stored) ? stored.filter((q): q is string => typeof q === 'string') : [];
+  } catch {
+    return [];
+  }
+}
 
 /** One search box for the whole library: memories, albums, folders, files, dates. */
 @Component({
@@ -27,6 +41,8 @@ export class SearchPage implements AfterViewInit {
 
   readonly results = signal<SearchResults | null>(null);
   readonly isSearching = signal(false);
+  readonly recentSearches = signal<string[]>(loadRecentSearches());
+  readonly exampleQueries = EXAMPLE_QUERIES;
   readonly viewerIndex = signal<number | null>(null);
   /** Which hit list feeds the viewer (filename hits vs semantic hits). */
   readonly viewerSource = signal<'assets' | 'semantic'>('assets');
@@ -55,6 +71,31 @@ export class SearchPage implements AfterViewInit {
     }
     this.isSearching.set(true);
     this.debounceTimer = setTimeout(() => void this.run(value), DEBOUNCE_MS);
+  }
+
+  /** A zero-state chip fills the box and searches immediately. */
+  applySuggestion(query: string): void {
+    this.input().nativeElement.value = query;
+    this.input().nativeElement.focus();
+    this.onQueryInput(query);
+  }
+
+  /** Remembers a query that actually found something (per-device convenience). */
+  private rememberSearch(query: string): void {
+    const trimmed = query.trim();
+    if (trimmed.length === 0) {
+      return;
+    }
+    const next = [trimmed, ...this.recentSearches().filter((q) => q !== trimmed)].slice(
+      0,
+      RECENT_SEARCHES_MAX,
+    );
+    this.recentSearches.set(next);
+    try {
+      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(next));
+    } catch {
+      // Convenience only; losing it is harmless.
+    }
   }
 
   thumbUrl(assetId: string): string {
@@ -91,6 +132,7 @@ export class SearchPage implements AfterViewInit {
       height: null,
       durationMs: null,
       hasThumbnail: true,
+      isFavorite: false,
     }));
   }
 
@@ -99,6 +141,9 @@ export class SearchPage implements AfterViewInit {
       const results = await this.api.search(query);
       if (this.latestQuery === query) {
         this.results.set(results);
+        if (this.hasAnyHits()) {
+          this.rememberSearch(query);
+        }
       }
     } finally {
       if (this.latestQuery === query) {

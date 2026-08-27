@@ -6,6 +6,7 @@ import { TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { EditModeService } from '../../core/edit-mode.service';
 import { ConfirmService } from '../../shared/confirm.service';
+import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
 import { EditToggle } from '../../shared/edit-toggle';
 import { AssetViewer } from '../viewer/asset-viewer';
@@ -14,7 +15,7 @@ import { AssetViewer } from '../viewer/asset-viewer';
  *  cluster — split wrong faces out, ignore junk, merge duplicates, hide. */
 @Component({
   selector: 'app-person-page',
-  imports: [AssetViewer, BottomNav, EditToggle, FormsModule, RouterLink],
+  imports: [BackButton, AssetViewer, BottomNav, EditToggle, FormsModule, RouterLink],
   templateUrl: './person-page.html',
   styleUrl: './person-page.scss',
 })
@@ -213,6 +214,11 @@ export class PersonPage implements OnInit {
     this.viewerIndex.set(null);
   }
 
+  /** The viewer trashed a photo: it leaves this person's grid too. */
+  onViewerDeleted(assetId: string): void {
+    this.assetIds.update((ids) => ids.filter((id) => id !== assetId));
+  }
+
   viewerAssets(): TimelineAsset[] {
     return this.assetIds().map((id) => ({
       id,
@@ -223,6 +229,7 @@ export class PersonPage implements OnInit {
       height: null,
       durationMs: null,
       hasThumbnail: true,
+      isFavorite: false,
     }));
   }
 

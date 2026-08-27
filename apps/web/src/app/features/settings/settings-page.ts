@@ -6,13 +6,14 @@ import { LibraryApiService } from '../../core/api/library-api.service';
 import { CreateUserInput, UsersApiService } from '../../core/api/users-api.service';
 import { LibraryRootView, LibraryStatus, UserProfile } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
+import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
 import { FolderPicker } from '../../shared/folder-picker';
 
 /** Admin settings: library folders and household members. */
 @Component({
   selector: 'app-settings-page',
-  imports: [BottomNav, FolderPicker, FormsModule, RouterLink],
+  imports: [BackButton, BottomNav, FolderPicker, FormsModule, RouterLink],
   templateUrl: './settings-page.html',
   styleUrl: './settings-page.scss',
 })

@@ -40,7 +40,12 @@
         }
         <div class="overlay">
           <h3>{{ memory.title }}</h3>
-          <p>{{ formatSpan(memory) }} · {{ memory.assetCount }} photos</p>
+          <p>
+            @if (memory.locationLabel) {
+              {{ memory.locationLabel }} ·
+            }
+            {{ formatSpan(memory) }} · {{ memory.assetCount }} photos
+          </p>
           @if (memory.journalPreview) {
             <p class="snippet">{{ memory.journalPreview }}</p>
           }
