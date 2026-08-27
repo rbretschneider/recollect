@@ -1,4 +1,4 @@
-import { Component, HostListener, input, output } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, input, OnInit, output } from '@angular/core';
 import { Icon } from './icon';
 
 /**
@@ -27,9 +27,19 @@ import { Icon } from './icon';
   `,
   styleUrl: './sheet.scss',
 })
-export class Sheet {
+export class Sheet implements OnInit {
+  private readonly host = inject(ElementRef<HTMLElement>);
+
   readonly sheetTitle = input.required<string>();
   readonly closed = output<void>();
+
+  ngOnInit(): void {
+    // Portal to <body>: a host inside any stacking context (a z-indexed hero
+    // button, a transformed card) would otherwise paint the sheet UNDER
+    // fixed chrome like the bottom nav. Angular still owns the node, so
+    // destroy/cleanup work unchanged.
+    document.body.appendChild(this.host.nativeElement);
+  }
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
