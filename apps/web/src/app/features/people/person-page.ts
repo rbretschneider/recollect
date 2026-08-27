@@ -78,9 +78,9 @@ export class PersonPage implements OnInit {
       );
   });
 
+  /** Face curation (naming, merging, splitting) is admin territory. */
   get canWrite(): boolean {
-    const permission = this.auth.user()?.permission;
-    return permission === 'write' || permission === 'delete';
+    return this.auth.user()?.isAdmin ?? false;
   }
 
   ngOnInit(): void {

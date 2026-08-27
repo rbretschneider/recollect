@@ -61,7 +61,7 @@
     </section>
   }
 
-  @if (editMode.isEditing()) {
+  @if (editMode.isEditing() && canWrite) {
     <section class="curation" aria-label="Fix this person">
       <div class="curation-head">
         <h2>Faces ({{ faces().length }})</h2>

@@ -98,3 +98,14 @@ real-library testing (~18.5k assets on hawaii) teaches us things.
 GPU 1 for inference · antelopev2 faces + CLIP search · edit-mode app-wide ·
 suggestions as a grid · sharing private-until-explicit with expiration ·
 modularity via env vars · guest uploads last.
+
+**The household is one shared space**: every member sees everyone's memories,
+albums, and people; write-grant members co-edit them (add photos, quotes,
+titles) — there is no per-user ownership wall. The one per-author boundary:
+each person's journal entry is theirs alone (others read it attributed, and
+write their own alongside). Deletes need the delete grant.
+
+**Admin-only curation**: face management (naming, merging, splitting,
+ignoring, disbanding, hiding people) and all library configuration (roots,
+scans, schedules, camera→person mappings) are admin actions. Write-grant
+members organize content; admins shape the machinery.

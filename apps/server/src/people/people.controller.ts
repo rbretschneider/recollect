@@ -12,7 +12,7 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { RequireGrant } from '../auth/decorators/require-grant.decorator';
+import { RequireAdmin } from '../auth/decorators/require-admin.decorator';
 import { FaceIdsRequestDto } from './dto/face-ids-request.dto';
 import { MergePersonRequestDto } from './dto/merge-person-request.dto';
 import { RenamePersonRequestDto } from './dto/rename-person-request.dto';
@@ -37,7 +37,7 @@ export class PeopleController {
     return { assetIds: await this.people.getAssets(id) };
   }
 
-  @RequireGrant('write')
+  @RequireAdmin()
   @Patch(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async rename(
@@ -64,7 +64,7 @@ export class PeopleController {
     res.sendFile(path);
   }
 
-  @RequireGrant('write')
+  @RequireAdmin()
   @Post(':id/merge-into')
   @HttpCode(HttpStatus.NO_CONTENT)
   async mergeInto(
@@ -74,7 +74,7 @@ export class PeopleController {
     await this.people.mergeInto(id, body.targetPersonId);
   }
 
-  @RequireGrant('write')
+  @RequireAdmin()
   @Post(':id/split')
   async split(
     @Param('id', ParseUUIDPipe) id: string,
@@ -83,7 +83,7 @@ export class PeopleController {
     return this.people.split(id, body.faceIds);
   }
 
-  @RequireGrant('write')
+  @RequireAdmin()
   @Post('faces/ignore')
   @HttpCode(HttpStatus.NO_CONTENT)
   async ignore(@Body() body: FaceIdsRequestDto): Promise<void> {
@@ -91,13 +91,13 @@ export class PeopleController {
   }
 
   /** "These are all different people": re-cluster every auto face from scratch. */
-  @RequireGrant('write')
+  @RequireAdmin()
   @Post(':id/disband')
   async disband(@Param('id', ParseUUIDPipe) id: string): Promise<{ reclustered: number }> {
     return this.people.disband(id);
   }
 
-  @RequireGrant('write')
+  @RequireAdmin()
   @Post(':id/hide')
   @HttpCode(HttpStatus.NO_CONTENT)
   async hide(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
