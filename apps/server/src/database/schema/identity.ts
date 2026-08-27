@@ -65,10 +65,3 @@ export const auditLog = pgTable(
   (table) => [index('audit_log_created_at_idx').on(table.createdAt)],
 );
 
-/** Admin-editable application settings (scan cron, holding period, worker caps, …). */
-export const appSetting = pgTable('app_setting', {
-  key: text('key').primaryKey(),
-  value: jsonb('value').notNull(),
-  updatedBy: uuid('updated_by').references(() => userAccount.id, { onDelete: 'set null' }),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
