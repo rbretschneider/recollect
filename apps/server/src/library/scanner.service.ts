@@ -217,38 +217,35 @@ export class ScannerService {
     }
   }
 
-  /** Images indexed before ML existed (or after failures) get their ML stages queued. */
+  /**
+   * Images indexed before ML existed (or after failures) get their ML stages
+   * queued. Set-based and uncapped — the old 2,000-per-scan cap left most of
+   * a large first import without faces until many scans had passed. Dedupe
+   * makes re-runs free; done/failed jobs don't block re-enqueueing.
+   */
   private async queueMlBackfill(): Promise<void> {
     if (!this.ml.isEnabled) {
       return;
     }
-    const pending = await this.db
-      .select({ id: asset.id, stageFacesAt: asset.stageFacesAt, stageEmbedAt: asset.stageEmbedAt })
-      .from(asset)
-      .where(
-        sql`${asset.status} = 'active' and ${asset.mediaType} = 'image'
-            and ${asset.stageThumbsAt} is not null
-            and (${asset.stageFacesAt} is null or ${asset.stageEmbedAt} is null)`,
-      )
-      .limit(2000);
-    for (const row of pending) {
-      if (row.stageFacesAt === null) {
-        await this.queue.enqueue(
-          DETECT_FACES_JOB,
-          { assetId: row.id },
-          { dedupeKey: `${DETECT_FACES_JOB}:${row.id}`, priority: ML_JOB_PRIORITY },
-        );
-      }
-      if (row.stageEmbedAt === null) {
-        await this.queue.enqueue(
-          EMBED_CLIP_JOB,
-          { assetId: row.id },
-          { dedupeKey: `${EMBED_CLIP_JOB}:${row.id}`, priority: ML_JOB_PRIORITY },
-        );
-      }
-    }
-    if (pending.length > 0) {
-      this.logger.log(`ML backfill queued for ${pending.length} assets.`);
+    const backfillOne = async (jobType: string, stageColumn: 'stage_faces_at' | 'stage_embed_at') =>
+      this.db.execute<{ count: number }>(sql`
+        insert into job (id, type, payload, dedupe_key, priority)
+        select gen_random_uuid(), ${jobType}, jsonb_build_object('assetId', a.id),
+               ${jobType} || ':' || a.id, ${ML_JOB_PRIORITY}
+        from asset a
+        where a.status = 'active' and a.media_type = 'image'
+          and a.stage_thumbs_at is not null
+          and ${sql.raw(`a.${stageColumn}`)} is null
+        on conflict do nothing
+      `);
+    const [faces, embeds] = await Promise.all([
+      backfillOne(DETECT_FACES_JOB, 'stage_faces_at'),
+      backfillOne(EMBED_CLIP_JOB, 'stage_embed_at'),
+    ]);
+    if (faces.rowCount || embeds.rowCount) {
+      this.logger.log(
+        `ML backfill queued: ${faces.rowCount ?? 0} face jobs, ${embeds.rowCount ?? 0} embed jobs.`,
+      );
     }
   }
 
