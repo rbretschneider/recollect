@@ -424,7 +424,11 @@ export class AssetsService {
    */
   async getPlayback(assetId: string): Promise<PlaybackResolution> {
     const [row] = await this.db
-      .select({ mediaType: asset.mediaType, videoCodec: asset.videoCodec })
+      .select({
+        mediaType: asset.mediaType,
+        videoCodec: asset.videoCodec,
+        stageErrors: asset.stageErrors,
+      })
       .from(asset)
       .where(eq(asset.id, assetId))
       .limit(1);
@@ -433,6 +437,11 @@ export class AssetsService {
     }
     const original = await this.getOriginalFile(assetId);
     if (row.mediaType !== 'video') {
+      return { kind: 'file', ...original };
+    }
+    // A file marked unplayable (damaged on disk) streams as-is instead of
+    // queueing a transcode that can never succeed ("Preparing…" forever).
+    if ((row.stageErrors as Record<string, string> | null)?.['playback']) {
       return { kind: 'file', ...original };
     }
     const codec = row.videoCodec ?? (await this.backfillVideoCodec(assetId, original.path));

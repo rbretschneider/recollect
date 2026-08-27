@@ -29,8 +29,30 @@ export class MlProcessingService {
     private readonly thumbnails: ThumbnailStore,
   ) {}
 
+  /**
+   * ML reads the 720 thumbnail; without one (thumbnailing failed for this
+   * file) there is nothing to analyze. The job completes quietly — the scan
+   * backfill only re-queues ML once a thumbnail exists, so a later thumbnail
+   * fix (reprocess) picks these up again automatically.
+   */
+  private async skipWhenThumbMissing(assetId: string, stage: 'faces' | 'embed'): Promise<boolean> {
+    const [row] = await this.db
+      .select({ stageThumbsAt: asset.stageThumbsAt })
+      .from(asset)
+      .where(eq(asset.id, assetId))
+      .limit(1);
+    if (!row || row.stageThumbsAt !== null) {
+      return false;
+    }
+    this.logger.warn(`Asset ${assetId} has no thumbnail; skipping ${stage} stage.`);
+    return true;
+  }
+
   /** Detects faces, stores embeddings, and clusters each into a Person. */
   async processFaces(assetId: string): Promise<void> {
+    if (await this.skipWhenThumbMissing(assetId, 'faces')) {
+      return;
+    }
     const thumbPath = this.thumbnails.pathFor(assetId, ML_INPUT_SIZE);
     const result = await this.ml.detectFaces(thumbPath);
     const sentDims = await sharp(thumbPath).metadata();
@@ -57,6 +79,9 @@ export class MlProcessingService {
 
   /** CLIP-embeds the asset for semantic search. */
   async processClipEmbedding(assetId: string): Promise<void> {
+    if (await this.skipWhenThumbMissing(assetId, 'embed')) {
+      return;
+    }
     const thumbPath = this.thumbnails.pathFor(assetId, ML_INPUT_SIZE);
     const result = await this.ml.embedImage(thumbPath);
     if (result.embedding.length > 0) {

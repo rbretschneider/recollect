@@ -37,7 +37,10 @@ export class TranscodeBackfillHandler implements JobHandler, OnModuleInit {
     const videos = await this.db
       .select({ id: asset.id, videoCodec: asset.videoCodec })
       .from(asset)
-      .where(sql`${asset.mediaType} = 'video' and ${asset.status} = 'active'`);
+      .where(
+        sql`${asset.mediaType} = 'video' and ${asset.status} = 'active'
+            and (${asset.stageErrors} is null or ${asset.stageErrors} -> 'playback' is null)`,
+      );
     let queued = 0;
     for (const video of videos) {
       if (video.videoCodec !== null && !isWebSafeVideoCodec(video.videoCodec)) {
