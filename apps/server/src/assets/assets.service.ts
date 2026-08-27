@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, desc, eq, lt, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
 import { access, stat } from 'fs/promises';
 import { join, resolve } from 'path';
 import { DATABASE } from '../database/database.module';
@@ -31,6 +31,16 @@ export interface TimelineAsset {
   hasThumbnail: boolean;
   /** Whether the requesting user has hearted this photo. */
   isFavorite: boolean;
+  // Card-view metadata (PhotoPrism-style details under each photo).
+  mime: string;
+  cameraMake: string | null;
+  cameraModel: string | null;
+  /** Who took it, per the camera→owner mapping in Settings. */
+  takenBy: string | null;
+  fileName: string | null;
+  /** Folder holding the file, relative to its library root. */
+  folder: string | null;
+  sizeBytes: number | null;
 }
 
 /** One page of the photo timeline. */
@@ -105,6 +115,9 @@ export class AssetsService {
         durationMs: asset.durationMs,
         stageThumbsAt: asset.stageThumbsAt,
         favoritedAt: favorite.createdAt,
+        mime: asset.mime,
+        cameraMake: asset.cameraMake,
+        cameraModel: asset.cameraModel,
       })
       .from(asset)
       .leftJoin(favorite, and(eq(favorite.assetId, asset.id), eq(favorite.userId, userId)))
@@ -121,21 +134,65 @@ export class AssetsService {
     const hasMore = rows.length > pageSize;
     const items = rows.slice(0, pageSize);
     const last = items[items.length - 1];
+    const fileByAsset = await this.loadFilesFor(items.map((row) => row.id));
+    const ownerByDevice = await this.loadDeviceOwners();
     return {
-      items: items.map((row) => ({
-        id: row.id,
-        mediaType: row.mediaType as 'image' | 'video',
-        capturedAt: row.capturedAt.toISOString(),
-        capturedDay: row.capturedDay,
-        width: row.width,
-        height: row.height,
-        durationMs: row.durationMs,
-        hasThumbnail: row.stageThumbsAt !== null,
-        isFavorite: row.favoritedAt !== null,
-      })),
+      items: items.map((row) => {
+        const file = fileByAsset.get(row.id);
+        const segments = file?.relPath.split('/') ?? [];
+        return {
+          id: row.id,
+          mediaType: row.mediaType as 'image' | 'video',
+          capturedAt: row.capturedAt.toISOString(),
+          capturedDay: row.capturedDay,
+          width: row.width,
+          height: row.height,
+          durationMs: row.durationMs,
+          hasThumbnail: row.stageThumbsAt !== null,
+          isFavorite: row.favoritedAt !== null,
+          mime: row.mime,
+          cameraMake: row.cameraMake,
+          cameraModel: row.cameraModel,
+          takenBy:
+            row.cameraMake !== null || row.cameraModel !== null
+              ? (ownerByDevice.get(`${row.cameraMake ?? ''} ${row.cameraModel ?? ''}`) ?? null)
+              : null,
+          fileName: segments.at(-1) ?? null,
+          folder: segments.length > 1 ? segments.slice(0, -1).join('/') : null,
+          sizeBytes: file?.sizeBytes ?? null,
+        };
+      }),
       nextCursor:
         hasMore && last ? encodeTimelineCursor({ capturedAt: last.capturedAt, id: last.id }) : null,
     };
+  }
+
+  /** One present file per asset (a duplicated photo has several; any one will do). */
+  private async loadFilesFor(
+    assetIds: string[],
+  ): Promise<Map<string, { relPath: string; sizeBytes: number | null }>> {
+    if (assetIds.length === 0) {
+      return new Map();
+    }
+    const files = await this.db
+      .selectDistinctOn([assetFile.assetId], {
+        assetId: assetFile.assetId,
+        relPath: assetFile.relPath,
+        sizeBytes: assetFile.sizeBytes,
+      })
+      .from(assetFile)
+      .where(and(inArray(assetFile.assetId, assetIds), eq(assetFile.state, 'present')));
+    return new Map(
+      files.map((file) => [file.assetId, { relPath: file.relPath, sizeBytes: file.sizeBytes }]),
+    );
+  }
+
+  /** Camera→owner labels keyed by "make model" (small table; loaded whole). */
+  private async loadDeviceOwners(): Promise<Map<string, string>> {
+    const owners = await this.db.select().from(deviceOwner);
+    return new Map(
+      owners.map((owner) => [`${owner.cameraMake} ${owner.cameraModel}`, owner.ownerName]),
+    );
   }
 
   /** Detail for one asset: metadata plus camera info for the viewer's info sheet. */

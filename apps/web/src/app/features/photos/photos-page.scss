@@ -301,12 +301,12 @@
 
   // PhotoPrism-style cards: rounded tiles with the details underneath.
   &.cards {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 0.6rem;
-    padding: 0 0.6rem;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 0.75rem;
+    padding: 0 0.75rem;
 
     @media (min-width: 768px) {
-      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     }
 
     .tile.card {
@@ -321,24 +321,50 @@
       }
 
       .meta {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        padding: 0.5rem 0.65rem;
-        font-size: 0.75rem;
+        display: grid;
+        gap: 0.3rem;
+        padding: 0.6rem 0.7rem 0.7rem;
+        font-size: 0.72rem;
         color: var(--text-muted);
         font-variant-numeric: tabular-nums;
 
-        .line {
-          flex: 1;
+        .title {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: var(--text);
+
+          .name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .fav {
+            color: #ff5c74;
+            flex-shrink: 0;
+          }
+        }
+
+        .row {
+          display: flex;
+          align-items: center;
+          gap: 0.45rem;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-        }
 
-        .fav {
-          color: #ff5c74;
-          flex-shrink: 0;
+          app-icon {
+            flex-shrink: 0;
+            opacity: 0.7;
+          }
+
+          &.file {
+            word-break: break-all;
+          }
         }
       }
     }

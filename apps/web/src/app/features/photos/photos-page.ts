@@ -200,15 +200,50 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
     return asset.durationMs === null ? '' : formatDuration(asset.durationMs);
   }
 
-  /** Card footer line: capture time, plus dimensions when known. */
-  cardMeta(asset: TimelineAsset): string {
-    const time = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' }).format(
-      new Date(asset.capturedAt),
-    );
-    if (asset.mediaType === 'video') {
-      return `${time} · ${this.durationLabel(asset)}`;
+  // --- Card view metadata (PhotoPrism-style details) ----------------------
+
+  /** Card title: the folder it lives in plus the year, like "Andrea_Phone / 2026". */
+  cardTitle(asset: TimelineAsset): string {
+    const year = asset.capturedDay.slice(0, 4);
+    const folderName = asset.folder?.split('/').at(-1);
+    return folderName ? `${folderName} / ${year}` : year;
+  }
+
+  cardDate(asset: TimelineAsset): string {
+    return new Intl.DateTimeFormat(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(new Date(asset.capturedAt));
+  }
+
+  cardCamera(asset: TimelineAsset): string {
+    return [asset.cameraMake, asset.cameraModel].filter(Boolean).join(' ');
+  }
+
+  /** "JPEG, 2268 × 4032, 1.7 MB" (or duration for videos). */
+  cardFormat(asset: TimelineAsset): string {
+    const parts: string[] = [];
+    const format = asset.mime?.split('/')[1]?.toUpperCase();
+    if (format) {
+      parts.push(format);
     }
-    return asset.width && asset.height ? `${time} · ${asset.width} × ${asset.height}` : time;
+    if (asset.mediaType === 'video' && asset.durationMs !== null) {
+      parts.push(this.durationLabel(asset));
+    } else if (asset.width && asset.height) {
+      parts.push(`${asset.width} × ${asset.height}`);
+    }
+    if (asset.sizeBytes != null) {
+      parts.push(
+        asset.sizeBytes < 1024 * 1024
+          ? `${Math.max(1, Math.round(asset.sizeBytes / 1024))} KB`
+          : `${(asset.sizeBytes / (1024 * 1024)).toFixed(1)} MB`,
+      );
+    }
+    return parts.join(', ');
   }
 
   toggleFavoritesOnly(): void {

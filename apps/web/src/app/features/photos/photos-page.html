@@ -128,9 +128,39 @@
             </button>
             @if (viewMode() === 'cards') {
               <figcaption class="meta">
-                <span class="line">{{ cardMeta(asset) }}</span>
-                @if (asset.isFavorite) {
-                  <app-icon name="heart-filled" [size]="13" class="fav" />
+                <span class="title">
+                  <span class="name">{{ cardTitle(asset) }}</span>
+                  @if (asset.isFavorite) {
+                    <app-icon name="heart-filled" [size]="13" class="fav" />
+                  }
+                </span>
+                <span class="row">
+                  <app-icon name="calendar" [size]="13" />
+                  {{ cardDate(asset) }}
+                </span>
+                @if (cardCamera(asset)) {
+                  <span class="row">
+                    <app-icon name="camera" [size]="13" />
+                    {{ cardCamera(asset) }}
+                  </span>
+                }
+                @if (asset.takenBy) {
+                  <span class="row">
+                    <app-icon name="user" [size]="13" />
+                    Taken by {{ asset.takenBy }}
+                  </span>
+                }
+                @if (cardFormat(asset)) {
+                  <span class="row">
+                    <app-icon name="image" [size]="13" />
+                    {{ cardFormat(asset) }}
+                  </span>
+                }
+                @if (asset.fileName) {
+                  <span class="row file">
+                    <app-icon name="file" [size]="13" />
+                    {{ asset.fileName }}
+                  </span>
                 }
               </figcaption>
             }

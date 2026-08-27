@@ -20,6 +20,15 @@ export interface TimelineAsset {
   hasThumbnail: boolean;
   /** Whether the signed-in user has hearted this photo. */
   isFavorite: boolean;
+  // Card-view metadata — present on timeline responses, optional elsewhere
+  // (viewer lists synthesized by other pages don't carry it).
+  mime?: string;
+  cameraMake?: string | null;
+  cameraModel?: string | null;
+  takenBy?: string | null;
+  fileName?: string | null;
+  folder?: string | null;
+  sizeBytes?: number | null;
 }
 
 /** Mirrors the server's TimelinePage. */
