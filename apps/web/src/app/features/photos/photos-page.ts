@@ -17,7 +17,7 @@ import { TrashApiService } from '../../core/api/trash-api.service';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
 import { formatDuration } from '../../core/format-duration';
 import { AlbumPicker } from '../../shared/album-picker';
-import { AppDrawer } from '../../shared/app-drawer';
+import { AvatarMenu } from '../../shared/avatar-menu';
 import { ActivitySpinner } from '../../shared/activity-spinner';
 import { Brand } from '../../shared/brand';
 import { ConfirmService } from '../../shared/confirm.service';
@@ -60,7 +60,7 @@ const STATUS_POLL_MS = 4000;
   imports: [
     ActivitySpinner,
     AlbumPicker,
-    AppDrawer,
+    AvatarMenu,
     AssetViewer,
     BottomNav,
     Brand,
@@ -96,7 +96,6 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
   readonly favoritesOnly = signal(false);
   readonly selectedIds = signal<ReadonlySet<string>>(new Set());
   readonly isPickingAlbum = signal(false);
-  readonly isDrawerOpen = signal(false);
   readonly undoIds = signal<string[]>([]);
   readonly isLoading = signal(false);
   readonly isComplete = signal(false);

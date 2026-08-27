@@ -1,7 +1,6 @@
-import { Component, inject, signal } from '@angular/core';
-import { AuthStateService } from '../core/auth/auth-state.service';
+import { Component } from '@angular/core';
 import { ActivitySpinner } from './activity-spinner';
-import { AppDrawer } from './app-drawer';
+import { AvatarMenu } from './avatar-menu';
 import { Brand } from './brand';
 
 /**
@@ -11,20 +10,15 @@ import { Brand } from './brand';
  */
 @Component({
   selector: 'app-topbar',
-  imports: [ActivitySpinner, AppDrawer, Brand],
+  imports: [ActivitySpinner, AvatarMenu, Brand],
   template: `
     <header class="topbar">
       <app-brand />
       <app-activity-spinner />
       <span class="spacer"></span>
       <ng-content />
-      <button type="button" class="avatar" aria-label="Menu" (click)="isDrawerOpen.set(true)">
-        {{ userInitial }}
-      </button>
+      <app-avatar-menu />
     </header>
-    @if (isDrawerOpen()) {
-      <app-drawer (closed)="isDrawerOpen.set(false)" />
-    }
   `,
   styles: `
     .topbar {
@@ -44,33 +38,6 @@ import { Brand } from './brand';
     .spacer {
       flex: 1;
     }
-
-    .avatar {
-      display: grid;
-      place-items: center;
-      width: 36px;
-      height: 36px;
-      border: none;
-      border-radius: 50%;
-      background: var(--accent);
-      color: var(--accent-contrast);
-      font-weight: 700;
-      font-size: 0.95rem;
-      cursor: pointer;
-      transition: transform 0.15s ease;
-
-      &:active {
-        transform: scale(0.92);
-      }
-    }
   `,
 })
-export class AppTopbar {
-  private readonly auth = inject(AuthStateService);
-
-  readonly isDrawerOpen = signal(false);
-
-  get userInitial(): string {
-    return (this.auth.user()?.displayName ?? '').charAt(0).toUpperCase();
-  }
-}
+export class AppTopbar {}

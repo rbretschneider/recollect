@@ -51,9 +51,7 @@
     @if (canWrite) {
       <button type="button" class="topbar-action" (click)="startSelecting()">Select</button>
     }
-    <button type="button" class="avatar" aria-label="Menu" (click)="isDrawerOpen.set(true)">
-      {{ userInitial }}
-    </button>
+    <app-avatar-menu />
   }
 </header>
 
@@ -234,10 +232,6 @@
 
 @if (isPickingAlbum()) {
   <app-album-picker (picked)="addSelectionToAlbum($event)" (cancelled)="cancelAlbumPick()" />
-}
-
-@if (isDrawerOpen()) {
-  <app-drawer (closed)="isDrawerOpen.set(false)" />
 }
 
 @if (undoIds().length > 0) {

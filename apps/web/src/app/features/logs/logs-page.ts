@@ -2,6 +2,7 @@ import { AfterViewInit, Component, DestroyRef, ElementRef, inject, OnInit, signa
 import { RouterLink } from '@angular/router';
 import { SystemApiService } from '../../core/api/system-api.service';
 import { ActivitySpinner } from '../../shared/activity-spinner';
+import { AvatarMenu } from '../../shared/avatar-menu';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
 
@@ -11,7 +12,7 @@ const REFRESH_MS = 5000;
 /** Live tail of the server log, with download (admin). */
 @Component({
   selector: 'app-logs-page',
-  imports: [BackButton, ActivitySpinner, BottomNav, RouterLink],
+  imports: [AvatarMenu, BackButton, ActivitySpinner, BottomNav, RouterLink],
   templateUrl: './logs-page.html',
   styleUrl: './logs-page.scss',
 })
