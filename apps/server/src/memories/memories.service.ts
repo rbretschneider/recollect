@@ -47,11 +47,12 @@ export interface MemoryDetail {
   gpsLon: number | null;
 }
 
-/** Someone recognized in a memory's photos. */
+/** Someone recognized in a memory's photos; name null = not yet named. */
 export interface MemoryPersonView {
   id: string;
-  name: string;
-  coverFaceId: string | null;
+  name: string | null;
+  /** Best face OF THIS MEMORY for the avatar — always present. */
+  coverFaceId: string;
   /** In how many of this memory's photos they appear. */
   photoCount: number;
 }
@@ -161,19 +162,23 @@ export class MemoriesService {
     };
   }
 
-  /** Who was there: face-recognized people across the memory's photos. */
+  /**
+   * Who was there: face-recognized people across the memory's photos, named
+   * first. The avatar is the best-quality face FROM THIS MEMORY, so every
+   * chip has one — including "who's this?" clusters awaiting a name.
+   */
   private async loadPeople(
     memoryId: string,
   ): Promise<{ people: MemoryPersonView[]; unnamedPeopleCount: number }> {
     const result = await this.db.execute<{
       id: string;
       name: string | null;
-      cover_face_id: string | null;
+      cover_face_id: string;
       photo_count: number;
     }>(sql`
       select coalesce(survivor.id, p.id) as id,
              coalesce(survivor.name, p.name) as name,
-             coalesce(survivor.cover_face_id, p.cover_face_id) as cover_face_id,
+             (array_agg(f.id order by f.quality desc))[1] as cover_face_id,
              count(distinct f.asset_id)::int as photo_count
       from memory_asset ma
       join face f on f.asset_id = ma.asset_id and f.ignored = false
@@ -181,19 +186,18 @@ export class MemoriesService {
       left join person survivor on survivor.id = p.merged_into_id
       where ma.memory_id = ${memoryId}
         and coalesce(survivor.hidden, p.hidden) = false
-      group by 1, 2, 3
-      order by count(distinct f.asset_id) desc
+      group by 1, 2
+      order by (coalesce(survivor.name, p.name) is null), count(distinct f.asset_id) desc
     `);
+    const people = result.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      coverFaceId: row.cover_face_id,
+      photoCount: row.photo_count,
+    }));
     return {
-      people: result.rows
-        .filter((row): row is typeof row & { name: string } => row.name !== null)
-        .map((row) => ({
-          id: row.id,
-          name: row.name,
-          coverFaceId: row.cover_face_id,
-          photoCount: row.photo_count,
-        })),
-      unnamedPeopleCount: result.rows.filter((row) => row.name === null).length,
+      people,
+      unnamedPeopleCount: people.filter((entry) => entry.name === null).length,
     };
   }
 

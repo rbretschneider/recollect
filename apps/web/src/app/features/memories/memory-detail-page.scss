@@ -118,10 +118,12 @@
       object-fit: cover;
     }
 
+    // "Who's this?" chips keep their face avatar and read as an invitation.
     &.unnamed {
-      padding-left: 0.9rem;
-      color: var(--text-muted);
       border-style: dashed;
+      border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+      color: var(--accent);
+      font-style: italic;
     }
   }
 }

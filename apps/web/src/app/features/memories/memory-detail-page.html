@@ -41,16 +41,9 @@
         <h2>Who was there</h2>
         <div class="chips">
           @for (person of memory.people; track person.id) {
-            <a class="chip" [routerLink]="['/people', person.id]">
-              @if (person.coverFaceId; as cover) {
-                <img [src]="cropUrl(cover)" alt="" loading="lazy" />
-              }
-              {{ person.name }}
-            </a>
-          }
-          @if (memory.unnamedPeopleCount > 0) {
-            <a class="chip unnamed" routerLink="/people">
-              +{{ memory.unnamedPeopleCount }} not named yet
+            <a class="chip" [class.unnamed]="person.name === null" [routerLink]="['/people', person.id]">
+              <img [src]="cropUrl(person.coverFaceId)" alt="" loading="lazy" />
+              {{ person.name ?? 'Who’s this?' }}
             </a>
           }
         </div>

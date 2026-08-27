@@ -128,11 +128,11 @@ export interface MemoryDetail {
   gpsLon: number | null;
 }
 
-/** Someone recognized in a memory's photos. */
+/** Someone recognized in a memory's photos; name null = not yet named. */
 export interface MemoryPerson {
   id: string;
-  name: string;
-  coverFaceId: string | null;
+  name: string | null;
+  coverFaceId: string;
   photoCount: number;
 }
 
