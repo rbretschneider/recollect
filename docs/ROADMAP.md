@@ -47,13 +47,30 @@ real-library testing (~18.5k assets on hawaii) teaches us things.
 5. **Settings completeness** — edit/disable members, change password
    (incl. forced first-login change), remove/re-enable library roots.
 6. **Live Photos pairing** (needs real iPhone HEIC+MOV pairs).
-4. **Special photo types**: photospheres/panoramas currently display as flat
+7. **Cleanup advisor (storage on location)** — a suggestion panel for
+   reclaiming NAS space, review-inbox style (accept / dismiss, never
+   auto-delete):
+   - **No-subject flags**: CLIP zero-shot against junk categories (floor /
+     ceiling / pocket shot / all-black / heavy blur) plus cheap signals
+     (near-zero luminance variance, tiny stub files like the 7KB cloud-only
+     placeholders, 0-byte and moov-less videos already marked by the
+     pipeline). Accept = Trash (normal holding period applies).
+   - **Space hogs**: biggest files by absolute size and videos by
+     bytes-per-second; offer **in-place conversion** (re-encode bloated
+     video to efficient H.264/HEVC at sane bitrate, oversized images to
+     high-quality JPEG/WebP). Conversion REPLACES the original on the NAS —
+     delete-grant only, confirm drawer, original goes through the trash
+     holding period as the undo window.
+   - Panel shows projected savings ("~14.2 GB reclaimable") and per-item
+     before/after sizes; lives next to the Library page's health card.
+8. **Special photo types**: photospheres/panoramas currently display as flat
    wide images (correct data, no 360° projection) — add an interactive 360°
    viewer for assets with GPano XMP or `.PHOTOSPHERE.` names; Pixel motion
    photos show their still (embedded video not yet played). Note: a
    `PHOTOSPHERE.jpg` that renders as a grey mountain icon is a Google Photos
-   cloud-only stub on the NAS (7KB placeholder), not an app bug.
-4. **Wait-state sweep** — audit remaining async actions against the
+   cloud-only stub on the NAS (7KB placeholder), not an app bug. Also: BMP
+   thumbnails via ffmpeg fallback (old scanned-photo folders have them).
+9. **Wait-state sweep** — audit remaining async actions against the
    three-signal standard.
 
 ## The big design pass
