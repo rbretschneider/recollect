@@ -9,6 +9,9 @@
     @if (canWrite) {
       <section class="manage" aria-label="Album actions">
         <app-share-button targetType="album" [targetId]="album.id" />
+        <button type="button" class="action" (click)="isDownloadSheetOpen.set(true)">
+          Download
+        </button>
         <app-edit-toggle />
         @if (editMode.isEditing()) {
           <button type="button" class="danger-link" (click)="deleteAlbum()">Delete album</button>
@@ -44,6 +47,29 @@
       }
     </div>
   </main>
+}
+
+@if (isDownloadSheetOpen()) {
+  <div class="scrim" (click)="isDownloadSheetOpen.set(false)"></div>
+  <div class="download-sheet" role="dialog" aria-label="Download album">
+    <h2>Download {{ detail()?.assetIds?.length }} photos</h2>
+    <p class="hint">
+      Files are named by date and who took them, so nothing lands as PXL_20260823….
+    </p>
+    <button type="button" class="option" (click)="downloadZip()">
+      One ZIP file
+      <span class="sub">Everything in a single download</span>
+    </button>
+    <button type="button" class="option" [disabled]="downloadProgress() !== null" (click)="downloadEach()">
+      @if (downloadProgress(); as progress) {
+        Downloading… {{ progress }}
+      } @else {
+        Each photo separately
+      }
+      <span class="sub">Saves ready-to-use files, no unzipping</span>
+    </button>
+    <button type="button" class="ghost" (click)="isDownloadSheetOpen.set(false)">Cancel</button>
+  </div>
 }
 
 @if (viewerIndex() !== null) {

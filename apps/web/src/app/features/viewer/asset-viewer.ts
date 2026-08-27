@@ -417,6 +417,18 @@ export class AssetViewer implements OnInit, OnDestroy {
     }
   }
 
+  /** Saves the original with its friendly server-assigned name. */
+  downloadCurrent(): void {
+    const asset = this.current();
+    if (!asset) {
+      return;
+    }
+    const anchor = document.createElement('a');
+    anchor.href = `/api/v1/assets/${asset.id}/download`;
+    anchor.download = '';
+    anchor.click();
+  }
+
   /** Moves the current photo to Trash (confirmed), then shows the next one. */
   async deleteCurrent(): Promise<void> {
     const asset = this.current();

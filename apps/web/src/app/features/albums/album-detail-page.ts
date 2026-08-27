@@ -32,6 +32,9 @@ export class AlbumDetailPage implements OnInit {
   readonly detail = signal<AlbumDetail | null>(null);
   readonly viewerAssets = signal<TimelineAsset[]>([]);
   readonly viewerIndex = signal<number | null>(null);
+  readonly isDownloadSheetOpen = signal(false);
+  /** "3 / 24" while the one-by-one download runs; null when idle. */
+  readonly downloadProgress = signal<string | null>(null);
 
   get canWrite(): boolean {
     const permission = this.auth.user()?.permission;
@@ -80,6 +83,38 @@ export class AlbumDetailPage implements OnInit {
     }
     await this.api.removeAsset(detail.id, assetId);
     this.detail.set({ ...detail, assetIds: detail.assetIds.filter((id) => id !== assetId) });
+  }
+
+  downloadZip(): void {
+    const detail = this.detail();
+    if (!detail) {
+      return;
+    }
+    const anchor = document.createElement('a');
+    anchor.href = `/api/v1/albums/${detail.id}/download.zip`;
+    anchor.download = '';
+    anchor.click();
+    this.isDownloadSheetOpen.set(false);
+  }
+
+  /** Saves every photo as its own file (the browser asks once to allow it). */
+  async downloadEach(): Promise<void> {
+    const detail = this.detail();
+    if (!detail || this.downloadProgress() !== null) {
+      return;
+    }
+    const ids = detail.assetIds;
+    for (let index = 0; index < ids.length; index += 1) {
+      this.downloadProgress.set(`${index + 1} / ${ids.length}`);
+      const anchor = document.createElement('a');
+      anchor.href = `/api/v1/assets/${ids[index]}/download`;
+      anchor.download = '';
+      anchor.click();
+      // Browsers drop rapid-fire downloads; a beat between keeps them all.
+      await new Promise((resolve) => setTimeout(resolve, 600));
+    }
+    this.downloadProgress.set(null);
+    this.isDownloadSheetOpen.set(false);
   }
 
   async deleteAlbum(): Promise<void> {

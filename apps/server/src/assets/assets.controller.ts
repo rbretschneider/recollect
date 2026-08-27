@@ -87,6 +87,14 @@ export class AssetsController {
     return { accepted: true };
   }
 
+  /** Downloads the original under a friendly unique name (date, owner, id). */
+  @Get(':id/download')
+  async download(@Param('id', ParseUUIDPipe) id: string, @Res() res: Response): Promise<void> {
+    const file = await this.assets.getOriginalFile(id);
+    const name = await this.assets.getDownloadName(id);
+    res.download(file.path, name);
+  }
+
   /** Streams the original file. express sendFile handles Range requests for video. */
   @Get(':id/original')
   async original(@Param('id', ParseUUIDPipe) id: string, @Res() res: Response): Promise<void> {

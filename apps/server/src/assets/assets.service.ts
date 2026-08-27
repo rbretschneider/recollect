@@ -264,6 +264,44 @@ export class AssetsService {
       .where(and(eq(favorite.userId, userId), eq(favorite.assetId, assetId)));
   }
 
+  /**
+   * A human-friendly, unique download name: capture date/time, who took it
+   * (camera→owner mapping), and a short id for uniqueness. When ML tagging
+   * lands, tags join this same name.
+   */
+  async getDownloadName(assetId: string): Promise<string> {
+    const [row] = await this.db
+      .select({
+        capturedAt: asset.capturedAt,
+        cameraMake: asset.cameraMake,
+        cameraModel: asset.cameraModel,
+        relPath: assetFile.relPath,
+      })
+      .from(asset)
+      .leftJoin(
+        assetFile,
+        and(eq(assetFile.assetId, asset.id), eq(assetFile.state, 'present')),
+      )
+      .where(eq(asset.id, assetId))
+      .limit(1);
+    if (!row) {
+      throw new NotFoundException('That photo does not exist.');
+    }
+    const owners = await this.loadDeviceOwners();
+    const takenBy =
+      row.cameraMake !== null || row.cameraModel !== null
+        ? owners.get(`${row.cameraMake ?? ''} ${row.cameraModel ?? ''}`)
+        : undefined;
+    const stamp = row.capturedAt
+      .toISOString()
+      .slice(0, 16)
+      .replace('T', '_')
+      .replace(':', '');
+    const extension = row.relPath?.match(/\.[A-Za-z0-9]+$/)?.[0]?.toLowerCase() ?? '';
+    const ownerPart = takenBy ? `_${takenBy.replace(/[^\p{L}\p{N}]+/gu, '-')}` : '';
+    return `${stamp}${ownerPart}_${assetId.slice(0, 6)}${extension}`;
+  }
+
   /** Absolute path + mime of the original file, for streaming to the viewer. */
   async getOriginalFile(assetId: string): Promise<{ path: string; mime: string }> {
     const [row] = await this.db

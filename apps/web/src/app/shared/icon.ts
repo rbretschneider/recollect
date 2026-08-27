@@ -10,6 +10,7 @@ export type IconName =
   | 'view-cards'
   | 'view-mosaic'
   | 'view-large'
+  | 'download'
   | 'calendar'
   | 'camera'
   | 'user'
@@ -77,6 +78,11 @@ export type IconName =
         }
         @case ('view-large') {
           <rect width="18" height="18" x="3" y="3" rx="2" />
+        }
+        @case ('download') {
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" x2="12" y1="3" y2="15" />
         }
         @case ('calendar') {
           <path d="M8 2v4" />

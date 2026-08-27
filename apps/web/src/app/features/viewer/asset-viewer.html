@@ -13,6 +13,11 @@
         <app-icon [name]="isCurrentFavorite() ? 'heart-filled' : 'heart'" />
       </button>
     }
+    @if (allowInfo()) {
+      <button type="button" class="icon" aria-label="Download" (click)="downloadCurrent()">
+        <app-icon name="download" />
+      </button>
+    }
     @if (canDelete) {
       <button type="button" class="icon" aria-label="Move to Trash" (click)="deleteCurrent()">
         <app-icon name="trash" />
