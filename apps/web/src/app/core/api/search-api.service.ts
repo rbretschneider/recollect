@@ -33,12 +33,21 @@ export interface SearchAssetHit {
 }
 
 /** Mirrors the server's SearchResults. */
+/** Mirrors the server's SearchPersonHit. */
+export interface SearchPersonHit {
+  id: string;
+  name: string;
+  coverFaceId: string | null;
+  faceCount: number;
+}
+
 export interface SearchResults {
   query: string;
   dateRange: { from: string; to: string; label: string } | null;
   memories: SearchMemoryHit[];
   albums: SearchAlbumHit[];
   folders: SearchFolderHit[];
+  people: SearchPersonHit[];
   assets: SearchAssetHit[];
   semantic: SearchAssetHit[];
 }

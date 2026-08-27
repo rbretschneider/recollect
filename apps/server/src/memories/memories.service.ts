@@ -38,9 +38,22 @@ export interface MemoryDetail {
   assetIds: string[];
   journal: JournalEntryView[];
   quotes: MemoryQuoteView[];
+  /** Named people recognized in this memory's photos, most-seen first. */
+  people: MemoryPersonView[];
+  /** Face clusters present but not yet named. */
+  unnamedPeopleCount: number;
   /** Median GPS of the member photos, for the map view; null when none have GPS. */
   gpsLat: number | null;
   gpsLon: number | null;
+}
+
+/** Someone recognized in a memory's photos. */
+export interface MemoryPersonView {
+  id: string;
+  name: string;
+  coverFaceId: string | null;
+  /** In how many of this memory's photos they appear. */
+  photoCount: number;
 }
 
 /** A "quote of the day": what was said and who said it. */
@@ -127,6 +140,7 @@ export class MemoriesService {
     const assetIds = await this.loadAssetIds(memoryId);
     const journal = await this.loadJournal(memoryId);
     const quotes = await this.loadQuotes(memoryId);
+    const { people, unnamedPeopleCount } = await this.loadPeople(memoryId);
     const location = await this.loadMedianGps(memoryId);
     return {
       gpsLat: location?.lat ?? null,
@@ -142,6 +156,44 @@ export class MemoriesService {
       assetIds,
       journal,
       quotes,
+      people,
+      unnamedPeopleCount,
+    };
+  }
+
+  /** Who was there: face-recognized people across the memory's photos. */
+  private async loadPeople(
+    memoryId: string,
+  ): Promise<{ people: MemoryPersonView[]; unnamedPeopleCount: number }> {
+    const result = await this.db.execute<{
+      id: string;
+      name: string | null;
+      cover_face_id: string | null;
+      photo_count: number;
+    }>(sql`
+      select coalesce(survivor.id, p.id) as id,
+             coalesce(survivor.name, p.name) as name,
+             coalesce(survivor.cover_face_id, p.cover_face_id) as cover_face_id,
+             count(distinct f.asset_id)::int as photo_count
+      from memory_asset ma
+      join face f on f.asset_id = ma.asset_id and f.ignored = false
+      join person p on p.id = f.person_id
+      left join person survivor on survivor.id = p.merged_into_id
+      where ma.memory_id = ${memoryId}
+        and coalesce(survivor.hidden, p.hidden) = false
+      group by 1, 2, 3
+      order by count(distinct f.asset_id) desc
+    `);
+    return {
+      people: result.rows
+        .filter((row): row is typeof row & { name: string } => row.name !== null)
+        .map((row) => ({
+          id: row.id,
+          name: row.name,
+          coverFaceId: row.cover_face_id,
+          photoCount: row.photo_count,
+        })),
+      unnamedPeopleCount: result.rows.filter((row) => row.name === null).length,
     };
   }
 

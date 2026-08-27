@@ -36,6 +36,27 @@
       </div>
     </header>
 
+    @if (memory.people.length > 0 || memory.unnamedPeopleCount > 0) {
+      <section class="who" aria-label="Who was there">
+        <h2>Who was there</h2>
+        <div class="chips">
+          @for (person of memory.people; track person.id) {
+            <a class="chip" [routerLink]="['/people', person.id]">
+              @if (person.coverFaceId; as cover) {
+                <img [src]="cropUrl(cover)" alt="" loading="lazy" />
+              }
+              {{ person.name }}
+            </a>
+          }
+          @if (memory.unnamedPeopleCount > 0) {
+            <a class="chip unnamed" routerLink="/people">
+              +{{ memory.unnamedPeopleCount }} not named yet
+            </a>
+          }
+        </div>
+      </section>
+    }
+
     <section class="story" aria-label="Journal">
       @if (canWrite) {
         <div class="mine">

@@ -122,8 +122,18 @@ export interface MemoryDetail {
   assetIds: string[];
   journal: JournalEntryView[];
   quotes: MemoryQuote[];
+  people: MemoryPerson[];
+  unnamedPeopleCount: number;
   gpsLat: number | null;
   gpsLon: number | null;
+}
+
+/** Someone recognized in a memory's photos. */
+export interface MemoryPerson {
+  id: string;
+  name: string;
+  coverFaceId: string | null;
+  photoCount: number;
 }
 
 /** A "quote of the day": what was said and who said it. */

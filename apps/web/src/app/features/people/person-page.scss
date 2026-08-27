@@ -40,6 +40,34 @@
   margin: 0 auto;
 }
 
+// Named people open as a profile, not a form (readers see this too).
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1.25rem 1rem 0.5rem;
+
+  .avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border);
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 1.35rem;
+    letter-spacing: -0.01em;
+  }
+
+  .muted {
+    margin: 0.15rem 0 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+}
+
 .naming {
   padding: 1rem 1rem 0;
 

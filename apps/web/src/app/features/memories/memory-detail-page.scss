@@ -78,6 +78,54 @@
   }
 }
 
+// Who was there: face-recognized people across the memory's photos.
+.who {
+  max-width: 38rem;
+  margin: 0 auto;
+  padding: 1rem 1.5rem 0;
+
+  h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin: 0 0 0.5rem;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 42px;
+    padding: 0.2rem 0.9rem 0.2rem 0.25rem;
+    border: 1px solid var(--border);
+    border-radius: 2rem;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.9rem;
+    text-decoration: none;
+
+    img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    &.unnamed {
+      padding-left: 0.9rem;
+      color: var(--text-muted);
+      border-style: dashed;
+    }
+  }
+}
+
 // The journal reads and writes like a story, not a form.
 .story {
   padding: 1.5rem 1.5rem 0.5rem;

@@ -36,6 +36,14 @@ export interface SearchFolderHit {
   name: string;
 }
 
+/** A named person whose name matches the query. */
+export interface SearchPersonHit {
+  id: string;
+  name: string;
+  coverFaceId: string | null;
+  faceCount: number;
+}
+
 /** A photo/video hit (filename match or date range member). */
 export interface SearchAssetHit {
   id: string;
@@ -51,6 +59,7 @@ export interface SearchResults {
   memories: SearchMemoryHit[];
   albums: SearchAlbumHit[];
   folders: SearchFolderHit[];
+  people: SearchPersonHit[];
   assets: SearchAssetHit[];
   /** CLIP semantic matches ("beach", "kids in snow") — empty when ML is off. */
   semantic: SearchAssetHit[];
@@ -79,10 +88,11 @@ export class SearchService {
     const trimmed = query.trim();
     const dateRange = parseDateQuery(trimmed);
     const isTextSearch = trimmed.length >= MIN_TEXT_LENGTH && dateRange === null;
-    const [memories, albums, folders, assets, semantic] = await Promise.all([
+    const [memories, albums, folders, people, assets, semantic] = await Promise.all([
       isTextSearch ? this.searchMemories(trimmed) : Promise.resolve([]),
       isTextSearch ? this.searchAlbums(trimmed) : Promise.resolve([]),
       isTextSearch ? this.searchFolders(trimmed) : Promise.resolve([]),
+      isTextSearch ? this.searchPeople(trimmed) : Promise.resolve([]),
       dateRange ? this.assetsInRange(dateRange) : isTextSearch ? this.searchFiles(trimmed) : Promise.resolve([]),
       isTextSearch ? this.searchSemantic(trimmed) : Promise.resolve([]),
     ]);
@@ -94,12 +104,38 @@ export class SearchService {
       memories,
       albums,
       folders,
+      people,
       assets,
       semantic,
     };
   }
 
   /** CLIP text-to-image search over the embedded library; empty when ML is off. */
+  /** Named people whose name contains the query — jumps to their photo page. */
+  private async searchPeople(text: string): Promise<SearchPersonHit[]> {
+    const result = await this.db.execute<{
+      id: string;
+      name: string;
+      cover_face_id: string | null;
+      face_count: number;
+    }>(sql`
+      select p.id, p.name, p.cover_face_id, count(f.id)::int as face_count
+      from person p
+      left join face f on f.person_id = p.id and f.ignored = false
+      where p.name ilike ${'%' + text + '%'}
+        and p.merged_into_id is null and p.hidden = false
+      group by p.id, p.name, p.cover_face_id
+      order by count(f.id) desc
+      limit 8
+    `);
+    return result.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      coverFaceId: row.cover_face_id,
+      faceCount: row.face_count,
+    }));
+  }
+
   private async searchSemantic(text: string): Promise<SearchAssetHit[]> {
     if (!this.ml.isEnabled) {
       return [];

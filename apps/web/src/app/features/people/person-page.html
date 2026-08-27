@@ -11,7 +11,23 @@
   @if (!isLoaded()) {
     <app-page-loading label="Loading photos…" />
   }
-  @if (canWrite) {
+  @if (person(); as p) {
+    @if (p.name) {
+      <header class="profile">
+        @if (p.coverFaceId; as cover) {
+          <img class="avatar" [src]="cropUrl(cover)" alt="" />
+        }
+        <div>
+          <h2>{{ p.name }}</h2>
+          <p class="muted">
+            {{ assetIds().length }} {{ assetIds().length === 1 ? 'photo' : 'photos' }}
+          </p>
+        </div>
+      </header>
+    }
+  }
+
+  @if (canWrite && (person()?.name === null || editMode.isEditing())) {
     <form class="naming" (ngSubmit)="saveName()">
       <div class="name-row">
         <input

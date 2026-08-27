@@ -48,6 +48,23 @@
       </section>
     }
 
+    @if (r.people.length > 0) {
+      <section aria-label="People">
+        <h2>People</h2>
+        <div class="people-chips">
+          @for (hit of r.people; track hit.id) {
+            <a class="person-chip" [routerLink]="['/people', hit.id]">
+              @if (hit.coverFaceId; as cover) {
+                <img [src]="faceCropUrl(cover)" alt="" loading="lazy" />
+              }
+              <span class="name">{{ hit.name }}</span>
+              <span class="count">{{ hit.faceCount }}</span>
+            </a>
+          }
+        </div>
+      </section>
+    }
+
     @if (r.memories.length > 0) {
       <section aria-label="Memories">
         <h2>Memories</h2>

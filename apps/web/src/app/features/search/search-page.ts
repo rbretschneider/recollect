@@ -51,9 +51,19 @@ export class SearchPage implements AfterViewInit {
     const r = this.results();
     return (
       r !== null &&
-      r.memories.length + r.albums.length + r.folders.length + r.assets.length + r.semantic.length > 0
+      r.memories.length +
+        r.albums.length +
+        r.folders.length +
+        r.people.length +
+        r.assets.length +
+        r.semantic.length >
+        0
     );
   });
+
+  faceCropUrl(faceId: string): string {
+    return `/api/v1/people/faces/${faceId}/crop`;
+  }
 
   ngAfterViewInit(): void {
     this.input().nativeElement.focus();
