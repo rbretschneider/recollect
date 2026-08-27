@@ -86,6 +86,12 @@ async function bootstrap(): Promise<void> {
   app.enableShutdownHooks();
   serveWebApp(app, config);
   await app.listen(config.port);
+  // Node's 5s keep-alive default races resuming mobile clients: they reuse a
+  // socket the server just closed and the request dies with a reset. Keep
+  // sockets open longer than any client would idle-reuse them.
+  const server = app.getHttpServer() as import('http').Server;
+  server.keepAliveTimeout = 65_000;
+  server.headersTimeout = 66_000;
 }
 
 void bootstrap();
