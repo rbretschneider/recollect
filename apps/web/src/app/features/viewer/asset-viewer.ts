@@ -114,12 +114,27 @@ export class AssetViewer implements OnInit, OnDestroy {
   private videoSwipeStart: { x: number; y: number } | null = null;
   private hasHistoryEntry = false;
   private prepareTimer: ReturnType<typeof setInterval> | null = null;
+  /** The gallery's scroll depth when the viewer opened; restored on close. */
+  private savedScrollY = 0;
   private readonly onPopState = (): void => {
     // The Android/browser back button pops our entry: close the viewer,
     // never the page underneath (the PhotoPrism-PWA failure mode).
     this.hasHistoryEntry = false;
     this.closed.emit();
+    this.restoreScroll();
   };
+
+  /**
+   * Closing must land you exactly where you were in the gallery. The router
+   * reacts to our popped history entry by "restoring" a scroll position it
+   * never recorded (the top), so we re-assert the real one — twice, to win
+   * the race against its async scroller.
+   */
+  private restoreScroll(): void {
+    const y = this.savedScrollY;
+    requestAnimationFrame(() => window.scrollTo(0, y));
+    setTimeout(() => window.scrollTo(0, y), 80);
+  }
 
   constructor() {
     effect(() => {
@@ -149,6 +164,7 @@ export class AssetViewer implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.savedScrollY = window.scrollY;
     history.pushState({ recollectViewer: true }, '', location.href);
     this.hasHistoryEntry = true;
     window.addEventListener('popstate', this.onPopState);
@@ -163,6 +179,7 @@ export class AssetViewer implements OnInit, OnDestroy {
       this.hasHistoryEntry = false;
       history.back();
     }
+    this.restoreScroll();
   }
 
   imageUrl(assetId: string): string {
