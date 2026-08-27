@@ -300,14 +300,12 @@
   }
 
   // PhotoPrism-style cards: rounded tiles with the details underneath.
+  // Cards are wide and the details are set at readable size — a card whose
+  // metadata needs squinting is a thumbnail with ceremony.
   &.cards {
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-    gap: 0.75rem;
-    padding: 0 0.75rem;
-
-    @media (min-width: 768px) {
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    }
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 0.9rem;
+    padding: 0 0.9rem;
 
     .tile.card {
       aspect-ratio: auto;
@@ -317,23 +315,35 @@
       border: 1px solid var(--border);
 
       .tile-button {
-        aspect-ratio: 1;
+        aspect-ratio: 4 / 3;
+        height: auto; // The base tile's height:100% would defeat the ratio.
+        position: relative;
+
+        // The image fills the fixed 4:3 window instead of dictating height.
+        img,
+        .placeholder {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
       }
 
       .meta {
         display: grid;
-        gap: 0.3rem;
-        padding: 0.6rem 0.7rem 0.7rem;
-        font-size: 0.72rem;
-        color: var(--text-muted);
+        gap: 0.45rem;
+        padding: 0.8rem 0.9rem 0.9rem;
+        font-size: 0.85rem;
+        color: color-mix(in srgb, var(--text) 80%, var(--text-muted));
         font-variant-numeric: tabular-nums;
 
         .title {
           display: flex;
           align-items: center;
           gap: 0.4rem;
-          font-size: 0.85rem;
-          font-weight: 600;
+          font-size: 1rem;
+          font-weight: 700;
           color: var(--text);
 
           .name {
@@ -352,14 +362,14 @@
         .row {
           display: flex;
           align-items: center;
-          gap: 0.45rem;
+          gap: 0.55rem;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
 
           app-icon {
             flex-shrink: 0;
-            opacity: 0.7;
+            opacity: 0.75;
           }
 
           &.file {
