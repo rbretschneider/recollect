@@ -134,6 +134,8 @@ export interface MemoryPerson {
   name: string | null;
   coverFaceId: string;
   photoCount: number;
+  /** True when they're here only as the photographer (device mapping). */
+  behindCamera: boolean;
 }
 
 /** A "quote of the day": what was said and who said it. */

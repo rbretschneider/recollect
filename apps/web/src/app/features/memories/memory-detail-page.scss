@@ -118,6 +118,10 @@
       object-fit: cover;
     }
 
+    .camera-tag {
+      color: var(--text-muted);
+    }
+
     // "Who's this?" chips keep their face avatar and read as an invitation.
     &.unnamed {
       border-style: dashed;

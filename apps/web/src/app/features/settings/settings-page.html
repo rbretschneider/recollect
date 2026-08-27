@@ -28,25 +28,33 @@
         <h2>Cameras</h2>
       </div>
       <p class="hint">
-        Name who each camera belongs to and photos will show who took them.
+        Pick who each camera belongs to — photos show who took them, and the
+        photographer counts as "who was there" on memories.
       </p>
+      @if (namedPeople().length === 0) {
+        <p class="hint">Name some people on the People page first, then map cameras here.</p>
+      }
       @for (device of devices(); track deviceKey(device)) {
-        <form class="card device-row" (ngSubmit)="saveDeviceOwner(device)">
+        <div class="card device-row">
           <div class="info">
             <h3>{{ deviceLabel(device) }}</h3>
             <p class="muted">{{ device.assetCount }} photos &amp; videos</p>
           </div>
-          <input
-            class="owner-input"
+          <select
+            class="owner-select"
             [name]="'owner-' + deviceKey(device)"
             [(ngModel)]="deviceDrafts[deviceKey(device)]"
-            placeholder="Whose camera?"
-            autocomplete="off"
-          />
-          <button type="submit" class="outline">
-            {{ deviceJustSaved() === deviceKey(device) ? 'Saved ✓' : 'Save' }}
-          </button>
-        </form>
+            (ngModelChange)="saveDeviceOwner(device)"
+          >
+            <option value="">— nobody —</option>
+            @for (candidate of namedPeople(); track candidate.id) {
+              <option [value]="candidate.id">{{ candidate.name }}</option>
+            }
+          </select>
+          @if (deviceJustSaved() === deviceKey(device)) {
+            <span class="chip">Saved ✓</span>
+          }
+        </div>
       }
     </section>
   }

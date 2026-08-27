@@ -22,6 +22,7 @@ import { BottomNav } from '../../shared/bottom-nav';
 import { PageLoading } from '../../shared/page-loading';
 import { ConfirmService } from '../../shared/confirm.service';
 import { EditToggle } from '../../shared/edit-toggle';
+import { Icon } from '../../shared/icon';
 import { SafeResourcePipe } from '../../shared/safe-resource.pipe';
 import { ShareButton } from '../../shared/share-button';
 import { AssetViewer } from '../viewer/asset-viewer';
@@ -36,6 +37,7 @@ const JOURNAL_AUTOSAVE_MS = 1500;
     BottomNav,
     EditToggle,
     FormsModule,
+    Icon,
     RouterLink,
     SafeResourcePipe,
     ShareButton,

@@ -18,6 +18,6 @@ export class DevicesController {
   @Put('owner')
   @HttpCode(HttpStatus.NO_CONTENT)
   async setOwner(@Body() body: SetDeviceOwnerRequestDto): Promise<void> {
-    await this.devices.setOwner(body.cameraMake, body.cameraModel, body.ownerName);
+    await this.devices.setOwner(body.cameraMake, body.cameraModel, body.personId ?? null);
   }
 }

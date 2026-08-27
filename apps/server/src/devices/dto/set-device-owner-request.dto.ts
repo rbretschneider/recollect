@@ -1,6 +1,6 @@
-import { IsString, MaxLength } from 'class-validator';
+import { IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
-/** Body for mapping a camera to its owner (empty name clears the mapping). */
+/** Body for mapping a camera to its owning Person (null personId clears it). */
 export class SetDeviceOwnerRequestDto {
   @IsString()
   @MaxLength(200)
@@ -10,7 +10,7 @@ export class SetDeviceOwnerRequestDto {
   @MaxLength(200)
   cameraModel!: string;
 
-  @IsString()
-  @MaxLength(100)
-  ownerName!: string;
+  @IsOptional()
+  @IsUUID()
+  personId?: string | null;
 }

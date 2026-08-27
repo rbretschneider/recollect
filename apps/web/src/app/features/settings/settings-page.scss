@@ -216,3 +216,14 @@ input[type='checkbox'] {
 .topbar .spacer {
   flex: 1;
 }
+
+.owner-select {
+  min-height: 42px;
+  max-width: 11rem;
+  padding: 0 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text);
+  font-size: 0.9rem;
+}

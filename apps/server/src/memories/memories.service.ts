@@ -55,6 +55,8 @@ export interface MemoryPersonView {
   coverFaceId: string;
   /** In how many of this memory's photos they appear. */
   photoCount: number;
+  /** True when they're here only as the photographer (device mapping). */
+  behindCamera: boolean;
 }
 
 /** A "quote of the day": what was said and who said it. */
@@ -189,12 +191,54 @@ export class MemoriesService {
       group by 1, 2
       order by (coalesce(survivor.name, p.name) is null), count(distinct f.asset_id) desc
     `);
-    const people = result.rows.map((row) => ({
+    const people: MemoryPersonView[] = result.rows.map((row) => ({
       id: row.id,
       name: row.name,
       coverFaceId: row.cover_face_id,
       photoCount: row.photo_count,
+      behindCamera: false,
     }));
+    // The photographer is never IN the photos: add camera owners whose device
+    // shot photos in this memory but whose face never appears.
+    const photographers = await this.db.execute<{
+      id: string;
+      name: string | null;
+      cover_face_id: string | null;
+      photo_count: number;
+    }>(sql`
+      with owners as (
+        select coalesce(survivor.id, p.id) as id,
+               coalesce(survivor.name, p.name) as name,
+               count(distinct ma.asset_id)::int as photo_count
+        from memory_asset ma
+        join asset a on a.id = ma.asset_id
+        join device_owner d
+          on d.camera_make = coalesce(a.camera_make, '')
+         and d.camera_model = coalesce(a.camera_model, '')
+        join person p on p.id = d.person_id
+        left join person survivor on survivor.id = p.merged_into_id
+        where ma.memory_id = ${memoryId}
+          and coalesce(survivor.hidden, p.hidden) = false
+        group by 1, 2
+      )
+      select o.id, o.name, o.photo_count,
+             (select f.id from face f
+              where f.person_id = o.id and f.ignored = false
+              order by f.quality desc limit 1) as cover_face_id
+      from owners o
+    `);
+    const seen = new Set(people.map((entry) => entry.id));
+    for (const row of photographers.rows) {
+      if (!seen.has(row.id) && row.cover_face_id !== null) {
+        people.push({
+          id: row.id,
+          name: row.name,
+          coverFaceId: row.cover_face_id,
+          photoCount: row.photo_count,
+          behindCamera: true,
+        });
+      }
+    }
     return {
       people,
       unnamedPeopleCount: people.filter((entry) => entry.name === null).length,

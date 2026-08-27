@@ -44,6 +44,9 @@
             <a class="chip" [class.unnamed]="person.name === null" [routerLink]="['/people', person.id]">
               <img [src]="cropUrl(person.coverFaceId)" alt="" loading="lazy" />
               {{ person.name ?? 'Who’s this?' }}
+              @if (person.behindCamera) {
+                <app-icon name="camera" [size]="14" class="camera-tag" />
+              }
             </a>
           }
         </div>

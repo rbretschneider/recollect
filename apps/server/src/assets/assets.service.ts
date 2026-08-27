@@ -4,7 +4,15 @@ import { access, stat } from 'fs/promises';
 import { join, resolve } from 'path';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
-import { asset, assetFile, deviceOwner, favorite, geocodeCache, libraryRoot } from '../database/schema';
+import {
+  asset,
+  assetFile,
+  deviceOwner,
+  favorite,
+  geocodeCache,
+  libraryRoot,
+  person,
+} from '../database/schema';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { MetadataExtractorService } from '../media/metadata-extractor.service';
 import { ThumbnailSize, ThumbnailStore } from '../media/thumbnail-store';
@@ -209,11 +217,20 @@ export class AssetsService {
     );
   }
 
-  /** Camera→owner labels keyed by "make model" (small table; loaded whole). */
+  /** Camera→owner names keyed by "make model" (small table; loaded whole). */
   private async loadDeviceOwners(): Promise<Map<string, string>> {
-    const owners = await this.db.select().from(deviceOwner);
+    const owners = await this.db
+      .select({
+        cameraMake: deviceOwner.cameraMake,
+        cameraModel: deviceOwner.cameraModel,
+        name: person.name,
+      })
+      .from(deviceOwner)
+      .innerJoin(person, eq(person.id, deviceOwner.personId));
     return new Map(
-      owners.map((owner) => [`${owner.cameraMake} ${owner.cameraModel}`, owner.ownerName]),
+      owners
+        .filter((owner): owner is typeof owner & { name: string } => owner.name !== null)
+        .map((owner) => [`${owner.cameraMake} ${owner.cameraModel}`, owner.name]),
     );
   }
 
@@ -245,8 +262,9 @@ export class AssetsService {
     const [owner] =
       row.cameraMake !== null || row.cameraModel !== null
         ? await this.db
-            .select({ ownerName: deviceOwner.ownerName })
+            .select({ ownerName: person.name })
             .from(deviceOwner)
+            .innerJoin(person, eq(person.id, deviceOwner.personId))
             .where(
               and(
                 eq(deviceOwner.cameraMake, row.cameraMake ?? ''),

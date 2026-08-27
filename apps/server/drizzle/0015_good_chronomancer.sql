@@ -1,0 +1,2 @@
+ALTER TABLE "device_owner" ADD COLUMN "person_id" uuid NOT NULL;--> statement-breakpoint
+ALTER TABLE "device_owner" ADD CONSTRAINT "device_owner_person_id_person_id_fk" FOREIGN KEY ("person_id") REFERENCES "public"."person"("id") ON DELETE cascade ON UPDATE no action;
