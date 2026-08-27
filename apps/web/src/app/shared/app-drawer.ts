@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, output, signal } from '@angular/core';
+import { Component, ElementRef, inject, OnInit, output, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ActivityService } from '../core/activity.service';
 import { LibraryApiService } from '../core/api/library-api.service';
@@ -62,7 +62,12 @@ export class AppDrawer implements OnInit {
     return this.auth.user()?.isAdmin ?? false;
   }
 
+  private readonly host = inject(ElementRef<HTMLElement>);
+
   ngOnInit(): void {
+    // Portal to <body> (same as app-sheet): hosted inside a topbar, the
+    // backdrop-filter/z-index context breaks the fixed panel and scrim.
+    document.body.appendChild(this.host.nativeElement);
     void this.loadStatus();
   }
 
