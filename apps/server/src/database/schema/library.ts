@@ -61,6 +61,13 @@ export const asset = pgTable(
     cameraMake: text('camera_make'),
     cameraModel: text('camera_model'),
     lensModel: text('lens_model'),
+    iso: integer('iso'),
+    /** Shutter speed as photographers read it, e.g. "1/120". */
+    exposureTime: text('exposure_time'),
+    /** Aperture f-number, e.g. 1.85. */
+    fNumber: real('f_number'),
+    /** 35mm-equivalent focal length in millimeters. */
+    focalLength35: integer('focal_length_35'),
     status: text('status').notNull().default('active'),
     trashedAt: timestamp('trashed_at', { withTimezone: true }),
     trashedBy: uuid('trashed_by').references(() => userAccount.id, { onDelete: 'set null' }),

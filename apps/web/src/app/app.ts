@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { NavigationEnd, NavigationError, Router, RouterOutlet } from '@angular/router';
+import { AppUpdateService } from './core/app-update.service';
 import { ConfirmDrawer } from './shared/confirm-drawer';
 
 /** sessionStorage flag preventing a reload loop when recovery itself fails. */
@@ -14,6 +15,7 @@ export class App {
   private readonly router = inject(Router);
 
   constructor() {
+    inject(AppUpdateService).start();
     // After a deploy, the cached index may reference lazy chunks that no
     // longer exist; navigation then fails and the app goes black. A full
     // reload fetches the fresh index and recovers — once, not in a loop.

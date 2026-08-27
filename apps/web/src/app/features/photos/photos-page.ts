@@ -202,9 +202,13 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
 
   // --- Card view metadata (PhotoPrism-style details) ----------------------
 
-  /** Card title: the folder it lives in plus the year, like "Andrea_Phone / 2026". */
+  /** Card title, PhotoPrism-style: place + year when known, else folder + year. */
   cardTitle(asset: TimelineAsset): string {
     const year = asset.capturedDay.slice(0, 4);
+    const town = asset.place?.split(',')[0]?.trim();
+    if (town) {
+      return `${town} / ${year}`;
+    }
     const folderName = asset.folder?.split('/').at(-1);
     return folderName ? `${folderName} / ${year}` : year;
   }
@@ -220,8 +224,32 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
     }).format(new Date(asset.capturedAt));
   }
 
+  /** "Google Pixel 7 Pro, ISO 336, 1/120". */
   cardCamera(asset: TimelineAsset): string {
-    return [asset.cameraMake, asset.cameraModel].filter(Boolean).join(' ');
+    const camera = [asset.cameraMake, asset.cameraModel].filter(Boolean).join(' ');
+    const parts = [camera];
+    if (asset.iso != null) {
+      parts.push(`ISO ${asset.iso}`);
+    }
+    if (asset.exposureTime) {
+      parts.push(asset.exposureTime);
+    }
+    return parts.filter(Boolean).join(', ');
+  }
+
+  /** "Pixel 7 Pro 6.81mm ƒ/1.85, 24mm". */
+  cardLens(asset: TimelineAsset): string {
+    const parts: string[] = [];
+    if (asset.lensModel) {
+      parts.push(asset.lensModel);
+    }
+    if (asset.fNumber != null) {
+      parts.push(`ƒ/${asset.fNumber}`);
+    }
+    if (asset.focalLength35 != null) {
+      parts.push(`${asset.focalLength35}mm`);
+    }
+    return parts.join(parts.length > 1 && asset.lensModel ? ' ' : ', ');
   }
 
   /** "JPEG, 2268 × 4032, 1.7 MB" (or duration for videos). */

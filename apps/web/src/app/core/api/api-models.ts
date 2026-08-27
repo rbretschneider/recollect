@@ -25,10 +25,16 @@ export interface TimelineAsset {
   mime?: string;
   cameraMake?: string | null;
   cameraModel?: string | null;
+  lensModel?: string | null;
+  iso?: number | null;
+  exposureTime?: string | null;
+  fNumber?: number | null;
+  focalLength35?: number | null;
   takenBy?: string | null;
   fileName?: string | null;
   folder?: string | null;
   sizeBytes?: number | null;
+  place?: string | null;
 }
 
 /** Mirrors the server's TimelinePage. */

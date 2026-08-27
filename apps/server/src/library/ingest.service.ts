@@ -139,6 +139,10 @@ export class IngestService {
       cameraMake: metadata?.cameraMake ?? null,
       cameraModel: metadata?.cameraModel ?? null,
       lensModel: metadata?.lensModel ?? null,
+      iso: metadata?.iso ?? null,
+      exposureTime: metadata?.exposureTime ?? null,
+      fNumber: metadata?.fNumber ?? null,
+      focalLength35: metadata?.focalLength35 ?? null,
       stageMetadataAt: metadata ? new Date() : null,
       stageErrors: metadata ? null : { metadata: 'extraction failed' },
     });
@@ -280,6 +284,10 @@ export class IngestService {
           cameraMake: metadata.cameraMake,
           cameraModel: metadata.cameraModel,
           lensModel: metadata.lensModel,
+          iso: metadata.iso,
+          exposureTime: metadata.exposureTime,
+          fNumber: metadata.fNumber,
+          focalLength35: metadata.focalLength35,
           stageMetadataAt: new Date(),
           ...(row.capturedAtSource === 'user'
             ? {}

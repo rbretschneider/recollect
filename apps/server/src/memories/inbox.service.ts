@@ -201,7 +201,8 @@ export class InboxService {
       if (gps?.lat == null || gps?.lon == null) {
         return;
       }
-      const label = await this.geocode.reverse(gps.lat, gps.lon);
+      const fullLabel = await this.geocode.reverse(gps.lat, gps.lon);
+      const label = fullLabel?.split(',')[0]?.trim();
       if (!label) {
         return;
       }

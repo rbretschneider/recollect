@@ -4,7 +4,7 @@ import { access, stat } from 'fs/promises';
 import { join, resolve } from 'path';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
-import { asset, assetFile, deviceOwner, favorite, libraryRoot } from '../database/schema';
+import { asset, assetFile, deviceOwner, favorite, geocodeCache, libraryRoot } from '../database/schema';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { MetadataExtractorService } from '../media/metadata-extractor.service';
 import { ThumbnailSize, ThumbnailStore } from '../media/thumbnail-store';
@@ -35,12 +35,19 @@ export interface TimelineAsset {
   mime: string;
   cameraMake: string | null;
   cameraModel: string | null;
+  lensModel: string | null;
+  iso: number | null;
+  exposureTime: string | null;
+  fNumber: number | null;
+  focalLength35: number | null;
   /** Who took it, per the camera→owner mapping in Settings. */
   takenBy: string | null;
   fileName: string | null;
   /** Folder holding the file, relative to its library root. */
   folder: string | null;
   sizeBytes: number | null;
+  /** Reverse-geocoded place, e.g. "Topsham, Maine, United States". */
+  place: string | null;
 }
 
 /** One page of the photo timeline. */
@@ -118,9 +125,23 @@ export class AssetsService {
         mime: asset.mime,
         cameraMake: asset.cameraMake,
         cameraModel: asset.cameraModel,
+        lensModel: asset.lensModel,
+        iso: asset.iso,
+        exposureTime: asset.exposureTime,
+        fNumber: asset.fNumber,
+        focalLength35: asset.focalLength35,
+        place: geocodeCache.label,
       })
       .from(asset)
       .leftJoin(favorite, and(eq(favorite.assetId, asset.id), eq(favorite.userId, userId)))
+      .leftJoin(
+        geocodeCache,
+        // Same "lat,lon" 2-decimal key format GeocodeService writes.
+        eq(
+          geocodeCache.cellKey,
+          sql`to_char(round(${asset.gpsLat}::numeric, 2), 'FM990.00') || ',' || to_char(round(${asset.gpsLon}::numeric, 2), 'FM990.00')`,
+        ),
+      )
       .where(
         and(
           eq(asset.status, 'active'),
@@ -153,6 +174,12 @@ export class AssetsService {
           mime: row.mime,
           cameraMake: row.cameraMake,
           cameraModel: row.cameraModel,
+          lensModel: row.lensModel,
+          iso: row.iso,
+          exposureTime: row.exposureTime,
+          fNumber: row.fNumber,
+          focalLength35: row.focalLength35,
+          place: row.place,
           takenBy:
             row.cameraMake !== null || row.cameraModel !== null
               ? (ownerByDevice.get(`${row.cameraMake ?? ''} ${row.cameraModel ?? ''}`) ?? null)

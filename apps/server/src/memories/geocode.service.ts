@@ -10,7 +10,7 @@ import { geocodeCache } from '../database/schema';
 const PLACE_FIELDS = ['village', 'hamlet', 'town', 'city', 'municipality', 'county'] as const;
 
 interface NominatimResponse {
-  address?: Partial<Record<(typeof PLACE_FIELDS)[number], string>>;
+  address?: Partial<Record<(typeof PLACE_FIELDS)[number] | 'state' | 'country', string>>;
 }
 
 /**
@@ -67,10 +67,14 @@ export class GeocodeService {
         return undefined;
       }
       const body = (await response.json()) as NominatimResponse;
+      // "Topsham, Maine, United States" — town first, so .split(',')[0] is the
+      // short form for titles.
       for (const field of PLACE_FIELDS) {
-        const value = body.address?.[field];
-        if (value) {
-          return value;
+        const place = body.address?.[field];
+        if (place) {
+          return [place, body.address?.state, body.address?.country]
+            .filter((part): part is string => Boolean(part))
+            .join(', ');
         }
       }
       return null;

@@ -15,7 +15,9 @@ export type IconName =
   | 'camera'
   | 'user'
   | 'file'
-  | 'image';
+  | 'image'
+  | 'aperture'
+  | 'map-pin';
 
 /**
  * Crisp stroke icons, inlined so the app stays dependency-free. Sized by the
@@ -103,6 +105,19 @@ export type IconName =
         @case ('file') {
           <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
           <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+        }
+        @case ('aperture') {
+          <circle cx="12" cy="12" r="10" />
+          <path d="m14.31 8 5.74 9.94" />
+          <path d="M9.69 8h11.48" />
+          <path d="m7.38 12 5.74-9.94" />
+          <path d="M9.69 16 3.95 6.06" />
+          <path d="M14.31 16H2.83" />
+          <path d="m16.62 12-5.74 9.94" />
+        }
+        @case ('map-pin') {
+          <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
+          <circle cx="12" cy="10" r="3" />
         }
         @case ('image') {
           <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />

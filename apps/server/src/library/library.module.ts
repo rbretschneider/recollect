@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MediaModule } from '../media/media.module';
+import { ExifBackfillHandler } from './handlers/exif-backfill.handler';
 import { IngestFileHandler } from './handlers/ingest-file.handler';
 import { ScanRootHandler } from './handlers/scan-root.handler';
 import { IngestService } from './ingest.service';
@@ -18,6 +19,7 @@ import { ScanSchedulerService } from './scan-scheduler.service';
     ScanSchedulerService,
     IngestService,
     ScanRootHandler,
+    ExifBackfillHandler,
     IngestFileHandler,
     ReprocessAssetHandler,
   ],

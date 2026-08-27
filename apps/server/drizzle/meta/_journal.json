@@ -64,6 +64,13 @@
       "when": 1787829938732,
       "tag": "0008_elite_the_order",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787833440992,
+      "tag": "0009_left_kid_colt",
+      "breakpoints": true
     }
   ]
 }

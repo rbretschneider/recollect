@@ -144,6 +144,12 @@
                     {{ cardCamera(asset) }}
                   </span>
                 }
+                @if (cardLens(asset)) {
+                  <span class="row">
+                    <app-icon name="aperture" [size]="13" />
+                    {{ cardLens(asset) }}
+                  </span>
+                }
                 @if (asset.takenBy) {
                   <span class="row">
                     <app-icon name="user" [size]="13" />
@@ -160,6 +166,12 @@
                   <span class="row file">
                     <app-icon name="file" [size]="13" />
                     {{ asset.fileName }}
+                  </span>
+                }
+                @if (asset.place) {
+                  <span class="row">
+                    <app-icon name="map-pin" [size]="13" />
+                    {{ asset.place }}
                   </span>
                 }
               </figcaption>
