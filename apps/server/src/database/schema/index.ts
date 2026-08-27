@@ -2,6 +2,7 @@ export * from './albums';
 export * from './devices';
 export * from './favorites';
 export * from './geocode';
+export * from './settings';
 export * from './identity';
 export * from './jobs';
 export * from './library';

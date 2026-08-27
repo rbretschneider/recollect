@@ -3,6 +3,17 @@ import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { BrowseListing, LibraryFailure, LibraryRootView, LibraryStatus } from './api-models';
 
+/** Mirrors the server's schedule response. */
+export interface ScanScheduleView {
+  schedule: {
+    mode: 'off' | 'interval' | 'daily' | 'weekly';
+    time: string;
+    weekday: number;
+  };
+  nextRunAt: string | null;
+  serverTimeZone: string;
+}
+
 /** Raw HTTP calls for library roots and indexing status. */
 @Injectable({ providedIn: 'root' })
 export class LibraryApiService {
@@ -25,6 +36,16 @@ export class LibraryApiService {
   rescan(rootId: string): Promise<{ accepted: true }> {
     return firstValueFrom(
       this.http.post<{ accepted: true }>(`/api/v1/library/roots/${rootId}/scan`, {}),
+    );
+  }
+
+  getSchedule(): Promise<ScanScheduleView> {
+    return firstValueFrom(this.http.get<ScanScheduleView>('/api/v1/library/schedule'));
+  }
+
+  setSchedule(schedule: ScanScheduleView['schedule']): Promise<ScanScheduleView> {
+    return firstValueFrom(
+      this.http.patch<ScanScheduleView>('/api/v1/library/schedule', schedule),
     );
   }
 

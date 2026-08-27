@@ -9,6 +9,7 @@ import {
 import { TimelineAsset } from '../../core/api/api-models';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
+import { Icon } from '../../shared/icon';
 import { PageLoading } from '../../shared/page-loading';
 import { AssetViewer } from '../viewer/asset-viewer';
 
@@ -18,13 +19,23 @@ interface Crumb {
   path: string;
 }
 
+const FOLDER_VIEW_KEY = 'rc-folder-view';
+
+function loadFolderView(): 'cards' | 'list' {
+  try {
+    return localStorage.getItem(FOLDER_VIEW_KEY) === 'list' ? 'list' : 'cards';
+  } catch {
+    return 'cards';
+  }
+}
+
 /**
  * Filesystem-shaped browsing (PhotoPrism-style Folders): the user's own
  * on-disk organization is the navigation. Driven by ?root= and ?path=.
  */
 @Component({
   selector: 'app-folders-page',
-  imports: [PageLoading, BackButton, AssetViewer, BottomNav, RouterLink],
+  imports: [PageLoading, BackButton, AssetViewer, BottomNav, Icon, RouterLink],
   templateUrl: './folders-page.html',
   styleUrl: './folders-page.scss',
 })
@@ -37,6 +48,17 @@ export class FoldersPage implements OnInit {
   readonly listing = signal<FolderListing | null>(null);
   readonly viewerIndex = signal<number | null>(null);
   readonly isLoaded = signal(false);
+  /** Card grid or full-name list; per-device preference. */
+  readonly folderView = signal<'cards' | 'list'>(loadFolderView());
+
+  setFolderView(view: 'cards' | 'list'): void {
+    this.folderView.set(view);
+    try {
+      localStorage.setItem(FOLDER_VIEW_KEY, view);
+    } catch {
+      // Per-device convenience only.
+    }
+  }
 
   readonly crumbs = computed<Crumb[]>(() => {
     const listing = this.listing();

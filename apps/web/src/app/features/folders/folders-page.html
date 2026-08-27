@@ -1,6 +1,25 @@
 <header class="topbar">
   <app-back to="/albums" label="Back to albums" />
   <h1>Folders</h1>
+  <span class="spacer"></span>
+  <div class="view-switch" role="group" aria-label="Folder view">
+    <button
+      type="button"
+      [class.active]="folderView() === 'cards'"
+      aria-label="Card view"
+      (click)="setFolderView('cards')"
+    >
+      <app-icon name="view-cards" [size]="17" />
+    </button>
+    <button
+      type="button"
+      [class.active]="folderView() === 'list'"
+      aria-label="List view (full names)"
+      (click)="setFolderView('list')"
+    >
+      <app-icon name="list" [size]="17" />
+    </button>
+  </div>
 </header>
 
 <main class="folders">
@@ -21,7 +40,7 @@
   }
 
   @if (!listing() && roots().length > 0) {
-    <div class="folder-grid">
+    <div class="folder-grid" [class.list]="folderView() === 'list'">
       @for (root of roots(); track root.rootId) {
         <button type="button" class="folder-card" (click)="openRoot(root)">
           @if (coverUrl(root.coverAssetId); as cover) {
@@ -38,7 +57,7 @@
 
   @if (listing(); as level) {
     @if (level.folders.length > 0) {
-      <div class="folder-grid">
+      <div class="folder-grid" [class.list]="folderView() === 'list'">
         @for (folder of level.folders; track folder.path) {
           <button type="button" class="folder-card" (click)="openFolder(folder.path)">
             @if (coverUrl(folder.coverAssetId); as cover) {

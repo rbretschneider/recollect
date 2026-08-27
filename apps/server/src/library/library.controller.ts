@@ -13,6 +13,8 @@ import {
 import { RequireAdmin } from '../auth/decorators/require-admin.decorator';
 import { CreateRootRequestDto } from './dto/create-root-request.dto';
 import { SetRootEnabledRequestDto } from './dto/set-root-enabled-request.dto';
+import { SetScheduleRequestDto } from './dto/set-schedule-request.dto';
+import type { ScanSchedule } from './scan-schedule';
 import {
   BrowseListing,
   LibraryFailure,
@@ -53,6 +55,27 @@ export class LibraryController {
     @Body() body: SetRootEnabledRequestDto,
   ): Promise<{ root: LibraryRootView }> {
     return { root: await this.library.setRootEnabled(id, body.enabled) };
+  }
+
+  @RequireAdmin()
+  @Get('schedule')
+  async getSchedule(): Promise<{
+    schedule: ScanSchedule;
+    nextRunAt: string | null;
+    serverTimeZone: string;
+  }> {
+    return this.library.getSchedule();
+  }
+
+  @RequireAdmin()
+  @Patch('schedule')
+  async setSchedule(@Body() body: SetScheduleRequestDto): Promise<{
+    schedule: ScanSchedule;
+    nextRunAt: string | null;
+    serverTimeZone: string;
+  }> {
+    await this.library.setSchedule({ mode: body.mode, time: body.time, weekday: body.weekday });
+    return this.library.getSchedule();
   }
 
   /** Cancels the current indexing pass (queued scan/ingest jobs are dropped). */

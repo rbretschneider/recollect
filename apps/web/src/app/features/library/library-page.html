@@ -88,6 +88,51 @@
     </section>
   }
 
+  @if (isAdmin && scheduleView(); as sv) {
+    <section class="schedule" aria-label="Automatic scans">
+      <div class="section-head">
+        <h2>Automatic scans</h2>
+        @if (scheduleJustSaved()) {
+          <span class="chip">Saved ✓</span>
+        }
+      </div>
+      <div class="card schedule-card">
+        <div class="schedule-row">
+          <select name="scheduleMode" [(ngModel)]="scheduleDraft.mode" (ngModelChange)="saveSchedule()">
+            <option value="off">Off — manual scans only</option>
+            <option value="interval">Every 24 hours (rolling)</option>
+            <option value="daily">Daily at a set time</option>
+            <option value="weekly">Weekly at a set time</option>
+          </select>
+          @if (scheduleDraft.mode === 'weekly') {
+            <select name="scheduleWeekday" [(ngModel)]="scheduleDraft.weekday" (ngModelChange)="saveSchedule()">
+              @for (day of weekdays; track day.value) {
+                <option [ngValue]="day.value">{{ day.label }}</option>
+              }
+            </select>
+          }
+          @if (scheduleDraft.mode === 'daily' || scheduleDraft.mode === 'weekly') {
+            <input
+              type="time"
+              name="scheduleTime"
+              [(ngModel)]="scheduleDraft.time"
+              (ngModelChange)="saveSchedule()"
+            />
+          }
+        </div>
+        <p class="muted">
+          @if (sv.nextRunAt) {
+            Next scan {{ formatNextRun(sv.nextRunAt) }} · server time ({{ sv.serverTimeZone }})
+          } @else if (scheduleDraft.mode === 'interval') {
+            Each folder rescans about once a day.
+          } @else {
+            Scans only run when you tap Scan now.
+          }
+        </p>
+      </div>
+    </section>
+  }
+
   <section aria-label="Library folders">
     <div class="section-head">
       <h2>Folders</h2>

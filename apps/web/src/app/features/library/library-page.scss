@@ -247,3 +247,34 @@
   color: var(--text-muted);
   cursor: pointer;
 }
+
+// Automatic scans: mode + time pickers, save-on-change.
+.schedule-card {
+  .schedule-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+
+    select,
+    input[type='time'] {
+      min-height: 42px;
+      padding: 0 0.6rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      background: var(--surface-raised);
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+
+    select:first-child {
+      flex: 1;
+      min-width: 12rem;
+    }
+  }
+
+  .muted {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+}

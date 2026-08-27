@@ -7,7 +7,12 @@ import { APP_CONFIG } from '../config/app-config';
 import type { AppConfig } from '../config/app-config';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
-import { asset, assetFile, job, libraryRoot } from '../database/schema';
+import { appSetting, asset, assetFile, job, libraryRoot } from '../database/schema';
+import {
+  nextOccurrence,
+  SCAN_SCHEDULE_KEY,
+  ScanSchedule,
+} from './scan-schedule';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { SCAN_ROOT_JOB } from './library-job-types';
 import { isFilesystemRoot } from './filesystem-root';
@@ -140,6 +145,45 @@ export class LibraryService {
       .where(sql`${job.status} = 'queued' and ${job.type} in ('scan_root', 'ingest_file')`)
       .returning({ id: job.id });
     return { canceled: rows.length };
+  }
+
+  /** Generic UI-settings read; null when never set. */
+  async getSetting<T>(key: string): Promise<T | null> {
+    const [row] = await this.db
+      .select({ value: appSetting.value })
+      .from(appSetting)
+      .where(eq(appSetting.key, key))
+      .limit(1);
+    return (row?.value as T) ?? null;
+  }
+
+  async setSetting(key: string, value: unknown): Promise<void> {
+    await this.db
+      .insert(appSetting)
+      .values({ key, value })
+      .onConflictDoUpdate({ target: appSetting.key, set: { value, updatedAt: new Date() } });
+  }
+
+  /** The automatic-scan schedule, with when it fires next (server-local time). */
+  async getSchedule(): Promise<{
+    schedule: ScanSchedule;
+    nextRunAt: string | null;
+    serverTimeZone: string;
+  }> {
+    const schedule = (await this.getSetting<ScanSchedule>(SCAN_SCHEDULE_KEY)) ?? {
+      mode: 'interval' as const,
+      time: '03:00',
+      weekday: 0,
+    };
+    return {
+      schedule,
+      nextRunAt: nextOccurrence(schedule, new Date())?.toISOString() ?? null,
+      serverTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    };
+  }
+
+  async setSchedule(schedule: ScanSchedule): Promise<void> {
+    await this.setSetting(SCAN_SCHEDULE_KEY, schedule);
   }
 
   /** Disables (or re-enables) a root: kept, browsable, but skipped by scans. */

@@ -1,5 +1,6 @@
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
-import { LibraryApiService } from '../../core/api/library-api.service';
+import { FormsModule } from '@angular/forms';
+import { LibraryApiService, ScanScheduleView } from '../../core/api/library-api.service';
 import { LibraryFailure, LibraryRootView, LibraryStatus } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { BackButton } from '../../shared/back-button';
@@ -33,7 +34,7 @@ const JOB_LABELS: Record<string, string> = {
  */
 @Component({
   selector: 'app-library-page',
-  imports: [BackButton, BottomNav, FolderPicker, PageLoading, Sheet],
+  imports: [BackButton, BottomNav, FolderPicker, FormsModule, PageLoading, Sheet],
   templateUrl: './library-page.html',
   styleUrl: './library-page.scss',
 })
@@ -51,6 +52,20 @@ export class LibraryPage implements OnInit {
   readonly justQueuedRootId = signal<string | null>(null);
   readonly isCancelling = signal(false);
   readonly error = signal<string | null>(null);
+  readonly scheduleView = signal<ScanScheduleView | null>(null);
+  readonly scheduleJustSaved = signal(false);
+  /** Bound to the schedule controls; every change saves immediately. */
+  scheduleDraft: ScanScheduleView['schedule'] = { mode: 'interval', time: '03:00', weekday: 0 };
+
+  readonly weekdays = [
+    { value: 0, label: 'Sunday' },
+    { value: 1, label: 'Monday' },
+    { value: 2, label: 'Tuesday' },
+    { value: 3, label: 'Wednesday' },
+    { value: 4, label: 'Thursday' },
+    { value: 5, label: 'Friday' },
+    { value: 6, label: 'Saturday' },
+  ];
 
   readonly pendingCount = computed(() => {
     const status = this.status();
@@ -125,6 +140,24 @@ export class LibraryPage implements OnInit {
     }
   }
 
+  /** Saves on every control change (three-signal: the Saved ✓ chip flashes). */
+  async saveSchedule(): Promise<void> {
+    const view = await this.api.setSchedule({ ...this.scheduleDraft });
+    this.scheduleView.set(view);
+    this.scheduleJustSaved.set(true);
+    setTimeout(() => this.scheduleJustSaved.set(false), 2000);
+  }
+
+  formatNextRun(iso: string): string {
+    return new Intl.DateTimeFormat(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(new Date(iso));
+  }
+
   async toggleEnabled(root: LibraryRootView): Promise<void> {
     const { root: updated } = await this.api.setRootEnabled(root.id, !root.enabled);
     this.roots.update((list) => list.map((entry) => (entry.id === updated.id ? updated : entry)));
@@ -162,6 +195,11 @@ export class LibraryPage implements OnInit {
   private async reload(): Promise<void> {
     const [{ roots }] = await Promise.all([this.api.listRoots(), this.pollStatus()]);
     this.roots.set(roots);
+    if (this.isAdmin) {
+      const view = await this.api.getSchedule();
+      this.scheduleView.set(view);
+      this.scheduleDraft = { ...view.schedule };
+    }
     this.isLoaded.set(true);
   }
 
