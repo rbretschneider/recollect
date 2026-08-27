@@ -12,6 +12,9 @@
         <button type="button" class="action" (click)="isDownloadSheetOpen.set(true)">
           Download
         </button>
+        <button type="button" class="action" (click)="startMemoryFromAlbum()">
+          Make a memory
+        </button>
         <app-edit-toggle />
         @if (editMode.isEditing()) {
           <button type="button" class="danger-link" (click)="deleteAlbum()">Delete album</button>
@@ -71,6 +74,47 @@
       <span class="sub">Saves ready-to-use files, no unzipping</span>
     </button>
     <button type="button" class="ghost" (click)="isDownloadSheetOpen.set(false)">Cancel</button>
+  </div>
+}
+
+@if (isMemorySheetOpen()) {
+  <div class="scrim" (click)="isMemorySheetOpen.set(false)"></div>
+  <div class="memory-sheet" role="dialog" aria-label="Make a memory from this album">
+    <h2>Make a memory</h2>
+    <p class="hint">
+      A memory is the story of a moment — usually fewer photos than the whole
+      album. Tap photos to leave them out, then give it a name.
+    </p>
+    <input
+      name="memoryTitle"
+      [(ngModel)]="memoryTitleDraft"
+      placeholder="Name the moment"
+      maxlength="200"
+    />
+    <div class="pick-grid">
+      @for (assetId of detail()?.assetIds ?? []; track assetId) {
+        <button
+          type="button"
+          class="pick"
+          [class.excluded]="!memorySelection().has(assetId)"
+          [attr.aria-pressed]="memorySelection().has(assetId)"
+          (click)="toggleMemoryAsset(assetId)"
+        >
+          <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
+        </button>
+      }
+    </div>
+    <div class="sheet-actions">
+      <button type="button" class="ghost" (click)="isMemorySheetOpen.set(false)">Cancel</button>
+      <button
+        type="button"
+        class="primary"
+        [disabled]="isCreatingMemory() || memorySelection().size === 0 || !memoryTitleDraft.trim()"
+        (click)="createMemoryFromAlbum()"
+      >
+        {{ isCreatingMemory() ? 'Creating…' : 'Create memory (' + memorySelection().size + ')' }}
+      </button>
+    </div>
   </div>
 }
 

@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { InboxSuggestion, MemoryDetail, MemorySummary } from './api-models';
+import { InboxSuggestion, MemoryDetail, MemoryQuote, MemorySummary } from './api-models';
 
 /** Raw HTTP calls for the Memory Inbox and memories. */
 @Injectable({ providedIn: 'root' })
@@ -57,5 +57,26 @@ export class MemoriesApiService {
 
   writeJournal(memoryId: string, bodyMd: string): Promise<void> {
     return firstValueFrom(this.http.put<void>(`/api/v1/memories/${memoryId}/journal`, { bodyMd }));
+  }
+
+  addQuote(memoryId: string, text: string, saidBy: string): Promise<{ quote: MemoryQuote }> {
+    return firstValueFrom(
+      this.http.post<{ quote: MemoryQuote }>(`/api/v1/memories/${memoryId}/quotes`, {
+        text,
+        saidBy,
+      }),
+    );
+  }
+
+  deleteQuote(memoryId: string, quoteId: string): Promise<void> {
+    return firstValueFrom(
+      this.http.delete<void>(`/api/v1/memories/${memoryId}/quotes/${quoteId}`),
+    );
+  }
+
+  createMemory(title: string, assetIds: string[]): Promise<{ memoryId: string }> {
+    return firstValueFrom(
+      this.http.post<{ memoryId: string }>('/api/v1/memories', { title, assetIds }),
+    );
   }
 }

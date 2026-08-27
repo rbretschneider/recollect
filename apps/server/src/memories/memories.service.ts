@@ -3,7 +3,7 @@ import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { v7 as uuidv7 } from 'uuid';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
-import { asset, journalEntry, memory, memoryAsset, userAccount } from '../database/schema';
+import { asset, journalEntry, memory, memoryAsset, memoryQuote, userAccount } from '../database/schema';
 
 /** A Memory card on the timeline. */
 export interface MemorySummary {
@@ -29,9 +29,17 @@ export interface MemoryDetail {
   coverAssetId: string | null;
   assetIds: string[];
   journal: JournalEntryView[];
+  quotes: MemoryQuoteView[];
   /** Median GPS of the member photos, for the map view; null when none have GPS. */
   gpsLat: number | null;
   gpsLon: number | null;
+}
+
+/** A "quote of the day": what was said and who said it. */
+export interface MemoryQuoteView {
+  id: string;
+  text: string;
+  saidBy: string;
 }
 
 /** A journal entry with attribution. */
@@ -108,6 +116,7 @@ export class MemoriesService {
     const row = await this.requireMemory(memoryId);
     const assetIds = await this.loadAssetIds(memoryId);
     const journal = await this.loadJournal(memoryId);
+    const quotes = await this.loadQuotes(memoryId);
     const location = await this.loadMedianGps(memoryId);
     return {
       gpsLat: location?.lat ?? null,
@@ -122,7 +131,42 @@ export class MemoriesService {
       coverAssetId: row.coverAssetId ?? assetIds[0] ?? null,
       assetIds,
       journal,
+      quotes,
     };
+  }
+
+  /** Adds a "quote of the day"; as many as the day deserves. */
+  async addQuote(
+    memoryId: string,
+    userId: string,
+    quoteText: string,
+    saidBy: string,
+  ): Promise<MemoryQuoteView> {
+    await this.requireMemory(memoryId);
+    const id = uuidv7();
+    await this.db.insert(memoryQuote).values({
+      id,
+      memoryId,
+      text: quoteText.trim(),
+      saidBy: saidBy.trim(),
+      createdBy: userId,
+    });
+    return { id, text: quoteText.trim(), saidBy: saidBy.trim() };
+  }
+
+  async deleteQuote(memoryId: string, quoteId: string): Promise<void> {
+    await this.db
+      .delete(memoryQuote)
+      .where(and(eq(memoryQuote.id, quoteId), eq(memoryQuote.memoryId, memoryId)));
+  }
+
+  private async loadQuotes(memoryId: string): Promise<MemoryQuoteView[]> {
+    const rows = await this.db
+      .select({ id: memoryQuote.id, text: memoryQuote.text, saidBy: memoryQuote.saidBy })
+      .from(memoryQuote)
+      .where(eq(memoryQuote.memoryId, memoryId))
+      .orderBy(asc(memoryQuote.createdAt));
+    return rows;
   }
 
   /** Manual Memory creation from a selection (or empty, S9.5). */

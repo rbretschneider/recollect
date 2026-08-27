@@ -61,17 +61,66 @@
       }
     </section>
 
-    <section class="grid" aria-label="Photos in this memory">
-      @for (assetId of memory.assetIds; track assetId) {
-        <button
-          type="button"
-          class="tile"
-          aria-label="Open photo"
-          (click)="openViewer(assetId)"
-        >
-          <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
-        </button>
+    <section class="quotes" aria-label="Quotes of the day">
+      @for (quote of memory.quotes; track quote.id) {
+        <blockquote class="quote">
+          <p>“{{ quote.text }}”</p>
+          <footer>
+            — {{ quote.saidBy }}
+            @if (editMode.isEditing()) {
+              <button
+                type="button"
+                class="quote-delete"
+                aria-label="Delete quote"
+                (click)="deleteQuote(quote)"
+              >✕</button>
+            }
+          </footer>
+        </blockquote>
       }
+      @if (canWrite) {
+        @if (isAddingQuote()) {
+          <form class="quote-form" (ngSubmit)="addQuote()">
+            <input
+              name="quoteText"
+              [(ngModel)]="quoteTextDraft"
+              placeholder="“We should live at the beach forever.”"
+              maxlength="500"
+              autofocus
+            />
+            <div class="quote-form-row">
+              <input
+                name="quoteSaidBy"
+                [(ngModel)]="quoteSaidByDraft"
+                placeholder="Who said it?"
+                maxlength="80"
+              />
+              <button type="submit" class="primary" [disabled]="!canSubmitQuote">Add</button>
+              <button type="button" class="ghost" (click)="isAddingQuote.set(false)">Cancel</button>
+            </div>
+          </form>
+        } @else {
+          <button type="button" class="quote-prompt" (click)="isAddingQuote.set(true)">
+            ❝ Add a quote of the day
+          </button>
+        }
+      }
+    </section>
+
+    <section class="filmstrip-section" aria-label="Photos in this memory">
+      <h2>{{ memory.assetIds.length }} {{ memory.assetIds.length === 1 ? 'photo' : 'photos' }}</h2>
+      <div class="filmstrip">
+        @for (assetId of memory.assetIds; track assetId) {
+          <button
+            type="button"
+            class="frame"
+            aria-label="Open photo"
+            (click)="openViewer(assetId)"
+          >
+            <img [src]="stripThumbUrl(assetId)" alt="" loading="lazy" />
+          </button>
+        }
+      </div>
     </section>
 
     @if (mapEmbedUrl(memory); as mapUrl) {

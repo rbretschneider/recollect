@@ -1,8 +1,10 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
+import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { AlbumDetail, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { EditModeService } from '../../core/edit-mode.service';
@@ -17,12 +19,22 @@ import { AssetViewer } from '../viewer/asset-viewer';
 /** One album: grid, viewer, share, remove-from-album. */
 @Component({
   selector: 'app-album-detail-page',
-  imports: [PageLoading, BackButton, AssetViewer, BottomNav, EditToggle, RouterLink, ShareButton],
+  imports: [
+    PageLoading,
+    BackButton,
+    AssetViewer,
+    BottomNav,
+    EditToggle,
+    FormsModule,
+    RouterLink,
+    ShareButton,
+  ],
   templateUrl: './album-detail-page.html',
   styleUrl: './album-detail-page.scss',
 })
 export class AlbumDetailPage implements OnInit {
   private readonly api = inject(AlbumsApiService);
+  private readonly memoriesApi = inject(MemoriesApiService);
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -34,6 +46,11 @@ export class AlbumDetailPage implements OnInit {
   readonly viewerAssets = signal<TimelineAsset[]>([]);
   readonly viewerIndex = signal<number | null>(null);
   readonly isDownloadSheetOpen = signal(false);
+  /** Album → memory conversion: pick the subset that tells the story. */
+  readonly isMemorySheetOpen = signal(false);
+  readonly memorySelection = signal<ReadonlySet<string>>(new Set());
+  readonly isCreatingMemory = signal(false);
+  memoryTitleDraft = '';
   /** "3 / 24" while the one-by-one download runs; null when idle. */
   readonly downloadProgress = signal<string | null>(null);
 
@@ -116,6 +133,46 @@ export class AlbumDetailPage implements OnInit {
     }
     this.downloadProgress.set(null);
     this.isDownloadSheetOpen.set(false);
+  }
+
+  /** Opens the conversion sheet with every album photo pre-selected. */
+  startMemoryFromAlbum(): void {
+    const detail = this.detail();
+    if (!detail) {
+      return;
+    }
+    this.memoryTitleDraft = detail.title;
+    this.memorySelection.set(new Set(detail.assetIds));
+    this.isMemorySheetOpen.set(true);
+  }
+
+  toggleMemoryAsset(assetId: string): void {
+    this.memorySelection.update((current) => {
+      const next = new Set(current);
+      if (next.has(assetId)) {
+        next.delete(assetId);
+      } else {
+        next.add(assetId);
+      }
+      return next;
+    });
+  }
+
+  async createMemoryFromAlbum(): Promise<void> {
+    const detail = this.detail();
+    const title = this.memoryTitleDraft.trim();
+    // Keep the album's ordering for the memory.
+    const ids = detail?.assetIds.filter((id) => this.memorySelection().has(id)) ?? [];
+    if (!detail || title.length === 0 || ids.length === 0 || this.isCreatingMemory()) {
+      return;
+    }
+    this.isCreatingMemory.set(true);
+    try {
+      const { memoryId } = await this.memoriesApi.createMemory(title, ids);
+      await this.router.navigate(['/memories', memoryId]);
+    } finally {
+      this.isCreatingMemory.set(false);
+    }
   }
 
   async deleteAlbum(): Promise<void> {

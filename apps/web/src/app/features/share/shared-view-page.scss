@@ -86,3 +86,25 @@
     font-size: 1.3rem;
   }
 }
+
+// Quotes travel with a shared memory when the journal is included.
+.shared-quote {
+  margin: 1.25rem auto;
+  max-width: 38rem;
+  padding: 0 1.5rem 0 2rem;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
+
+  p {
+    margin: 0;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.25rem;
+    font-style: italic;
+    color: var(--text);
+  }
+
+  footer {
+    margin-top: 0.3rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+}

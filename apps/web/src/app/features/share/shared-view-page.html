@@ -24,6 +24,13 @@
       </article>
     }
 
+    @for (quote of shared.quotes; track quote.text + quote.saidBy) {
+      <blockquote class="shared-quote">
+        <p>“{{ quote.text }}”</p>
+        <footer>— {{ quote.saidBy }}</footer>
+      </blockquote>
+    }
+
     <div class="grid">
       @for (assetId of shared.assetIds; track assetId; let index = $index) {
         <button type="button" class="tile" aria-label="Open photo" (click)="openViewer(index)">

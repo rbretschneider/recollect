@@ -23,6 +23,17 @@ real-library testing (~18.5k assets on hawaii) teaches us things.
   clustering, CLIP embeddings), ml service in compose on GPU 1, backfill
   sweeping the library; People pages shipped
 
+## Locked: Memory vs Album
+
+- **Album** = a bucket. Photos you grouped on purpose; unbounded grid; no
+  narrative, no date semantics. Organization.
+- **Memory** = a story. One bounded, composed page about a moment — hero,
+  written journal, quotes of the day, a swipeable photo strip (media scrolls
+  *within* its region, never page-infinitely), and where it happened. Usually
+  a curated subset, smaller than an album.
+- An album can be **converted** to a memory ("Make a memory" on the album
+  page): the album's photos open pre-selected for pruning down to the story.
+
 ## Next up
 
 1. **On This Day** — resurface past years' photos for today's date on the

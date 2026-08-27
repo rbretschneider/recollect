@@ -13,7 +13,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
-import { MemoryDetail, TimelineAsset } from '../../core/api/api-models';
+import { MemoryDetail, MemoryQuote, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { EditModeService } from '../../core/edit-mode.service';
 import { BackButton } from '../../shared/back-button';
@@ -61,8 +61,15 @@ export class MemoryDetailPage implements OnInit {
   readonly isEditingTitle = signal(false);
   readonly journalDraft = signal('');
   readonly saveState = signal<'idle' | 'saving' | 'saved'>('idle');
+  readonly isAddingQuote = signal(false);
 
   titleDraft = '';
+  quoteTextDraft = '';
+  quoteSaidByDraft = '';
+
+  get canSubmitQuote(): boolean {
+    return this.quoteTextDraft.trim().length > 0 && this.quoteSaidByDraft.trim().length > 0;
+  }
 
   readonly myJournalEntry = computed(() => {
     const userId = this.auth.user()?.id;
@@ -167,6 +174,44 @@ export class MemoryDetailPage implements OnInit {
     }
     await this.api.deleteMemory(detail.id);
     await this.router.navigateByUrl('/memories');
+  }
+
+  /** The filmstrip runs at a fixed height; 720 keeps frames sharp. */
+  stripThumbUrl(assetId: string): string {
+    return `/api/v1/assets/${assetId}/thumb/720`;
+  }
+
+  async addQuote(): Promise<void> {
+    const detail = this.detail();
+    if (!detail || !this.canSubmitQuote) {
+      return;
+    }
+    const { quote } = await this.api.addQuote(
+      detail.id,
+      this.quoteTextDraft.trim(),
+      this.quoteSaidByDraft.trim(),
+    );
+    this.detail.set({ ...detail, quotes: [...detail.quotes, quote] });
+    this.quoteTextDraft = '';
+    this.quoteSaidByDraft = '';
+    this.isAddingQuote.set(false);
+  }
+
+  async deleteQuote(quote: MemoryQuote): Promise<void> {
+    const detail = this.detail();
+    if (!detail) {
+      return;
+    }
+    const confirmed = await this.confirms.ask({
+      title: 'Delete this quote?',
+      message: `“${quote.text.slice(0, 80)}${quote.text.length > 80 ? '…' : ''}” goes away for good.`,
+      confirmLabel: 'Delete quote',
+    });
+    if (!confirmed) {
+      return;
+    }
+    await this.api.deleteQuote(detail.id, quote.id);
+    this.detail.set({ ...detail, quotes: detail.quotes.filter((entry) => entry.id !== quote.id) });
   }
 
   /** The "write the story" prompt drops the cursor straight into the journal. */

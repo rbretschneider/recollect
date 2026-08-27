@@ -113,6 +113,28 @@ export const memoryAsset = pgTable(
   ],
 );
 
+/**
+ * A "quote of the day" on a Memory — the funny thing somebody said, with
+ * attribution. As irreplaceable as the journal; never machine-touched.
+ */
+export const memoryQuote = pgTable(
+  'memory_quote',
+  {
+    id: uuid('id').primaryKey(),
+    memoryId: uuid('memory_id')
+      .notNull()
+      .references(() => memory.id, { onDelete: 'cascade' }),
+    text: text('text').notNull(),
+    /** Who said it — free text ("Emma, 4"), not an account. */
+    saidBy: text('said_by').notNull(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => userAccount.id, { onDelete: 'restrict' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('memory_quote_memory_idx').on(table.memoryId)],
+);
+
 /** Human-authored narrative on a Memory. The irreplaceable data — never machine-touched. */
 export const journalEntry = pgTable(
   'journal_entry',

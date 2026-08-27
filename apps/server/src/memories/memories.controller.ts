@@ -15,10 +15,11 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequireGrant } from '../auth/decorators/require-grant.decorator';
 import type { UserProfile } from '../users/user.types';
 import { AddAssetsRequestDto } from './dto/add-assets-request.dto';
+import { AddQuoteRequestDto } from './dto/add-quote-request.dto';
 import { CreateMemoryRequestDto } from './dto/create-memory-request.dto';
 import { UpdateMemoryRequestDto } from './dto/update-memory-request.dto';
 import { WriteJournalRequestDto } from './dto/write-journal-request.dto';
-import { MemoriesService, MemoryDetail, MemorySummary } from './memories.service';
+import { MemoriesService, MemoryDetail, MemoryQuoteView, MemorySummary } from './memories.service';
 
 /** Memory timeline, detail, editing, and journal writing. */
 @Controller('memories')
@@ -84,6 +85,26 @@ export class MemoriesController {
     @Param('assetId', ParseUUIDPipe) assetId: string,
   ): Promise<void> {
     await this.memories.removeAsset(id, assetId);
+  }
+
+  @RequireGrant('write')
+  @Post(':id/quotes')
+  async addQuote(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: AddQuoteRequestDto,
+    @CurrentUser() user: UserProfile,
+  ): Promise<{ quote: MemoryQuoteView }> {
+    return { quote: await this.memories.addQuote(id, user.id, body.text, body.saidBy) };
+  }
+
+  @RequireGrant('write')
+  @Delete(':id/quotes/:quoteId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteQuote(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('quoteId', ParseUUIDPipe) quoteId: string,
+  ): Promise<void> {
+    await this.memories.deleteQuote(id, quoteId);
   }
 
   @RequireGrant('write')

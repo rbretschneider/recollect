@@ -121,8 +121,16 @@ export interface MemoryDetail {
   coverAssetId: string | null;
   assetIds: string[];
   journal: JournalEntryView[];
+  quotes: MemoryQuote[];
   gpsLat: number | null;
   gpsLon: number | null;
+}
+
+/** A "quote of the day": what was said and who said it. */
+export interface MemoryQuote {
+  id: string;
+  text: string;
+  saidBy: string;
 }
 
 /** Mirrors the server's AlbumSummary. */
@@ -162,6 +170,7 @@ export interface SharedView {
   endAt: string | null;
   assetIds: string[];
   journal: Array<{ authorName: string; bodyMd: string }>;
+  quotes: Array<{ text: string; saidBy: string }>;
 }
 
 /** Mirrors the server's BrowseEntry. */

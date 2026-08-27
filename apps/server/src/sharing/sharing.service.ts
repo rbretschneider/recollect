@@ -35,6 +35,7 @@ export interface SharedView {
   endAt: string | null;
   assetIds: string[];
   journal: Array<{ authorName: string; bodyMd: string }>;
+  quotes: Array<{ text: string; saidBy: string }>;
 }
 
 const TOKEN_BYTES = 24;
@@ -115,6 +116,10 @@ export class SharingService {
         journal: link.includeJournal
           ? detail.journal.map((entry) => ({ authorName: entry.authorName, bodyMd: entry.bodyMd }))
           : [],
+        // Quotes travel with the journal: same "words of the family" privacy.
+        quotes: link.includeJournal
+          ? detail.quotes.map((quote) => ({ text: quote.text, saidBy: quote.saidBy }))
+          : [],
       };
     }
     const detail = await this.albums.getDetail(link.targetId);
@@ -126,6 +131,7 @@ export class SharingService {
       endAt: null,
       assetIds: detail.assetIds,
       journal: [],
+      quotes: [],
     };
   }
 
