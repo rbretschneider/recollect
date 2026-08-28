@@ -75,6 +75,18 @@ export class AssetViewer implements OnInit, OnDestroy {
   readonly imageFailed = signal(false);
   /** Optimistic heart states the user has toggled this session. */
   private readonly favoriteOverrides = signal<ReadonlyMap<string, boolean>>(new Map());
+  /** Which way the last navigation went, for the entry glide direction. */
+  readonly navDirection = signal<'forward' | 'backward'>('forward');
+  /** The outgoing image, briefly kept as a fading ghost under the new one. */
+  readonly ghostUrl = signal<string | null>(null);
+  private ghostTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** The current asset as a one-item list so @for track recreates the media
+   *  element per photo — that's what makes the entry animation run. */
+  readonly currentAsList = computed<TimelineAsset[]>(() => {
+    const asset = this.current();
+    return asset ? [asset] : [];
+  });
   /** Bumped when a prepared rendition becomes available, to reload the <video>. */
   readonly videoReloadKey = signal(0);
 
@@ -110,6 +122,7 @@ export class AssetViewer implements OnInit, OnDestroy {
   private didDrag = false;
   private didPinch = false;
   private lastResetAssetId: string | null = null;
+  private lastShownWasImage = false;
   /** Swipe-over-video tracking; native controls stay untouched. */
   private videoSwipeStart: { x: number; y: number } | null = null;
   private hasHistoryEntry = false;
@@ -154,6 +167,15 @@ export class AssetViewer implements OnInit, OnDestroy {
       if (assetId === this.lastResetAssetId) {
         return;
       }
+      // The photo we're leaving lingers as a fading ghost (images only).
+      if (this.lastResetAssetId !== null && this.lastShownWasImage) {
+        this.ghostUrl.set(this.imageUrl(this.lastResetAssetId));
+        if (this.ghostTimer !== null) {
+          clearTimeout(this.ghostTimer);
+        }
+        this.ghostTimer = setTimeout(() => this.ghostUrl.set(null), 260);
+      }
+      this.lastShownWasImage = this.current()?.mediaType === 'image';
       this.lastResetAssetId = assetId;
       this.stopPreparePolling();
       this.isPreparingVideo.set(false);
@@ -227,12 +249,14 @@ export class AssetViewer implements OnInit, OnDestroy {
 
   next(): void {
     if (this.index() < this.assets().length - 1) {
+      this.navDirection.set('forward');
       this.index.update((value) => value + 1);
     }
   }
 
   previous(): void {
     if (this.index() > 0) {
+      this.navDirection.set('backward');
       this.index.update((value) => value - 1);
     }
   }

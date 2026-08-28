@@ -53,41 +53,49 @@
       (dblclick)="onDoubleClick($event)"
       (click)="onStageClick($event)"
     >
-      @if (asset.mediaType === 'image') {
-        @if (isImageLoading()) {
-          <div class="image-loading" aria-label="Loading photo">
+      @if (ghostUrl(); as ghost) {
+        <img class="ghost" [src]="ghost" alt="" aria-hidden="true" draggable="false" />
+      }
+      @for (media of currentAsList(); track media.id) {
+        @if (media.mediaType === 'image') {
+          @if (isImageLoading()) {
+            <div class="image-loading" aria-label="Loading photo">
+              <div class="spinner" aria-hidden="true"></div>
+            </div>
+          }
+          <img
+            class="media"
+            [class.enter-forward]="navDirection() === 'forward'"
+            [class.enter-backward]="navDirection() === 'backward'"
+            [src]="imageUrl(media.id)"
+            [alt]="'Photo taken ' + formatDate(media.capturedAt)"
+            [style.transform]="mediaTransform()"
+            [class.loading]="isImageLoading()"
+            draggable="false"
+            (load)="isImageLoading.set(false)"
+            (error)="isImageLoading.set(false); imageFailed.set(true)"
+          />
+          @if (imageFailed()) {
+            <div class="image-failed" role="status">
+              <p>Couldn't display this photo.</p>
+              <p class="sub">The file may be damaged or incomplete on disk.</p>
+            </div>
+          }
+        } @else if (isPreparingVideo()) {
+          <div class="preparing" role="status">
             <div class="spinner" aria-hidden="true"></div>
+            <p>Preparing video for playback…</p>
+            <p class="sub">This happens once per video; it will start automatically.</p>
           </div>
+        } @else {
+          <video
+            [src]="videoUrl(media.id)"
+            controls
+            autoplay
+            playsinline
+            (error)="onVideoError()"
+          ></video>
         }
-        <img
-          [src]="imageUrl(asset.id)"
-          [alt]="'Photo taken ' + formatDate(asset.capturedAt)"
-          [style.transform]="mediaTransform()"
-          [class.loading]="isImageLoading()"
-          draggable="false"
-          (load)="isImageLoading.set(false)"
-          (error)="isImageLoading.set(false); imageFailed.set(true)"
-        />
-        @if (imageFailed()) {
-          <div class="image-failed" role="status">
-            <p>Couldn't display this photo.</p>
-            <p class="sub">The file may be damaged or incomplete on disk.</p>
-          </div>
-        }
-      } @else if (isPreparingVideo()) {
-        <div class="preparing" role="status">
-          <div class="spinner" aria-hidden="true"></div>
-          <p>Preparing video for playback…</p>
-          <p class="sub">This happens once per video; it will start automatically.</p>
-        </div>
-      } @else {
-        <video
-          [src]="videoUrl(asset.id)"
-          controls
-          autoplay
-          playsinline
-          (error)="onVideoError()"
-        ></video>
       }
     </div>
 
