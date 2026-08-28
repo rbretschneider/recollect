@@ -18,5 +18,6 @@ import { PeopleService } from './people.service';
     DetectFacesHandler,
     EmbedClipHandler,
   ],
+  exports: [FaceCropService],
 })
 export class PeopleModule {}

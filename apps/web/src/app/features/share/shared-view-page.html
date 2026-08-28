@@ -22,7 +22,47 @@
       }
     </header>
 
-    @for (entry of shared.journal; track entry.authorName + entry.bodyMd) {
+    @if (shared.people.length > 0) {
+      <section class="who" aria-label="Who was there">
+        <h2>Who was there</h2>
+        <div class="chips">
+          @for (person of shared.people; track person.name + person.coverFaceId) {
+            <span class="chip">
+              <img [src]="faceCropUrl(person.coverFaceId)" alt="" loading="lazy" />
+              {{ person.name }}
+            </span>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- The story: journal paragraphs with captioned photos woven into the
+         gaps, exactly like the signed-in read. -->
+    @if (storyFlow().length > 0) {
+      <article class="story-post">
+        @for (item of storyFlow(); track $index) {
+          @if (item.kind === 'text') {
+            <p class="prose">{{ item.text }}</p>
+          } @else {
+            <figure class="story-group" [class.multi]="item.assetIds.length > 1">
+              <div class="story-images">
+                @for (assetId of item.assetIds; track assetId) {
+                  <button type="button" aria-label="Open photo" (click)="openViewerForAsset(assetId)">
+                    <img [src]="thumbUrl(assetId, 1440)" alt="" loading="lazy" />
+                  </button>
+                }
+              </div>
+              <figcaption>{{ item.caption }}</figcaption>
+            </figure>
+          }
+        }
+        @if (shared.journal[0]; as first) {
+          <p class="author">— {{ first.authorName }}</p>
+        }
+      </article>
+    }
+
+    @for (entry of extraJournal(); track entry.authorName + entry.bodyMd) {
       <article class="entry">
         <h3>{{ entry.authorName }}</h3>
         <p>{{ entry.bodyMd }}</p>
@@ -36,13 +76,23 @@
       </blockquote>
     }
 
-    <div class="grid">
-      @for (assetId of shared.assetIds; track assetId; let index = $index) {
-        <button type="button" class="tile" aria-label="Open photo" (click)="openViewer(index)">
-          <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
+    @if (looseAssetIds().length > 0) {
+      <section class="more-photos" aria-label="More photos">
+        <button type="button" class="stack" (click)="showSlideshow.set(true)">
+          <span class="fan">
+            @for (assetId of loosePreview(); track assetId; let i = $index) {
+              <span class="polaroid" [attr.data-card]="i">
+                <img [src]="thumbUrl(assetId, 720)" alt="" loading="lazy" />
+              </span>
+            }
+          </span>
+          <span class="stack-label">
+            <strong>{{ looseAssetIds().length }} more {{ looseAssetIds().length === 1 ? 'photo' : 'photos' }}</strong>
+            <span class="sub">tap to play the whole memory ▶</span>
+          </span>
         </button>
-      }
-    </div>
+      </section>
+    }
 
     <footer>Shared with Recollect</footer>
   </main>
@@ -62,6 +112,7 @@
     [assets]="viewerAssets()"
     [startIndex]="viewerIndex()!"
     [mediaBase]="mediaBase"
+    [captions]="captions()"
     [allowInfo]="false"
     (closed)="closeViewer()"
   />

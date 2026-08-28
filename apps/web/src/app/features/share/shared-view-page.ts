@@ -32,8 +32,96 @@ export class SharedViewPage implements OnInit {
     return `/api/v1/share/${this.token}/assets`;
   }
 
-  thumbUrl(assetId: string): string {
-    return this.api.sharedThumbUrl(this.token, assetId, 240);
+  thumbUrl(assetId: string, size: 240 | 720 | 1440 = 240): string {
+    return this.api.sharedThumbUrl(this.token, assetId, size);
+  }
+
+  faceCropUrl(faceId: string): string {
+    return this.api.sharedFaceCropUrl(this.token, faceId);
+  }
+
+  /** Captions passed to the viewer so shared photos carry their words too. */
+  readonly captions = computed<Record<string, string>>(() => this.view()?.captions ?? {});
+
+  /** Captioned photos grouped by shared caption (same as the private read). */
+  readonly storyGroups = computed<Array<{ caption: string; assetIds: string[] }>>(() => {
+    const view = this.view();
+    if (!view) {
+      return [];
+    }
+    const byCaption = new Map<string, string[]>();
+    for (const id of view.assetIds) {
+      const caption = view.captions[id];
+      if (!caption) {
+        continue;
+      }
+      const existing = byCaption.get(caption);
+      if (existing) {
+        existing.push(id);
+      } else {
+        byCaption.set(caption, [id]);
+      }
+    }
+    return [...byCaption.entries()].map(([caption, assetIds]) => ({ caption, assetIds }));
+  });
+
+  /** The primary journal entry, split into paragraphs for interleaving. */
+  readonly journalParagraphs = computed<string[]>(() => {
+    const text = this.view()?.journal[0]?.bodyMd.trim() ?? '';
+    return text ? text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean) : [];
+  });
+
+  /** Extra journal entries beyond the first, shown after the woven story. */
+  readonly extraJournal = computed(() => this.view()?.journal.slice(1) ?? []);
+
+  /** The woven read: journal paragraphs with captioned figures in the gaps. */
+  readonly storyFlow = computed<
+    Array<{ kind: 'text'; text: string } | { kind: 'figure'; caption: string; assetIds: string[] }>
+  >(() => {
+    const paras = this.journalParagraphs();
+    const groups = this.storyGroups();
+    const flow: Array<
+      { kind: 'text'; text: string } | { kind: 'figure'; caption: string; assetIds: string[] }
+    > = [];
+    if (paras.length === 0) {
+      for (const group of groups) {
+        flow.push({ kind: 'figure', ...group });
+      }
+      return flow;
+    }
+    const inlineCount = Math.min(groups.length, paras.length);
+    const afterPara = new Map<number, number>();
+    for (let i = 0; i < inlineCount; i++) {
+      afterPara.set(Math.floor(((i + 1) * paras.length) / (inlineCount + 1)), i);
+    }
+    paras.forEach((text, index) => {
+      flow.push({ kind: 'text', text });
+      const groupIndex = afterPara.get(index);
+      if (groupIndex !== undefined) {
+        flow.push({ kind: 'figure', ...groups[groupIndex] });
+      }
+    });
+    for (let i = inlineCount; i < groups.length; i++) {
+      flow.push({ kind: 'figure', ...groups[i] });
+    }
+    return flow;
+  });
+
+  /** Uncaptioned photos — the tappable polaroid stack at the end. */
+  readonly looseAssetIds = computed<string[]>(() => {
+    const view = this.view();
+    return view ? view.assetIds.filter((id) => !view.captions[id]) : [];
+  });
+
+  /** Up to four fanned previews for the end-of-story stack. */
+  readonly loosePreview = computed<string[]>(() => this.looseAssetIds().slice(0, 4));
+
+  /** Opens the viewer at a given asset id (captioned figures are clickable). */
+  openViewerForAsset(assetId: string): void {
+    const index = this.viewerAssets().findIndex((asset) => asset.id === assetId);
+    if (index >= 0) {
+      this.viewerIndex.set(index);
+    }
   }
 
   /** computed: the viewer needs a stable array reference (see person page). */

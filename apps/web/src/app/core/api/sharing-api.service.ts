@@ -45,4 +45,9 @@ export class SharingApiService {
   sharedThumbUrl(token: string, assetId: string, size: 240 | 720 | 1440): string {
     return `/api/v1/share/${token}/assets/${assetId}/thumb/${size}`;
   }
+
+  /** URL for a "Who was there" avatar crop on the public page (no auth). */
+  sharedFaceCropUrl(token: string, faceId: string): string {
+    return `/api/v1/share/${token}/faces/${faceId}/crop`;
+  }
 }

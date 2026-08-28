@@ -38,6 +38,10 @@ export interface SharedView {
   mediaItems: Array<{ id: string; mediaType: 'image' | 'video' }>;
   journal: Array<{ authorName: string; bodyMd: string }>;
   quotes: Array<{ text: string; saidBy: string }>;
+  /** Named people in the memory — shown but NOT linkable on the public page. */
+  people: Array<{ name: string; coverFaceId: string; behindCamera: boolean }>;
+  /** Per-photo captions, so the public read weaves them into the story too. */
+  captions: Record<string, string>;
 }
 
 const TOKEN_BYTES = 24;
@@ -129,6 +133,8 @@ export class SharingService {
         mediaItems: await this.mediaItemsFor([link.targetId]),
         journal: [],
         quotes: [],
+        people: [],
+        captions: {},
       };
     }
     if (link.targetType === 'memory') {
@@ -148,6 +154,16 @@ export class SharingService {
         quotes: link.includeJournal
           ? detail.quotes.map((quote) => ({ text: quote.text, saidBy: quote.saidBy }))
           : [],
+        // Who was there is always shown (names only, never linkable); captions
+        // are story text, so they ride the same toggle as the journal.
+        people: detail.people
+          .filter((person) => person.name !== null)
+          .map((person) => ({
+            name: person.name as string,
+            coverFaceId: person.coverFaceId,
+            behindCamera: person.behindCamera,
+          })),
+        captions: link.includeJournal ? detail.captions : {},
       };
     }
     const detail = await this.albums.getDetail(link.targetId);
@@ -161,7 +177,25 @@ export class SharingService {
       mediaItems: await this.mediaItemsFor(detail.assetIds),
       journal: [],
       quotes: [],
+      people: [],
+      captions: {},
     };
+  }
+
+  /**
+   * Guards the public face-crop route: the face must be an avatar of someone
+   * shown in the shared memory's "Who was there", nothing else.
+   */
+  async assertSharedFace(token: string, faceId: string): Promise<void> {
+    const link = await this.requireActiveLink(token);
+    if (link.targetType !== 'memory') {
+      throw new NotFoundException('This link is no longer available.');
+    }
+    const detail = await this.memories.getDetail(link.targetId);
+    const shown = new Set(detail.people.map((person) => person.coverFaceId));
+    if (!shown.has(faceId)) {
+      throw new NotFoundException('This link is no longer available.');
+    }
   }
 
   /**

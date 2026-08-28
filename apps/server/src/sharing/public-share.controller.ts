@@ -2,6 +2,7 @@ import { Controller, Get, Header, Param, ParseIntPipe, ParseUUIDPipe, Res } from
 import type { Response } from 'express';
 import { AssetMediaStreamer } from '../assets/asset-media-streamer';
 import { Public } from '../auth/decorators/public.decorator';
+import { FaceCropService } from '../people/face-crop.service';
 import { SharedView, SharingService } from './sharing.service';
 
 /**
@@ -13,12 +14,28 @@ export class PublicShareController {
   constructor(
     private readonly sharing: SharingService,
     private readonly media: AssetMediaStreamer,
+    private readonly crops: FaceCropService,
   ) {}
 
   @Public()
   @Get(':token')
   async view(@Param('token') token: string): Promise<SharedView> {
     return this.sharing.getSharedView(token);
+  }
+
+  /** Face-crop avatar for the shared memory's "Who was there" — scoped to the
+   *  people actually shown on this link, never arbitrary faces. */
+  @Public()
+  @Get(':token/faces/:faceId/crop')
+  @Header('Cache-Control', 'private, max-age=3600')
+  async faceCrop(
+    @Param('token') token: string,
+    @Param('faceId', ParseUUIDPipe) faceId: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.sharing.assertSharedFace(token, faceId);
+    res.type('image/webp');
+    res.sendFile(await this.crops.getCropPath(faceId));
   }
 
   @Public()

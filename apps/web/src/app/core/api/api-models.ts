@@ -224,6 +224,10 @@ export interface SharedView {
   mediaItems: Array<{ id: string; mediaType: 'image' | 'video' }>;
   journal: Array<{ authorName: string; bodyMd: string }>;
   quotes: Array<{ text: string; saidBy: string }>;
+  /** Named people in the memory — shown but NOT linkable on the public page. */
+  people: Array<{ name: string; coverFaceId: string; behindCamera: boolean }>;
+  /** Per-photo captions, woven into the public read just like the private one. */
+  captions: Record<string, string>;
 }
 
 /** Mirrors the server's BrowseEntry. */
