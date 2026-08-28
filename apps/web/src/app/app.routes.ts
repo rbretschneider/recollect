@@ -95,5 +95,11 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/share/shared-view-page').then((m) => m.SharedViewPage),
   },
+  {
+    // Public guest contribution links — also outside the auth guard.
+    path: 'c/:token',
+    loadComponent: () =>
+      import('./features/contribute/contribute-page').then((m) => m.ContributePage),
+  },
   { path: '**', redirectTo: '' },
 ];

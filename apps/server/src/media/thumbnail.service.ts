@@ -51,6 +51,26 @@ export class ThumbnailService {
     return this.orientedDimensions(metadata);
   }
 
+  /**
+   * Renders a single review-sized webp for a file that is NOT (yet) an asset —
+   * used by guest-upload quarantine. Decoding doubles as validation: a file
+   * that claims to be media but isn't fails here and gets rejected.
+   */
+  async renderPreview(
+    absolutePath: string,
+    typeInfo: MediaTypeInfo,
+    outPath: string,
+    edge = 480,
+  ): Promise<void> {
+    const source =
+      typeInfo.mediaType === 'video' ? await this.extractVideoPoster(absolutePath) : absolutePath;
+    await sharp(source, { failOn: 'truncated' })
+      .rotate()
+      .resize({ width: edge, height: edge, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 78 })
+      .toFile(outPath);
+  }
+
   private async extractVideoPoster(absolutePath: string): Promise<Buffer> {
     // Prefer a frame past the first second (first frames are often black),
     // but clips shorter than that need the very first frame instead.

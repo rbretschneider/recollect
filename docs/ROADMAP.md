@@ -92,8 +92,9 @@ real-library testing (~18.5k assets on hawaii) teaches us things.
 
 ## Last, deliberately
 
-- **Guest uploads for an event** — the only public write path; ships after
-  everything above is boring and stable. Design locked (2026-08-27):
+- **Guest uploads for an event** — the only public write path. SHIPPED
+  2026-08-27 (pulled forward at user request). Reachable publicly only once
+  nginx exists; works on LAN today. Design as locked (2026-08-27):
 
   **An event is not a new entity.** It's an album wearing a *contribution
   link*, and the memory comes afterwards as curation. The layering is:

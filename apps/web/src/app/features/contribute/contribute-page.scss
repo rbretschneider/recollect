@@ -1,0 +1,254 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+.gone {
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  gap: 0.5rem;
+  justify-items: center;
+  text-align: center;
+  color: var(--text-muted);
+  padding: 2rem;
+
+  h1 {
+    color: var(--text);
+    font-size: 1.2rem;
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+    max-width: 26rem;
+  }
+}
+
+.contribute {
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+header {
+  text-align: center;
+
+  .eyebrow {
+    margin: 0;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
+
+  h1 {
+    margin: 0.25rem 0 0.35rem;
+    font-size: 1.7rem;
+    line-height: 1.2;
+  }
+
+  .expiry {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+}
+
+.uploader {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.name {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+
+  input {
+    min-height: 48px;
+    padding: 0 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 0.7rem;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 1rem;
+
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+  }
+}
+
+// The one big obvious action. A <label> so the native picker opens with no JS.
+.add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 56px;
+  border-radius: 0.8rem;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+
+  input {
+    display: none;
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.queue {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 44px;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+    background: var(--bg);
+    font-size: 0.9rem;
+
+    transition: border-color 0.2s ease;
+
+    &.done {
+      border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    }
+
+    &.failed {
+      border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
+    }
+  }
+
+  .filename {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .state {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    flex-shrink: 0;
+
+    &.ok {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      color: var(--accent);
+    }
+
+    &.err {
+      color: var(--danger);
+      white-space: normal;
+    }
+  }
+
+  .bar {
+    flex-shrink: 0;
+    width: 6rem;
+    height: 6px;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
+    overflow: hidden;
+
+    .fill {
+      display: block;
+      height: 100%;
+      background: var(--accent);
+      border-radius: 3px;
+      transition: width 0.2s ease;
+    }
+  }
+
+  .retry {
+    min-height: 36px;
+    padding: 0 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+}
+
+.review-note {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.pool {
+  display: grid;
+  gap: 0.6rem;
+
+  h2 {
+    margin: 0;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 2px;
+
+    img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      display: block;
+      border-radius: 2px;
+      background: var(--surface);
+    }
+  }
+}
+
+footer {
+  text-align: center;
+
+  p {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+}

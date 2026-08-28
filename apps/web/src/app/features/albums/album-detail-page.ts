@@ -4,6 +4,10 @@ import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
+import {
+  ContributionsApiService,
+  GuestUploadView,
+} from '../../core/api/contributions-api.service';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { AlbumDetail, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
@@ -13,6 +17,8 @@ import { BottomNav } from '../../shared/bottom-nav';
 import { PageLoading } from '../../shared/page-loading';
 import { ConfirmService } from '../../shared/confirm.service';
 import { EditToggle } from '../../shared/edit-toggle';
+import { GuestLinkButton } from '../../shared/guest-link-button';
+import { Icon } from '../../shared/icon';
 import { ShareButton } from '../../shared/share-button';
 import { Sheet } from '../../shared/sheet';
 import { AssetViewer } from '../viewer/asset-viewer';
@@ -27,6 +33,8 @@ import { AssetViewer } from '../viewer/asset-viewer';
     BottomNav,
     EditToggle,
     FormsModule,
+    GuestLinkButton,
+    Icon,
     RouterLink,
     ShareButton,
     Sheet,
@@ -36,6 +44,7 @@ import { AssetViewer } from '../viewer/asset-viewer';
 })
 export class AlbumDetailPage implements OnInit {
   private readonly api = inject(AlbumsApiService);
+  private readonly contributionsApi = inject(ContributionsApiService);
   private readonly memoriesApi = inject(MemoriesApiService);
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
@@ -55,6 +64,9 @@ export class AlbumDetailPage implements OnInit {
   memoryTitleDraft = '';
   /** "3 / 24" while the one-by-one download runs; null when idle. */
   readonly downloadProgress = signal<string | null>(null);
+  /** Guest uploads sitting in quarantine for this album. */
+  readonly pendingUploads = signal<GuestUploadView[]>([]);
+  readonly reviewBusy = signal(false);
 
   get canWrite(): boolean {
     const permission = this.auth.user()?.permission;
@@ -194,12 +206,60 @@ export class AlbumDetailPage implements OnInit {
     await this.router.navigateByUrl('/albums');
   }
 
+  previewUrl(uploadId: string): string {
+    return this.contributionsApi.previewUrl(uploadId);
+  }
+
+  async approveUploads(ids: string[]): Promise<void> {
+    this.reviewBusy.set(true);
+    try {
+      await this.contributionsApi.approve(ids);
+      await this.refreshAfterReview();
+    } finally {
+      this.reviewBusy.set(false);
+    }
+  }
+
+  async rejectUploads(ids: string[]): Promise<void> {
+    this.reviewBusy.set(true);
+    try {
+      await this.contributionsApi.reject(ids);
+      await this.refreshAfterReview();
+    } finally {
+      this.reviewBusy.set(false);
+    }
+  }
+
+  approveAll(): Promise<void> {
+    return this.approveUploads(this.pendingUploads().map((upload) => upload.id));
+  }
+
+  /** Approvals change both the queue and the album grid; reload both. */
+  private async refreshAfterReview(): Promise<void> {
+    const detail = this.detail();
+    if (!detail) {
+      return;
+    }
+    const [fresh, { uploads }] = await Promise.all([
+      this.api.get(detail.id),
+      this.contributionsApi.listPending(detail.id),
+    ]);
+    this.detail.set(fresh);
+    this.pendingUploads.set(uploads);
+    // New album members invalidate the cached viewer list.
+    this.viewerAssets.set([]);
+  }
+
   private async load(): Promise<void> {
     const albumId = this.route.snapshot.paramMap.get('id');
     if (!albumId) {
       return;
     }
     this.detail.set(await this.api.get(albumId));
+    if (this.canWrite) {
+      const { uploads } = await this.contributionsApi.listPending(albumId);
+      this.pendingUploads.set(uploads);
+    }
   }
 
   private async loadViewerAssets(assetIds: string[]): Promise<void> {

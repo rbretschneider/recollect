@@ -20,7 +20,8 @@ const REQUEST_TIMEOUT_MS = 20_000;
 export const authRefreshInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthStateService);
   const router = inject(Router);
-  const isTimeoutExempt = req.url.includes('/download') || req.url.includes('/original');
+  const isTimeoutExempt =
+    req.url.includes('/download') || req.url.includes('/original') || req.url.includes('/upload');
   return next(req).pipe(
     isTimeoutExempt ? (source) => source : timeout(REQUEST_TIMEOUT_MS),
     retry({

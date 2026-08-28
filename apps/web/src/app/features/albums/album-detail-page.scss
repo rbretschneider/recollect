@@ -49,7 +49,8 @@
 .manage {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  flex-wrap: wrap; // Five actions now; narrow phones get two tidy rows.
+  gap: 0.6rem 1rem;
   padding: 1rem 1rem 0.25rem;
 
   .action {
@@ -267,5 +268,124 @@
   h2 {
     color: var(--text);
     margin-bottom: 0.25rem;
+  }
+}
+
+// Guest quarantine queue: photos wait here until a household member decides.
+.review {
+  margin: 1rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+
+    .count {
+      min-width: 1.6rem;
+      padding: 0.1rem 0.45rem;
+      border-radius: 1rem;
+      background: var(--accent);
+      color: var(--accent-contrast);
+      font-size: 0.8rem;
+      text-align: center;
+    }
+  }
+
+  .hint {
+    margin: 0 0 0.75rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .review-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.6rem;
+  }
+
+  .pending {
+    margin: 0;
+    display: grid;
+    gap: 0.35rem;
+
+    img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: 0.5rem;
+      background: var(--bg);
+    }
+
+    figcaption {
+      display: flex;
+      align-items: baseline;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      overflow: hidden;
+
+      .from {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .kind {
+        color: var(--text-muted);
+        flex-shrink: 0;
+      }
+    }
+
+    .verdict {
+      display: flex;
+      gap: 0.4rem;
+
+      button {
+        flex: 1;
+        min-height: 38px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        background: var(--surface);
+        cursor: pointer;
+
+        &:disabled {
+          opacity: 0.5;
+        }
+
+        &.approve {
+          color: var(--accent);
+        }
+
+        &.reject {
+          color: var(--danger);
+        }
+      }
+    }
+  }
+
+  .review-actions {
+    margin-top: 0.85rem;
+
+    .approve-all {
+      min-height: 44px;
+      padding: 0 1.1rem;
+      border: none;
+      border-radius: 0.6rem;
+      background: var(--accent);
+      color: var(--accent-contrast);
+      font-weight: 600;
+      cursor: pointer;
+
+      &:disabled {
+        opacity: 0.6;
+      }
+    }
   }
 }

@@ -3,6 +3,7 @@ import { AlbumsModule } from './albums/albums.module';
 import { AssetsModule } from './assets/assets.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from './config/config.module';
+import { ContributionsModule } from './contributions/contributions.module';
 import { DatabaseModule } from './database/database.module';
 import { DevicesModule } from './devices/devices.module';
 import { FoldersModule } from './folders/folders.module';
@@ -32,6 +33,7 @@ import { UsersModule } from './users/users.module';
     FoldersModule,
     MemoriesModule,
     AlbumsModule,
+    ContributionsModule,
     MlModule,
     PeopleModule,
     PlacesModule,

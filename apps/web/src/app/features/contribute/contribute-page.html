@@ -1,0 +1,99 @@
+@if (isLoading()) {
+  <app-page-loading />
+} @else if (linkGone()) {
+  <main class="gone">
+    <app-icon name="image" [size]="40" />
+    <h1>This link isn't available</h1>
+    <p>It may have expired or been turned off. Ask your host for a fresh one.</p>
+  </main>
+} @else if (view(); as info) {
+  <main class="contribute">
+    <header>
+      <p class="eyebrow">Add your photos to</p>
+      <h1>{{ info.albumTitle }}</h1>
+      <p class="expiry">{{ expiryLabel(info) }}</p>
+    </header>
+
+    <section class="uploader" aria-label="Upload your photos">
+      <label class="name">
+        Your name
+        <input
+          type="text"
+          name="guestName"
+          [(ngModel)]="guestName"
+          (ngModelChange)="onNameChange()"
+          placeholder="So the family knows who these are from"
+          maxlength="80"
+          autocomplete="name"
+        />
+      </label>
+
+      <label class="add" [class.disabled]="!hasName">
+        <app-icon name="upload" [size]="22" />
+        {{ queue().length === 0 ? 'Add photos & videos' : 'Add more' }}
+        <input
+          type="file"
+          multiple
+          accept="image/*,video/*"
+          [disabled]="!hasName"
+          (change)="onFilesChosen($event)"
+        />
+      </label>
+      @if (!hasName) {
+        <p class="hint">Type your name first, then add photos.</p>
+      }
+
+      @if (queue().length > 0) {
+        <ul class="queue" aria-label="Your uploads">
+          @for (item of queue(); track item.file.name + item.file.size) {
+            <li [class]="item.state">
+              <span class="filename">{{ item.file.name }}</span>
+              @switch (item.state) {
+                @case ('queued') {
+                  <span class="state">Waiting…</span>
+                }
+                @case ('uploading') {
+                  <span class="bar" role="progressbar" [attr.aria-valuenow]="item.progress">
+                    <span class="fill" [style.width.%]="item.progress"></span>
+                  </span>
+                }
+                @case ('done') {
+                  <span class="state ok"><app-icon name="check" [size]="16" /> Sent</span>
+                }
+                @case ('failed') {
+                  <span class="state err">{{ item.error }}</span>
+                  <button type="button" class="retry" (click)="retry(item)">Retry</button>
+                }
+              }
+            </li>
+          }
+        </ul>
+        @if (doneCount > 0 && !isUploading()) {
+          <p class="review-note" role="status">
+            {{ doneCount }} {{ doneCount === 1 ? 'photo is' : 'photos are' }} in — the family
+            will review them before they join the album. Thank you!
+          </p>
+        }
+      }
+    </section>
+
+    @if (info.poolView) {
+      <section class="pool" aria-label="Photos so far">
+        <h2>Photos so far</h2>
+        @if (info.poolAssetIds.length === 0) {
+          <p class="hint">Nothing approved yet — yours could be first.</p>
+        } @else {
+          <div class="grid">
+            @for (assetId of info.poolAssetIds; track assetId) {
+              <img [src]="poolThumbUrl(assetId)" alt="" loading="lazy" />
+            }
+          </div>
+        }
+      </section>
+    }
+
+    <footer>
+      <p>Powered by Recollect — this family's own photo home.</p>
+    </footer>
+  </main>
+}

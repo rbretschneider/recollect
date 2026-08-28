@@ -1,0 +1,47 @@
+<button type="button" class="guest-link" (click)="open()">Guest link</button>
+
+@if (isOpen()) {
+  <app-sheet sheetTitle="Invite guests to add photos" (closed)="close()">
+    <div class="guest-content">
+      <p class="hint">
+        Anyone with this link can add photos and videos to the review queue —
+        nothing joins the album until someone in the household approves it.
+        Guests never see the rest of your library.
+      </p>
+
+      @for (link of links(); track link.id) {
+        <div class="link-row">
+          <div class="link-info">
+            <input type="text" readonly [value]="urlFor(link)" aria-label="Guest link URL" />
+            <span class="meta">
+              {{ expiryLabel(link) }} · {{ link.uploadCount }} uploads ·
+              {{ link.poolView ? 'guests see approved photos' : 'upload only' }}
+            </span>
+          </div>
+          <button type="button" class="small" (click)="copy(link)">
+            {{ copiedLinkId() === link.id ? 'Copied!' : 'Copy' }}
+          </button>
+          <button type="button" class="small danger" (click)="turnOff(link)">Turn off</button>
+        </div>
+      }
+
+      <div class="create-row">
+        <label>
+          Link expires after
+          <select name="guestExpiry" [(ngModel)]="selectedExpiryHours">
+            @for (option of expiryOptions; track option.label) {
+              <option [ngValue]="option.hours">{{ option.label }}</option>
+            }
+          </select>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" name="poolView" [(ngModel)]="poolView" />
+          Guests can see the approved photos
+        </label>
+        <button type="button" class="primary" [disabled]="isBusy()" (click)="createLink()">
+          {{ isBusy() ? 'Creating…' : 'Create guest link' }}
+        </button>
+      </div>
+    </div>
+  </app-sheet>
+}

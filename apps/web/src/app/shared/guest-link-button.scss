@@ -1,0 +1,121 @@
+.guest-link {
+  min-height: 40px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.guest-content {
+  display: grid;
+  gap: 0.75rem;
+
+  .hint {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .link-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .link-info {
+      flex: 1;
+      min-width: 0;
+      display: grid;
+      gap: 0.2rem;
+
+      input {
+        width: 100%;
+        min-width: 0;
+        padding: 0.45rem 0.6rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--border);
+        background: var(--surface-raised);
+        color: var(--text-muted);
+        font-size: 0.75rem;
+      }
+
+      .meta {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+      }
+    }
+  }
+
+  .create-row {
+    display: grid;
+    gap: 0.6rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+
+    label {
+      display: grid;
+      gap: 0.25rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-height: 44px;
+      color: var(--text);
+      font-size: 0.9rem;
+
+      input {
+        width: 1.15rem;
+        height: 1.15rem;
+        accent-color: var(--accent);
+      }
+    }
+
+    select {
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      background: var(--surface-raised);
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+  }
+
+  button {
+    min-height: 40px;
+    border-radius: 0.5rem;
+    border: none;
+    cursor: pointer;
+
+    &.primary {
+      padding: 0 0.9rem;
+      background: var(--accent);
+      color: var(--accent-contrast);
+      font-weight: 600;
+
+      &:disabled {
+        opacity: 0.6;
+      }
+    }
+
+    &.small {
+      min-height: 34px;
+      padding: 0 0.6rem;
+      font-size: 0.75rem;
+      background: var(--surface-raised);
+      color: var(--text);
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+
+      &.danger {
+        color: var(--danger);
+      }
+    }
+  }
+}
