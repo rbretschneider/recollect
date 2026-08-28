@@ -92,6 +92,38 @@
       </section>
     }
 
+    <!-- Scrapbook order: the story, then the photos (with their captions),
+         then the little things people said, underneath. -->
+    <section class="filmstrip-section" aria-label="Photos in this memory">
+      <h2>{{ memory.assetIds.length }} {{ memory.assetIds.length === 1 ? 'photo' : 'photos' }}</h2>
+      <div class="filmstrip">
+        @for (assetId of memory.assetIds; track assetId) {
+          <figure class="frame-wrap">
+            <button
+              type="button"
+              class="frame"
+              aria-label="Open photo"
+              (click)="openViewer(assetId)"
+            >
+              <img [src]="stripThumbUrl(assetId)" alt="" loading="lazy" />
+            </button>
+            @if (editMode.isEditing()) {
+              <input
+                class="caption-input"
+                [name]="'caption-' + assetId"
+                [value]="memory.captions[assetId] ?? ''"
+                placeholder="Caption this moment…"
+                maxlength="500"
+                (change)="saveCaption(assetId, $any($event.target).value)"
+              />
+            } @else if (memory.captions[assetId]; as caption) {
+              <figcaption>{{ caption }}</figcaption>
+            }
+          </figure>
+        }
+      </div>
+    </section>
+
     @if (editMode.isEditing() || memory.quotes.length > 0) {
     <section class="quotes" aria-label="Quotes of the day">
       @for (quote of memory.quotes; track quote.id) {
@@ -152,22 +184,6 @@
       }
     </section>
     }
-
-    <section class="filmstrip-section" aria-label="Photos in this memory">
-      <h2>{{ memory.assetIds.length }} {{ memory.assetIds.length === 1 ? 'photo' : 'photos' }}</h2>
-      <div class="filmstrip">
-        @for (assetId of memory.assetIds; track assetId) {
-          <button
-            type="button"
-            class="frame"
-            aria-label="Open photo"
-            (click)="openViewer(assetId)"
-          >
-            <img [src]="stripThumbUrl(assetId)" alt="" loading="lazy" />
-          </button>
-        }
-      </div>
-    </section>
 
     @if (mapEmbedUrl(memory); as mapUrl) {
       <section class="place" aria-label="Where this happened">

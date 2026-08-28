@@ -107,6 +107,8 @@ export const memoryAsset = pgTable(
     sortOrder: integer('sort_order').notNull().default(0),
     addedBy: uuid('added_by').references(() => userAccount.id, { onDelete: 'set null' }),
     addedAt: timestamp('added_at', { withTimezone: true }).notNull().defaultNow(),
+    /** Scrapbook narration under this photo, in this memory only. */
+    caption: text('caption'),
   },
   (table) => [
     primaryKey({ columns: [table.memoryId, table.assetId] }),

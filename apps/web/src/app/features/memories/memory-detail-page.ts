@@ -117,6 +117,22 @@ export class MemoryDetailPage implements OnInit {
     return this.detail()?.journal.filter((entry) => entry.authorUserId !== userId) ?? [];
   });
 
+  /** Saves one photo's scrapbook caption as soon as the field settles. */
+  async saveCaption(assetId: string, value: string): Promise<void> {
+    const detail = this.detail();
+    if (!detail) {
+      return;
+    }
+    await this.api.setCaption(detail.id, assetId, value);
+    const captions = { ...detail.captions };
+    if (value.trim().length > 0) {
+      captions[assetId] = value.trim();
+    } else {
+      delete captions[assetId];
+    }
+    this.detail.set({ ...detail, captions });
+  }
+
   /** Whether the journal section has anything to show in read mode. */
   get hasJournalContent(): boolean {
     return this.journalDraft().trim().length > 0 || this.othersJournalEntries().length > 0;

@@ -82,6 +82,12 @@
   }
 
   <footer>
-    <button type="button" class="outline" (click)="signOut()">Sign out</button>
+    @if (pwa.canInstall()) {
+      <button type="button" class="outline" (click)="pwa.install()">Install app</button>
+    } @else if (!pwa.isStandalone) {
+      <p class="install-hint">
+        Install: your browser's menu → “Add to Home Screen”.
+      </p>
+    }
   </footer>
 </aside>

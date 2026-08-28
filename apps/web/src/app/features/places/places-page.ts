@@ -14,6 +14,7 @@ import * as L from 'leaflet';
 import { PlacesApiService, PlaceView } from '../../core/api/places-api.service';
 import { TimelineAsset } from '../../core/api/api-models';
 import { Icon } from '../../shared/icon';
+import { AccountBadge } from '../../shared/account-badge';
 import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
@@ -30,7 +31,7 @@ const PLACES_VIEW_KEY = 'recollect.placesView';
  */
 @Component({
   selector: 'app-places-page',
-  imports: [Icon, MenuButton, BackButton, AssetViewer, BottomNav, PageLoading, SafeResourcePipe],
+  imports: [AccountBadge, Icon, MenuButton, BackButton, AssetViewer, BottomNav, PageLoading, SafeResourcePipe],
   templateUrl: './places-page.html',
   styleUrl: './places-page.scss',
 })

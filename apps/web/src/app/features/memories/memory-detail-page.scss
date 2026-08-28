@@ -140,10 +140,13 @@
   max-width: 38rem;
   margin: 0 auto;
 
-  // Read mode is prose, sitting tight against the quotes below it.
+  // Read mode is prose — the journal is the loudest voice on the page,
+  // set in the scrapbook serif, larger than the quotes below the photos.
   .entry .prose {
     margin: 0 0 0.25rem;
-    line-height: 1.6;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.2rem;
+    line-height: 1.65;
     white-space: pre-wrap;
   }
 
@@ -266,10 +269,11 @@
     padding-left: 1rem;
     border-left: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
 
+    // Quieter than the journal: the quotes are marginalia, not the headline.
     p {
       margin: 0;
       font-family: Georgia, 'Times New Roman', serif;
-      font-size: 1.3rem;
+      font-size: 1.05rem;
       font-style: italic;
       line-height: 1.5;
       color: var(--text);
@@ -405,6 +409,37 @@
     border-radius: 0.75rem;
     // Momentum scrolling without the strip stealing vertical swipes.
     overscroll-behavior-x: contain;
+
+    // A photo and its scrapbook caption travel together.
+    .frame-wrap {
+      flex-shrink: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      max-width: 20rem;
+      scroll-snap-align: start;
+
+      figcaption {
+        font-family: Georgia, 'Times New Roman', serif;
+        font-style: italic;
+        font-size: 0.9rem;
+        line-height: 1.4;
+        color: var(--text-muted);
+        padding: 0 0.15rem 0.25rem;
+        white-space: normal;
+      }
+
+      .caption-input {
+        min-height: 38px;
+        padding: 0 0.6rem;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        background: var(--surface);
+        color: var(--text);
+        font-size: 0.85rem;
+      }
+    }
 
     .frame {
       flex-shrink: 0;

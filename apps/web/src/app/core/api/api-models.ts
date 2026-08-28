@@ -120,6 +120,8 @@ export interface MemoryDetail {
   locationLabel: string | null;
   coverAssetId: string | null;
   assetIds: string[];
+  /** Scrapbook captions keyed by asset id (only captioned photos appear). */
+  captions: Record<string, string>;
   journal: JournalEntryView[];
   quotes: MemoryQuote[];
   people: MemoryPerson[];

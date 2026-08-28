@@ -17,6 +17,7 @@ import type { UserProfile } from '../users/user.types';
 import { AddAssetsRequestDto } from './dto/add-assets-request.dto';
 import { AddQuoteRequestDto } from './dto/add-quote-request.dto';
 import { CreateMemoryRequestDto } from './dto/create-memory-request.dto';
+import { SetCaptionRequestDto } from './dto/set-caption-request.dto';
 import { UpdateMemoryRequestDto } from './dto/update-memory-request.dto';
 import { WriteJournalRequestDto } from './dto/write-journal-request.dto';
 import { MemoriesService, MemoryDetail, MemoryQuoteView, MemorySummary } from './memories.service';
@@ -75,6 +76,17 @@ export class MemoriesController {
     @CurrentUser() user: UserProfile,
   ): Promise<void> {
     await this.memories.addAssets(id, body.assetIds, user.id);
+  }
+
+  @RequireGrant('write')
+  @Patch(':id/assets/:assetId/caption')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async setCaption(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('assetId', ParseUUIDPipe) assetId: string,
+    @Body() body: SetCaptionRequestDto,
+  ): Promise<void> {
+    await this.memories.setCaption(id, assetId, body.caption);
   }
 
   @RequireGrant('write')

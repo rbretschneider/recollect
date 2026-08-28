@@ -59,6 +59,13 @@ export class MemoriesApiService {
     return firstValueFrom(this.http.put<void>(`/api/v1/memories/${memoryId}/journal`, { bodyMd }));
   }
 
+  /** Writes one photo's scrapbook caption; empty text clears it. */
+  setCaption(memoryId: string, assetId: string, caption: string): Promise<void> {
+    return firstValueFrom(
+      this.http.patch<void>(`/api/v1/memories/${memoryId}/assets/${assetId}/caption`, { caption }),
+    );
+  }
+
   addQuote(
     memoryId: string,
     text: string,

@@ -9,6 +9,7 @@ import { Router } from '@angular/router';
 import { AuthApiService } from '../../core/api/auth-api.service';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { ConfirmService } from '../../shared/confirm.service';
+import { AccountBadge } from '../../shared/account-badge';
 import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
@@ -17,7 +18,7 @@ import { Sheet } from '../../shared/sheet';
 /** Admin settings: cameras and household members. The library has its own page. */
 @Component({
   selector: 'app-settings-page',
-  imports: [MenuButton, BackButton, BottomNav, FormsModule, RouterLink, Sheet],
+  imports: [AccountBadge, MenuButton, BackButton, BottomNav, FormsModule, RouterLink, Sheet],
   templateUrl: './settings-page.html',
   styleUrl: './settings-page.scss',
 })

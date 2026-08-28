@@ -1,0 +1,19 @@
+<button type="button" class="avatar" aria-label="Your account" (click)="isOpen.set(true)">
+  {{ userInitial }}
+</button>
+
+@if (isOpen()) {
+  <app-sheet sheetTitle="Your account" (closed)="isOpen.set(false)">
+    <div class="account-info">
+      <div class="who">
+        <span class="big-avatar">{{ userInitial }}</span>
+        <div>
+          <h3>{{ userName }}</h3>
+          <p>{{ userEmail }}</p>
+          <p class="grant">{{ grantLabel }}</p>
+        </div>
+      </div>
+      <button type="button" class="sign-out" (click)="signOut()">Sign out</button>
+    </div>
+  </app-sheet>
+}

@@ -7,6 +7,7 @@ import {
   RootEntry,
 } from '../../core/api/folders-api.service';
 import { TimelineAsset } from '../../core/api/api-models';
+import { AccountBadge } from '../../shared/account-badge';
 import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
@@ -36,7 +37,7 @@ function loadFolderView(): 'cards' | 'list' {
  */
 @Component({
   selector: 'app-folders-page',
-  imports: [MenuButton, PageLoading, BackButton, AssetViewer, BottomNav, Icon, RouterLink],
+  imports: [AccountBadge, MenuButton, PageLoading, BackButton, AssetViewer, BottomNav, Icon, RouterLink],
   templateUrl: './folders-page.html',
   styleUrl: './folders-page.scss',
 })

@@ -4,6 +4,7 @@ import { ActivityService } from '../core/activity.service';
 import { LibraryApiService } from '../core/api/library-api.service';
 import { LibraryFailure, LibraryStatus } from '../core/api/api-models';
 import { AuthStateService } from '../core/auth/auth-state.service';
+import { PwaInstallService } from '../core/pwa-install.service';
 import { ActivitySpinner } from './activity-spinner';
 
 /**
@@ -21,6 +22,7 @@ export class AppDrawer implements OnInit {
   private readonly libraryApi = inject(LibraryApiService);
   private readonly router = inject(Router);
   protected readonly activity = inject(ActivityService);
+  protected readonly pwa = inject(PwaInstallService);
 
   readonly closed = output<void>();
 
@@ -92,12 +94,6 @@ export class AppDrawer implements OnInit {
     } finally {
       this.isRescanBusy.set(false);
     }
-  }
-
-  async signOut(): Promise<void> {
-    await this.auth.logout();
-    this.closed.emit();
-    await this.router.navigateByUrl('/login');
   }
 
   private async loadStatus(): Promise<void> {

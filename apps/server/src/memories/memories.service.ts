@@ -36,6 +36,8 @@ export interface MemoryDetail {
   locationLabel: string | null;
   coverAssetId: string | null;
   assetIds: string[];
+  /** Scrapbook captions keyed by asset id (only captioned photos appear). */
+  captions: Record<string, string>;
   journal: JournalEntryView[];
   quotes: MemoryQuoteView[];
   /** Named people recognized in this memory's photos, most-seen first. */
@@ -141,6 +143,7 @@ export class MemoriesService {
   async getDetail(memoryId: string): Promise<MemoryDetail> {
     const row = await this.requireMemory(memoryId);
     const assetIds = await this.loadAssetIds(memoryId);
+    const captions = await this.loadCaptions(memoryId);
     const journal = await this.loadJournal(memoryId);
     const quotes = await this.loadQuotes(memoryId);
     const { people, unnamedPeopleCount } = await this.loadPeople(memoryId);
@@ -157,6 +160,7 @@ export class MemoriesService {
       locationLabel: row.locationLabel,
       coverAssetId: row.coverAssetId ?? assetIds[0] ?? null,
       assetIds,
+      captions,
       journal,
       quotes,
       people,
@@ -436,6 +440,30 @@ export class MemoriesService {
       .where(eq(memoryAsset.memoryId, memoryId))
       .orderBy(asc(memoryAsset.sortOrder));
     return rows.map((row) => row.assetId);
+  }
+
+  private async loadCaptions(memoryId: string): Promise<Record<string, string>> {
+    const rows = await this.db
+      .select({ assetId: memoryAsset.assetId, caption: memoryAsset.caption })
+      .from(memoryAsset)
+      .where(eq(memoryAsset.memoryId, memoryId));
+    const captions: Record<string, string> = {};
+    for (const row of rows) {
+      if (row.caption !== null && row.caption.trim().length > 0) {
+        captions[row.assetId] = row.caption;
+      }
+    }
+    return captions;
+  }
+
+  /** Writes (or clears, with empty text) one photo's scrapbook caption. */
+  async setCaption(memoryId: string, assetId: string, caption: string): Promise<void> {
+    await this.requireMemory(memoryId);
+    const trimmed = caption.trim();
+    await this.db
+      .update(memoryAsset)
+      .set({ caption: trimmed.length > 0 ? trimmed : null })
+      .where(and(eq(memoryAsset.memoryId, memoryId), eq(memoryAsset.assetId, assetId)));
   }
 
   private async loadJournal(memoryId: string): Promise<JournalEntryView[]> {

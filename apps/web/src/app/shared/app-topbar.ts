@@ -1,21 +1,23 @@
 import { Component } from '@angular/core';
+import { AccountBadge } from './account-badge';
 import { ActivitySpinner } from './activity-spinner';
 import { Brand } from './brand';
 
 /**
  * The persistent app header: brand (opens the left drawer), live activity,
- * and projected page actions. The bottom nav says where you are; this bar
- * stays the same everywhere.
+ * projected page actions, and the account badge top-right. The bottom nav
+ * says where you are; this bar stays the same everywhere.
  */
 @Component({
   selector: 'app-topbar',
-  imports: [ActivitySpinner, Brand],
+  imports: [AccountBadge, ActivitySpinner, Brand],
   template: `
     <header class="topbar">
       <app-brand />
       <app-activity-spinner />
       <span class="spacer"></span>
       <ng-content />
+      <app-account-badge />
     </header>
   `,
   styles: `

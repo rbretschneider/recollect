@@ -1,0 +1,1 @@
+ALTER TABLE "memory_asset" ADD COLUMN "caption" text;

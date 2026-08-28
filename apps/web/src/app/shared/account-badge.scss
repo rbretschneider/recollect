@@ -1,0 +1,64 @@
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.account-info {
+  display: grid;
+  gap: 1rem;
+
+  .who {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+
+    .big-avatar {
+      display: grid;
+      place-items: center;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: var(--accent-contrast);
+      font-weight: 700;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      margin: 0;
+      font-size: 1.05rem;
+    }
+
+    p {
+      margin: 0.1rem 0 0;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .grant {
+      font-size: 0.75rem;
+    }
+  }
+
+  .sign-out {
+    min-height: 44px;
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+    background: var(--surface-raised);
+    color: var(--danger);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+}

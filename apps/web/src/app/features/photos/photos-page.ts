@@ -18,6 +18,7 @@ import { AlbumsApiService } from '../../core/api/albums-api.service';
 import { formatDuration } from '../../core/format-duration';
 import { AlbumPicker } from '../../shared/album-picker';
 import { ActivitySpinner } from '../../shared/activity-spinner';
+import { AccountBadge } from '../../shared/account-badge';
 import { Brand } from '../../shared/brand';
 import { ConfirmService } from '../../shared/confirm.service';
 import { Icon } from '../../shared/icon';
@@ -61,6 +62,7 @@ const STATUS_POLL_MS = 4000;
     AlbumPicker,
     AssetViewer,
     BottomNav,
+    AccountBadge,
     Brand,
     Icon,
     LongPressDirective,
