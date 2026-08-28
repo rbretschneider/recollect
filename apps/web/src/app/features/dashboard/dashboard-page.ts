@@ -108,8 +108,12 @@ export class DashboardPage implements OnInit {
       this.memoriesApi.listInbox().catch(() => ({ suggestions: [] })),
       this.memoriesApi.listMemories().catch(() => ({ memories: [] })),
     ]);
-    // "Today" itself isn't a memory yet; show past years only.
-    this.onThisDay.set(otd.years.filter((group) => group.year !== now.getFullYear()));
+    // Fibonacci anniversaries only: 1, 2, 3, 5, 8, 13, 21, 34 years ago —
+    // "today" isn't a memory yet, and year 4 is just year 4.
+    const fibonacci = new Set([1, 2, 3, 5, 8, 13, 21, 34, 55]);
+    this.onThisDay.set(
+      otd.years.filter((group) => fibonacci.has(now.getFullYear() - group.year)),
+    );
     this.suggestions.set(inbox.suggestions.slice(0, 4));
     this.recentMemories.set(memories.memories.slice(0, 4));
     this.isLoaded.set(true);

@@ -42,6 +42,28 @@
     </section>
   }
 
+  @if (recentMemories().length > 0) {
+    <section class="recent" aria-label="Recent memories">
+      <div class="section-head">
+        <h2>Jump back in</h2>
+        <a routerLink="/memories">All memories ›</a>
+      </div>
+      <div class="cards">
+        @for (memory of recentMemories(); track memory.id) {
+          <a class="card" [routerLink]="['/memories', memory.id]">
+            @if (memory.coverAssetId; as cover) {
+              <img [src]="thumbUrl(cover, 720)" alt="" loading="lazy" />
+            }
+            <div class="veil"></div>
+            <div class="caption">
+              <h3>{{ memory.title }}</h3>
+              <p>{{ spanLabel(memory) }} · {{ memory.assetCount }} photos</p>
+            </div>
+          </a>
+        }
+      </div>
+    </section>
+  }
   @if (suggestions().length > 0) {
     <section class="suggestions" aria-label="Suggested memories">
       <div class="section-head">
@@ -65,28 +87,6 @@
     </section>
   }
 
-  @if (recentMemories().length > 0) {
-    <section class="recent" aria-label="Recent memories">
-      <div class="section-head">
-        <h2>Jump back in</h2>
-        <a routerLink="/memories">All memories ›</a>
-      </div>
-      <div class="cards">
-        @for (memory of recentMemories(); track memory.id) {
-          <a class="card" [routerLink]="['/memories', memory.id]">
-            @if (memory.coverAssetId; as cover) {
-              <img [src]="thumbUrl(cover, 720)" alt="" loading="lazy" />
-            }
-            <div class="veil"></div>
-            <div class="caption">
-              <h3>{{ memory.title }}</h3>
-              <p>{{ spanLabel(memory) }} · {{ memory.assetCount }} photos</p>
-            </div>
-          </a>
-        }
-      </div>
-    </section>
-  }
 </main>
 
 @if (viewerIndex() !== null) {
