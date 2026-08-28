@@ -353,3 +353,29 @@
     translate: 4rem 0;
   }
 }
+
+// 360° photosphere: pannellum owns the stage while open.
+.sphere-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 24;
+  background: black;
+
+  .sphere-host {
+    position: absolute;
+    inset: 0;
+  }
+
+  .sphere-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 2;
+  }
+}
+
+.sphere-btn {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}

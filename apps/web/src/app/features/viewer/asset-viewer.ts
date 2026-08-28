@@ -78,6 +78,9 @@ export class AssetViewer implements OnInit, OnDestroy {
   private readonly favoriteOverrides = signal<ReadonlyMap<string, boolean>>(new Map());
   /** Which way the last navigation went, for the entry glide direction. */
   readonly navDirection = signal<'forward' | 'backward'>('forward');
+  /** 360° photosphere overlay open? (Only offered when detail says so.) */
+  readonly showSphere = signal(false);
+  private sphereViewer: { destroy: () => void } | null = null;
   /** The outgoing image, briefly kept as a fading ghost under the new one. */
   readonly ghostUrl = signal<string | null>(null);
   private ghostTimer: ReturnType<typeof setTimeout> | null = null;
@@ -155,9 +158,12 @@ export class AssetViewer implements OnInit, OnDestroy {
       this.index.set(this.startIndex());
     });
     effect(() => {
+      // Detail loads for every shown asset (small JSON): it powers the info
+      // sheet AND surfaces special types like 360° photospheres up front.
       const asset = this.current();
       this.detail.set(null);
-      if (asset && this.showInfo()) {
+      this.showSphere.set(false);
+      if (asset && this.allowInfo()) {
         void this.loadDetail(asset.id);
       }
     });
@@ -481,6 +487,38 @@ export class AssetViewer implements OnInit, OnDestroy {
   /** Creating share links needs the write grant (matches the server). */
   get canShare(): boolean {
     return this.allowInfo() && this.canWrite;
+  }
+
+  /** Opens the 360° view: full-sphere pan/zoom via pannellum (bundled). */
+  async openSphere(): Promise<void> {
+    const asset = this.current();
+    if (!asset) {
+      return;
+    }
+    this.showSphere.set(true);
+    // pannellum attaches itself to window; the import is a side effect.
+    await import('pannellum');
+    setTimeout(() => {
+      const host = document.getElementById('sphere-host');
+      const pannellum = (window as unknown as { pannellum?: { viewer: Function } }).pannellum;
+      if (!host || !pannellum) {
+        return;
+      }
+      this.sphereViewer?.destroy();
+      this.sphereViewer = pannellum.viewer('sphere-host', {
+        type: 'equirectangular',
+        panorama: `${this.mediaBase()}/${asset.id}/original`,
+        autoLoad: true,
+        showFullscreenCtrl: false,
+        autoRotate: -3,
+      }) as { destroy: () => void };
+    }, 0);
+  }
+
+  closeSphere(): void {
+    this.sphereViewer?.destroy();
+    this.sphereViewer = null;
+    this.showSphere.set(false);
   }
 
   async toggleFavorite(): Promise<void> {

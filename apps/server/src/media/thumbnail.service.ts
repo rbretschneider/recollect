@@ -37,6 +37,26 @@ export class ThumbnailService {
     const source =
       typeInfo.mediaType === 'video' ? await this.extractVideoPoster(absolutePath) : absolutePath;
     await this.store.ensureDirectoryFor(assetId);
+    try {
+      return await this.renderSizes(assetId, source);
+    } catch (error) {
+      // Formats this libvips can't decode (old scanned BMPs, oddball TIFFs):
+      // ffmpeg reads almost anything — extract one frame and thumbnail that.
+      if (typeInfo.mediaType !== 'image') {
+        throw error;
+      }
+      const frame = await this.extractFrame(absolutePath, 0);
+      if (frame.length === 0) {
+        throw error;
+      }
+      return this.renderSizes(assetId, frame);
+    }
+  }
+
+  private async renderSizes(
+    assetId: string,
+    source: string | Buffer,
+  ): Promise<RenderedDimensions> {
     const pipeline = sharp(source, { failOn: 'truncated' }).rotate();
     const metadata = await pipeline.metadata();
     await Promise.all(

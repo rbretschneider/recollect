@@ -438,6 +438,12 @@
         background: var(--surface);
         color: var(--text);
         font-size: 0.85rem;
+        transition: border-color 0.3s ease;
+
+        // The save-confirmation flash (three-signal standard).
+        &.just-saved {
+          border-color: var(--accent);
+        }
       }
     }
 

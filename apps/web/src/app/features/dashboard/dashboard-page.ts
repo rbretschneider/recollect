@@ -6,6 +6,7 @@ import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { InboxSuggestion, MemorySummary, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { AppTopbar } from '../../shared/app-topbar';
+import { PageLoading } from '../../shared/page-loading';
 import { AssetViewer } from '../viewer/asset-viewer';
 
 interface OnThisDayYear {
@@ -19,7 +20,7 @@ interface OnThisDayYear {
  */
 @Component({
   selector: 'app-dashboard-page',
-  imports: [AppTopbar, AssetViewer, RouterLink],
+  imports: [AppTopbar, AssetViewer, PageLoading, RouterLink],
   templateUrl: './dashboard-page.html',
   styleUrl: './dashboard-page.scss',
 })

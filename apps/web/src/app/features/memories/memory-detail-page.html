@@ -110,6 +110,7 @@
             @if (editMode.isEditing()) {
               <input
                 class="caption-input"
+                [class.just-saved]="captionJustSaved() === assetId"
                 [name]="'caption-' + assetId"
                 [value]="memory.captions[assetId] ?? ''"
                 placeholder="Caption this moment…"

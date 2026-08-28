@@ -116,6 +116,9 @@ export class MemoryDetailPage implements OnInit {
     return this.detail()?.journal.filter((entry) => entry.authorUserId !== userId) ?? [];
   });
 
+  /** Which caption just saved, for the flash of confirmation. */
+  readonly captionJustSaved = signal<string | null>(null);
+
   /** Saves one photo's scrapbook caption as soon as the field settles. */
   async saveCaption(assetId: string, value: string): Promise<void> {
     const detail = this.detail();
@@ -123,6 +126,12 @@ export class MemoryDetailPage implements OnInit {
       return;
     }
     await this.api.setCaption(detail.id, assetId, value);
+    this.captionJustSaved.set(assetId);
+    setTimeout(() => {
+      if (this.captionJustSaved() === assetId) {
+        this.captionJustSaved.set(null);
+      }
+    }, 1500);
     const captions = { ...detail.captions };
     if (value.trim().length > 0) {
       captions[assetId] = value.trim();

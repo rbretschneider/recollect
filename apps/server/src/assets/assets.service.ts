@@ -80,6 +80,8 @@ export interface AssetDetail {
   takenBy: string | null;
   /** The mapped person's id, so "Taken by" can link to their page. */
   takenByPersonId: string | null;
+  /** True for 360° equirectangular panoramas (GPano metadata or filename). */
+  isPhotosphere: boolean;
   gpsLat: number | null;
   gpsLon: number | null;
   relPath: string | null;
@@ -237,6 +239,23 @@ export class AssetsService {
   }
 
   /** Detail for one asset: metadata plus camera info for the viewer's info sheet. */
+  /** GPano equirectangular metadata, or the Pixel .PHOTOSPHERE. filename. */
+  private async isPhotosphere(assetId: string, relPath: string | null): Promise<boolean> {
+    if (relPath !== null && /photosphere/i.test(relPath)) {
+      return true;
+    }
+    const result = await this.db.execute<{ ok: number }>(sql`
+      select 1 as ok from asset_metadata
+      where asset_id = ${assetId}
+        and (
+          raw->>'ProjectionType' = 'equirectangular'
+          or lower(coalesce(raw->>'UsePanoramaViewer', '')) = 'true'
+        )
+      limit 1
+    `);
+    return result.rows.length > 0;
+  }
+
   async getDetail(assetId: string, userId?: string): Promise<AssetDetail> {
     // Independent lookups run together — one round-trip time, not three.
     const [[row], [heart], [file]] = await Promise.all([
@@ -288,6 +307,7 @@ export class AssetsService {
       lensModel: row.lensModel,
       takenBy: owner?.ownerName ?? null,
       takenByPersonId: owner?.ownerPersonId ?? null,
+      isPhotosphere: await this.isPhotosphere(assetId, file?.relPath ?? null),
       gpsLat: row.gpsLat,
       gpsLon: row.gpsLon,
       relPath: file?.relPath ?? null,

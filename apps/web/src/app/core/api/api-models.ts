@@ -72,6 +72,8 @@ export interface AssetDetail {
   takenBy: string | null;
   /** The mapped person's id, so "Taken by" can link to their page. */
   takenByPersonId: string | null;
+  /** True for 360° equirectangular panoramas (GPano metadata or filename). */
+  isPhotosphere: boolean;
   isFavorite: boolean;
   gpsLat: number | null;
   gpsLon: number | null;

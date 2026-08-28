@@ -13,6 +13,11 @@
         <app-icon [name]="isCurrentFavorite() ? 'heart-filled' : 'heart'" />
       </button>
     }
+    @if (detail()?.isPhotosphere) {
+      <button type="button" class="icon sphere-btn" aria-label="View in 360°" (click)="openSphere()">
+        360°
+      </button>
+    }
     @if (canShare) {
       @if (current(); as sharedAsset) {
         <app-share-button variant="overlay" targetType="asset" [targetId]="sharedAsset.id" />
@@ -206,5 +211,19 @@
         }
       </aside>
     }
+  }
+
+  @if (showSphere()) {
+    <div class="sphere-overlay" role="dialog" aria-label="360 degree view">
+      <div id="sphere-host" class="sphere-host"></div>
+      <button
+        type="button"
+        class="icon sphere-close"
+        aria-label="Close 360 view"
+        (click)="closeSphere()"
+      >
+        <app-icon name="close" />
+      </button>
+    </div>
   }
 </div>
