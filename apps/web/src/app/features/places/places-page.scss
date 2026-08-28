@@ -140,3 +140,51 @@
     margin-bottom: 0.25rem;
   }
 }
+
+// Topbar layout toggle, same control as the Photos grid switcher.
+.view-switch {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  button {
+    min-width: 38px;
+    min-height: 38px;
+    border: none;
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+
+    &.active {
+      background: var(--surface-raised);
+      color: var(--accent);
+    }
+
+    & + button {
+      border-left: 1px solid var(--border);
+    }
+  }
+}
+
+// The whole-library bubble map.
+.map-wrap {
+  padding: 0.5rem 0.5rem 0;
+
+  .library-map {
+    height: calc(100dvh - 14rem);
+    min-height: 20rem;
+    border-radius: 0.9rem;
+    border: 1px solid var(--border);
+    // Leaflet must sit under the app's fixed chrome (topbar, drawers, viewer).
+    z-index: 0;
+    position: relative;
+  }
+
+  .map-hint {
+    margin: 0.5rem 0.25rem 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+}

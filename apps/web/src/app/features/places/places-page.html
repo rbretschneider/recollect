@@ -7,6 +7,26 @@
     <h1>Places</h1>
   }
   <span class="spacer"></span>
+  @if (!selectedLabel()) {
+    <div class="view-switch" role="group" aria-label="Places layout">
+      <button
+        type="button"
+        [class.active]="viewMode() === 'cards'"
+        aria-label="Card view"
+        (click)="setViewMode('cards')"
+      >
+        <app-icon name="view-cards" [size]="17" />
+      </button>
+      <button
+        type="button"
+        [class.active]="viewMode() === 'map'"
+        aria-label="Map view"
+        (click)="setViewMode('map')"
+      >
+        <app-icon name="map-pin" [size]="17" />
+      </button>
+    </div>
+  }
   <app-menu-button />
 </header>
 
@@ -25,7 +45,14 @@
     </section>
   }
 
-  @if (!selectedLabel()) {
+  @if (!selectedLabel() && viewMode() === 'map' && places().length > 0) {
+    <div class="map-wrap">
+      <div #mapHost class="library-map" aria-label="Map of everywhere photos were taken"></div>
+      <p class="map-hint">Every bubble is a place — bigger means more photos. Tap one to dive in.</p>
+    </div>
+  }
+
+  @if (!selectedLabel() && viewMode() === 'cards') {
     <div class="place-grid">
       @for (place of places(); track place.label) {
         <button type="button" class="place-card" (click)="openPlace(place)">
@@ -38,7 +65,9 @@
         </button>
       }
     </div>
-  } @else {
+  }
+
+  @if (selectedLabel()) {
     @if (selectedPlace(); as place) {
       <p class="full-label">{{ place.label }}</p>
       <iframe
