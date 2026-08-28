@@ -17,6 +17,8 @@ import { PeopleApiService, PersonSummary } from '../../core/api/people-api.servi
 import { MemoryDetail, MemoryQuote, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { EditModeService } from '../../core/edit-mode.service';
+import { AccountBadge } from '../../shared/account-badge';
+import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
 import { PageLoading } from '../../shared/page-loading';
 import { ConfirmService } from '../../shared/confirm.service';
@@ -32,7 +34,7 @@ const JOURNAL_AUTOSAVE_MS = 1500;
 /** One Memory: hero, editable title, media grid, and the journal. */
 @Component({
   selector: 'app-memory-detail-page',
-  imports: [PageLoading, BackButton,
+  imports: [AccountBadge, MenuButton, PageLoading, BackButton,
     AssetViewer,
     SlideshowOverlay,
     EditToggle,
