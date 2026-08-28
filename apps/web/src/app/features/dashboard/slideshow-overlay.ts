@@ -10,6 +10,15 @@ export interface SlideItem {
 /** How long each photo holds the screen. Videos hold until they finish. */
 const IMAGE_HOLD_MS = 3800;
 
+/** Bundled public-domain tracks (Wikimedia Commons, PD performances). */
+const MUSIC_TRACKS = [
+  'audio/gymnopedie-1.m4a',
+  'audio/clair-de-lune.m4a',
+  'audio/gymnopedie-3.m4a',
+];
+const MUSIC_PREF_KEY = 'recollect.slideshowMusic';
+const MUSIC_VOLUME = 0.35;
+
 /**
  * The memories slideshow: a fullscreen auto-advancing carousel. Photos
  * crossfade on a timer; a video plays through and the show waits for it.
@@ -37,6 +46,15 @@ export class SlideshowOverlay implements OnDestroy {
 
   private timer: ReturnType<typeof setTimeout> | null = null;
 
+  /**
+   * Background music, strictly fire-and-forget (prime directive: the show
+   * NEVER waits for it) — slides start instantly, audio joins whenever it's
+   * buffered, and it ducks out while a video's own sound plays.
+   */
+  readonly musicOn = signal(this.loadMusicPref());
+  private audio: HTMLAudioElement | null = null;
+  private trackIndex = Math.floor((Date.now() / 1000) % MUSIC_TRACKS.length);
+
   constructor() {
     effect(() => {
       const item = this.current();
@@ -46,11 +64,58 @@ export class SlideshowOverlay implements OnDestroy {
       if (item && item.mediaType === 'image' && !paused) {
         this.timer = setTimeout(() => this.next(), IMAGE_HOLD_MS);
       }
+      // Music ducks for videos and pause; resumes for photos.
+      if (this.audio) {
+        if (!this.musicOn() || paused || item?.mediaType === 'video') {
+          this.audio.pause();
+        } else {
+          void this.audio.play().catch(() => undefined);
+        }
+      }
     });
+    // Kick the music off the open tap — but never gate anything on it.
+    if (this.musicOn()) {
+      this.startMusic();
+    }
   }
 
   ngOnDestroy(): void {
     this.clearTimer();
+    this.audio?.pause();
+    this.audio = null;
+  }
+
+  toggleMusic(): void {
+    const next = !this.musicOn();
+    this.musicOn.set(next);
+    try {
+      localStorage.setItem(MUSIC_PREF_KEY, next ? 'on' : 'off');
+    } catch {
+      // Storage refused; the toggle still works for this show.
+    }
+    if (next && !this.audio) {
+      this.startMusic();
+    }
+  }
+
+  private startMusic(): void {
+    const audio = new Audio(MUSIC_TRACKS[this.trackIndex % MUSIC_TRACKS.length]);
+    audio.volume = MUSIC_VOLUME;
+    audio.addEventListener('ended', () => {
+      this.trackIndex += 1;
+      audio.src = MUSIC_TRACKS[this.trackIndex % MUSIC_TRACKS.length];
+      void audio.play().catch(() => undefined);
+    });
+    this.audio = audio;
+    void audio.play().catch(() => undefined);
+  }
+
+  private loadMusicPref(): boolean {
+    try {
+      return localStorage.getItem(MUSIC_PREF_KEY) !== 'off';
+    } catch {
+      return true;
+    }
   }
 
   imageUrl(id: string): string {

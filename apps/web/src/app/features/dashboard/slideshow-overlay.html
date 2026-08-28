@@ -2,6 +2,16 @@
   <header class="bar">
     <span class="title">{{ title() }}</span>
     <span class="counter">{{ index() + 1 }} / {{ items().length }}</span>
+    <button
+      type="button"
+      class="chrome"
+      [class.dim]="!musicOn()"
+      [attr.aria-pressed]="musicOn()"
+      [attr.aria-label]="musicOn() ? 'Turn music off' : 'Turn music on'"
+      (click)="toggleMusic()"
+    >
+      ♫
+    </button>
     <button type="button" class="chrome" aria-label="Close slideshow" (click)="close()">
       <app-icon name="close" />
     </button>
