@@ -384,7 +384,11 @@ export class MemoryDetailPage implements OnInit {
       await this.loadViewerAssets(detail.assetIds);
     }
     this.slideshowItems.set(
-      this.viewerAssets().map((asset) => ({ id: asset.id, mediaType: asset.mediaType })),
+      this.viewerAssets().map((asset) => ({
+        id: asset.id,
+        mediaType: asset.mediaType,
+        caption: detail.captions[asset.id],
+      })),
     );
   }
 }

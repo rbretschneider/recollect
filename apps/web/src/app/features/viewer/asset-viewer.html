@@ -124,6 +124,12 @@
       <button type="button" class="nav next" aria-label="Next" (click)="next()">›</button>
     }
 
+    @if (currentCaption(); as caption) {
+      @if (!showInfo() && zoom() === 1) {
+        <figcaption class="caption-band" aria-live="polite">{{ caption }}</figcaption>
+      }
+    }
+
     @if (showInfo()) {
       <aside class="info" aria-label="Photo details">
         <h3>{{ formatDate(asset.capturedAt) }}</h3>

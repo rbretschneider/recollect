@@ -59,6 +59,8 @@ export class AssetViewer implements OnInit, OnDestroy {
   readonly mediaBase = input<string>('/api/v1/assets');
   /** Info sheet requires the authed detail endpoint; share pages disable it. */
   readonly allowInfo = input<boolean>(true);
+  /** Optional per-asset captions (memory scrapbook). Shown over the photo. */
+  readonly captions = input<Record<string, string>>({});
   readonly closed = output<void>();
   /** Emitted after the current photo is moved to Trash from the viewer. */
   readonly deleted = output<string>();
@@ -95,6 +97,12 @@ export class AssetViewer implements OnInit, OnDestroy {
   readonly videoReloadKey = signal(0);
 
   readonly current = computed<TimelineAsset | null>(() => this.assets()[this.index()] ?? null);
+
+  /** The caption for the photo on screen, if the memory gave it one. */
+  readonly currentCaption = computed<string>(() => {
+    const asset = this.current();
+    return asset ? (this.captions()[asset.id] ?? '') : '';
+  });
 
   readonly isCurrentFavorite = computed<boolean>(() => {
     const asset = this.current();

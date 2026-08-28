@@ -5,6 +5,8 @@ import { Icon } from '../../shared/icon';
 export interface SlideItem {
   id: string;
   mediaType: 'image' | 'video';
+  /** Optional scrapbook caption, shown over the foot of the slide. */
+  caption?: string;
 }
 
 /** How long each photo holds the screen. Videos hold until they finish. */
@@ -59,6 +61,9 @@ export class SlideshowOverlay implements OnDestroy {
   /** True after the last slide: the show stops and offers a replay. */
   readonly isFinished = signal(false);
   readonly current = computed<SlideItem | null>(() => this.items()[this.index()] ?? null);
+  /** The caption for the slide on screen — shown only while it's a paused/held
+   *  image, never over a playing video's own controls. */
+  readonly currentCaption = computed<string>(() => this.current()?.caption ?? '');
   /** Single-item list so @for track recreates the element (crossfade). */
   readonly currentAsList = computed<SlideItem[]>(() => {
     const item = this.current();

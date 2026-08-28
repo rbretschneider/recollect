@@ -37,6 +37,11 @@
         ></video>
       }
     }
+    @if (currentCaption(); as caption) {
+      @if (!isFinished()) {
+        <figcaption class="caption-band" aria-live="polite">{{ caption }}</figcaption>
+      }
+    }
     @if (isPaused() && !isFinished()) {
       <div class="paused-hint" aria-live="polite">Paused — tap to resume</div>
     }

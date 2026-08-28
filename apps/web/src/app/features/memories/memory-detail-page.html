@@ -250,6 +250,7 @@
   <app-asset-viewer
     [assets]="viewerAssets()"
     [startIndex]="viewerIndex()!"
+    [captions]="detail()?.captions ?? {}"
     (closed)="closeViewer()"
     (deleted)="onViewerDeleted($event)"
   />
