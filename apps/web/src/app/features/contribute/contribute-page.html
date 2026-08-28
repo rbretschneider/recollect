@@ -80,12 +80,17 @@
     @if (info.poolView) {
       <section class="pool" aria-label="The album so far">
         <h2>The album so far</h2>
-        @if (info.poolAssetIds.length === 0) {
+        @if (info.poolItems.length === 0) {
           <p class="hint">Nothing here yet — yours could be first.</p>
         } @else {
           <div class="grid">
-            @for (assetId of info.poolAssetIds; track assetId) {
-              <img [src]="poolThumbUrl(assetId)" alt="" loading="lazy" />
+            @for (item of info.poolItems; track item.id; let index = $index) {
+              <button type="button" class="pool-tile" aria-label="Open photo" (click)="openViewer(index)">
+                <img [src]="poolThumbUrl(item.id)" alt="" loading="lazy" />
+                @if (item.mediaType === 'video') {
+                  <span class="video-badge" aria-hidden="true">▶</span>
+                }
+              </button>
             }
           </div>
         }
@@ -96,4 +101,14 @@
       <p>Powered by Recollect — this family's own photo home.</p>
     </footer>
   </main>
+
+  @if (viewerIndex() !== null) {
+    <app-asset-viewer
+      [assets]="viewerAssets()"
+      [startIndex]="viewerIndex()!"
+      [mediaBase]="viewerMediaBase"
+      [allowInfo]="false"
+      (closed)="closeViewer()"
+    />
+  }
 }

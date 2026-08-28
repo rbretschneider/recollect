@@ -12,18 +12,33 @@ import { Icon } from './icon';
   imports: [Icon],
   template: `
     @if (editMode.canEnterEditMode()) {
-      <button
-        type="button"
-        class="toggle"
-        [class.overlay]="variant() === 'overlay'"
-        [class.active]="editMode.isEditing()"
-        [attr.aria-pressed]="editMode.isEditing()"
-        [attr.aria-label]="editMode.isEditing() ? 'Done editing' : 'Edit'"
-        [title]="editMode.isEditing() ? 'Done editing' : 'Edit'"
-        (click)="editMode.toggle()"
-      >
-        <app-icon [name]="editMode.isEditing() ? 'check' : 'pencil'" [size]="18" />
-      </button>
+      @if (variant() === 'labeled') {
+        <button
+          type="button"
+          class="labeled-action"
+          [class.active]="editMode.isEditing()"
+          [attr.aria-pressed]="editMode.isEditing()"
+          (click)="editMode.toggle()"
+        >
+          <span class="glyph">
+            <app-icon [name]="editMode.isEditing() ? 'check' : 'pencil'" [size]="18" />
+          </span>
+          <span class="label">{{ editMode.isEditing() ? 'Done' : 'Edit' }}</span>
+        </button>
+      } @else {
+        <button
+          type="button"
+          class="toggle"
+          [class.overlay]="variant() === 'overlay'"
+          [class.active]="editMode.isEditing()"
+          [attr.aria-pressed]="editMode.isEditing()"
+          [attr.aria-label]="editMode.isEditing() ? 'Done editing' : 'Edit'"
+          [title]="editMode.isEditing() ? 'Done editing' : 'Edit'"
+          (click)="editMode.toggle()"
+        >
+          <app-icon [name]="editMode.isEditing() ? 'check' : 'pencil'" [size]="18" />
+        </button>
+      }
     }
   `,
   styles: `
@@ -64,5 +79,5 @@ import { Icon } from './icon';
 export class EditToggle {
   protected readonly editMode = inject(EditModeService);
 
-  readonly variant = input<'chip' | 'overlay'>('chip');
+  readonly variant = input<'chip' | 'overlay' | 'labeled'>('chip');
 }

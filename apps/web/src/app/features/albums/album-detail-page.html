@@ -8,25 +8,31 @@
   </header>
 
   <main class="album">
+    @if (publicBadges().length > 0) {
+      <div class="visibility" aria-label="Who can see this album">
+        @for (badge of publicBadges(); track badge) {
+          <span class="badge">{{ badge }}</span>
+        }
+      </div>
+    }
     @if (canWrite) {
       <section class="manage" aria-label="Album actions">
-        <app-share-button variant="icon" targetType="album" [targetId]="album.id" />
-        <button
-          type="button"
-          class="icon-action"
-          aria-label="Download"
-          title="Download"
-          (click)="isDownloadSheetOpen.set(true)"
-        >
-          <app-icon name="download" [size]="18" />
-        </button>
-        <app-edit-toggle />
+        <app-share-button variant="labeled" targetType="album" [targetId]="album.id" />
         <app-guest-link-button [albumId]="album.id" />
-        <button type="button" class="action" (click)="startMemoryFromAlbum()">
-          Make a memory
+        <button type="button" class="labeled-action" (click)="isDownloadSheetOpen.set(true)">
+          <span class="glyph"><app-icon name="download" [size]="19" /></span>
+          <span class="label">Download</span>
         </button>
+        <button type="button" class="labeled-action" (click)="startMemoryFromAlbum()">
+          <span class="glyph"><app-icon name="sparkles" [size]="19" /></span>
+          <span class="label">Memory</span>
+        </button>
+        <app-edit-toggle variant="labeled" />
         @if (editMode.isEditing()) {
-          <button type="button" class="danger-link" (click)="deleteAlbum()">Delete album</button>
+          <button type="button" class="labeled-action danger" (click)="deleteAlbum()">
+            <span class="glyph"><app-icon name="trash" [size]="19" /></span>
+            <span class="label">Delete</span>
+          </button>
         }
       </section>
     }

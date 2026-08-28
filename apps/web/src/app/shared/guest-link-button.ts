@@ -5,6 +5,7 @@ import {
   ContributionsApiService,
 } from '../core/api/contributions-api.service';
 import { ConfirmService } from './confirm.service';
+import { Icon } from './icon';
 import { Sheet } from './sheet';
 
 /** How long guests can keep adding photos. Events end; so do their links. */
@@ -21,7 +22,7 @@ const EXPIRY_OPTIONS = [
  */
 @Component({
   selector: 'app-guest-link-button',
-  imports: [FormsModule, Sheet],
+  imports: [FormsModule, Icon, Sheet],
   templateUrl: './guest-link-button.html',
   styleUrl: './guest-link-button.scss',
 })

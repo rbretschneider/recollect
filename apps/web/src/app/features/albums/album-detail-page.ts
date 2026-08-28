@@ -9,6 +9,7 @@ import {
   GuestUploadView,
 } from '../../core/api/contributions-api.service';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
+import { SharingApiService } from '../../core/api/sharing-api.service';
 import { AlbumDetail, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { EditModeService } from '../../core/edit-mode.service';
@@ -48,6 +49,7 @@ import { AssetViewer } from '../viewer/asset-viewer';
 export class AlbumDetailPage implements OnInit {
   private readonly api = inject(AlbumsApiService);
   private readonly contributionsApi = inject(ContributionsApiService);
+  private readonly sharingApi = inject(SharingApiService);
   private readonly memoriesApi = inject(MemoriesApiService);
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
@@ -70,6 +72,8 @@ export class AlbumDetailPage implements OnInit {
   /** Guest uploads sitting in quarantine for this album. */
   readonly pendingUploads = signal<GuestUploadView[]>([]);
   readonly reviewBusy = signal(false);
+  /** "Public until Sep 4" / "Guests until Sep 4" chips under the title. */
+  readonly publicBadges = signal<string[]>([]);
 
   get canWrite(): boolean {
     const permission = this.auth.user()?.permission;
@@ -262,8 +266,28 @@ export class AlbumDetailPage implements OnInit {
     }
     this.detail.set(await this.api.get(albumId));
     if (this.canWrite) {
-      const { uploads } = await this.contributionsApi.listPending(albumId);
+      const [{ uploads }, shares, guests] = await Promise.all([
+        this.contributionsApi.listPending(albumId),
+        this.sharingApi.listFor('album', albumId).catch(() => ({ links: [] })),
+        this.contributionsApi.listLinks(albumId).catch(() => ({ links: [] })),
+      ]);
       this.pendingUploads.set(uploads);
+      const badges: string[] = [];
+      const untilLabel = (iso: string | null): string =>
+        iso === null
+          ? 'no expiration'
+          : new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      const share = shares.links[0];
+      if (share) {
+        badges.push(
+          share.expiresAt === null ? 'Public — no expiration' : `Public until ${untilLabel(share.expiresAt)}`,
+        );
+      }
+      const guest = guests.links[0];
+      if (guest) {
+        badges.push(`Guests until ${untilLabel(guest.expiresAt)}`);
+      }
+      this.publicBadges.set(badges);
     }
   }
 

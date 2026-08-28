@@ -129,7 +129,7 @@ function serveWebApp(app: NestExpressApplication, config: AppConfig): void {
             }
           } else if (contributeToken) {
             const view = await contributions.getContributeView(contributeToken);
-            const cover = view.poolAssetIds[0] ?? null;
+            const cover = view.poolItems[0]?.id ?? null;
             tags = unfurlTags(
               `Add your photos to “${view.albumTitle}”`,
               'Tap to add your photos and videos — no account needed.',

@@ -12,12 +12,18 @@ export interface ContributionLinkView {
   createdAt: string;
 }
 
+/** One album entry as shown to guests. */
+export interface PoolItem {
+  id: string;
+  mediaType: 'image' | 'video';
+}
+
 /** What the public guest page renders. */
 export interface ContributeView {
   albumTitle: string;
   poolView: boolean;
   expiresAt: string;
-  poolAssetIds: string[];
+  poolItems: PoolItem[];
 }
 
 /** One quarantined upload awaiting review. */

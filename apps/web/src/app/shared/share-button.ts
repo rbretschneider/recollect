@@ -34,8 +34,8 @@ export class ShareButton {
   readonly targetId = input.required<string>();
   /** For memories: whether the shared page includes journal text. */
   readonly includeJournal = input<boolean>(false);
-  /** 'overlay': circular chrome for photo heroes; 'icon': bordered icon for action rows. */
-  readonly variant = input<'button' | 'overlay' | 'icon'>('button');
+  /** 'overlay': circular chrome; 'icon': bordered icon; 'labeled': icon over a tiny label. */
+  readonly variant = input<'button' | 'overlay' | 'icon' | 'labeled'>('button');
 
   /** Human word for the sheet copy — "asset" is engineer-speak. */
   get targetLabel(): string {

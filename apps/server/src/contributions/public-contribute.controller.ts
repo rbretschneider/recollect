@@ -82,4 +82,34 @@ export class PublicContributeController {
     res.type('image/webp');
     res.sendFile(path);
   }
+
+  @Public()
+  @Get(':token/assets/:assetId/original')
+  async poolOriginal(
+    @Param('token') token: string,
+    @Param('assetId', ParseUUIDPipe) assetId: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.contributions.assertPoolAsset(token, assetId);
+    const file = await this.assets.getOriginalFile(assetId);
+    res.type(file.mime);
+    res.sendFile(file.path);
+  }
+
+  @Public()
+  @Get(':token/assets/:assetId/playback')
+  async poolPlayback(
+    @Param('token') token: string,
+    @Param('assetId', ParseUUIDPipe) assetId: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.contributions.assertPoolAsset(token, assetId);
+    const resolution = await this.assets.getPlayback(assetId);
+    if (resolution.kind === 'preparing') {
+      res.status(202).json({ status: 'preparing' });
+      return;
+    }
+    res.type(resolution.mime);
+    res.sendFile(resolution.path);
+  }
 }

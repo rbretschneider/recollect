@@ -1,5 +1,45 @@
 /* Recollect global theme. Dark-first: photos look best on a dark canvas. */
 
+// Google-Photos-style labeled icon action: a glyph tile with a tiny label
+// underneath. One shape for every page-action row in the app.
+.labeled-action {
+  display: grid;
+  justify-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  min-width: 54px;
+
+  .glyph {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 44px;
+    border: 1px solid var(--border);
+    border-radius: 0.7rem;
+    background: var(--surface);
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  &.active .glyph {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-contrast);
+  }
+
+  &.danger .glyph {
+    color: var(--danger);
+  }
+}
+
 :root {
   --bg: #101014;
   --surface: #1a1a20;

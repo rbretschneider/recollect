@@ -31,13 +31,19 @@ export interface ContributionLinkView {
   createdAt: string;
 }
 
+/** One album entry as shown to guests (media type drives the viewer). */
+export interface PoolItem {
+  id: string;
+  mediaType: 'image' | 'video';
+}
+
 /** What a guest sees when opening a contribution link. */
 export interface ContributeView {
   albumTitle: string;
   poolView: boolean;
   expiresAt: string;
-  /** Approved photos, oldest first — only populated when poolView is on. */
-  poolAssetIds: string[];
+  /** The whole album, in album order — only populated when poolView is on. */
+  poolItems: PoolItem[];
 }
 
 /** One quarantined upload in the review list. */
@@ -136,17 +142,24 @@ export class ContributionsService {
     if (!albumRow) {
       throw new NotFoundException('This link is no longer available.');
     }
-    let poolAssetIds: string[] = [];
+    let poolItems: PoolItem[] = [];
     if (link.poolView) {
       // The WHOLE album, not just guest uploads: guests at the party see the
       // shared album grow — theirs and everyone else's alike.
-      poolAssetIds = (await this.albums.getDetail(link.albumId)).assetIds;
+      const result = await this.db.execute<{ id: string; media_type: 'image' | 'video' }>(sql`
+        select a.id, a.media_type
+        from album_asset aa
+        join asset a on a.id = aa.asset_id and a.status = 'active'
+        where aa.album_id = ${link.albumId}
+        order by aa.sort_order
+      `);
+      poolItems = result.rows.map((row) => ({ id: row.id, mediaType: row.media_type }));
     }
     return {
       albumTitle: albumRow.title,
       poolView: link.poolView,
       expiresAt: link.expiresAt.toISOString(),
-      poolAssetIds,
+      poolItems,
     };
   }
 

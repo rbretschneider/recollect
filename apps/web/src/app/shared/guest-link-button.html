@@ -1,4 +1,7 @@
-<button type="button" class="guest-link" (click)="open()">Guest link</button>
+<button type="button" class="labeled-action" (click)="open()">
+  <span class="glyph"><app-icon name="users" [size]="19" /></span>
+  <span class="label">Guests</span>
+</button>
 
 @if (isOpen()) {
   <app-sheet sheetTitle="Invite guests to add photos" (closed)="close()">

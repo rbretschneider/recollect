@@ -1,10 +1,12 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { HttpEventType } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ContributeView, ContributionsApiService } from '../../core/api/contributions-api.service';
+import { TimelineAsset } from '../../core/api/api-models';
 import { Icon } from '../../shared/icon';
 import { PageLoading } from '../../shared/page-loading';
+import { AssetViewer } from '../viewer/asset-viewer';
 
 const GUEST_NAME_KEY = 'recollect.guestName';
 
@@ -25,7 +27,7 @@ interface UploadItem {
  */
 @Component({
   selector: 'app-contribute-page',
-  imports: [FormsModule, Icon, PageLoading],
+  imports: [AssetViewer, FormsModule, Icon, PageLoading],
   templateUrl: './contribute-page.html',
   styleUrl: './contribute-page.scss',
 })
@@ -62,6 +64,35 @@ export class ContributePage implements OnInit {
 
   poolThumbUrl(assetId: string): string {
     return this.api.poolThumbUrl(this.token, assetId);
+  }
+
+  /** Fullscreen viewing for guests, through the token-scoped media routes. */
+  readonly viewerIndex = signal<number | null>(null);
+
+  get viewerMediaBase(): string {
+    return `/api/v1/contribute/${this.token}/assets`;
+  }
+
+  readonly viewerAssets = computed<TimelineAsset[]>(() =>
+    (this.view()?.poolItems ?? []).map((item) => ({
+      id: item.id,
+      mediaType: item.mediaType,
+      capturedAt: new Date(0).toISOString(),
+      capturedDay: '',
+      width: null,
+      height: null,
+      durationMs: null,
+      hasThumbnail: true,
+      isFavorite: false,
+    })),
+  );
+
+  openViewer(index: number): void {
+    this.viewerIndex.set(index);
+  }
+
+  closeViewer(): void {
+    this.viewerIndex.set(null);
   }
 
   expiryLabel(view: ContributeView): string {
