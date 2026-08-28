@@ -5,11 +5,12 @@ import { SharingApiService } from '../../core/api/sharing-api.service';
 import { SharedView, TimelineAsset, toViewerAsset } from '../../core/api/api-models';
 import { SlideItem, SlideshowOverlay } from '../dashboard/slideshow-overlay';
 import { AssetViewer } from '../viewer/asset-viewer';
+import { Icon } from '../../shared/icon';
 
 /** The public page behind a share link. No account, no navigation chrome. */
 @Component({
   selector: 'app-shared-view-page',
-  imports: [AssetViewer, SlideshowOverlay],
+  imports: [AssetViewer, SlideshowOverlay, Icon],
   templateUrl: './shared-view-page.html',
   styleUrl: './shared-view-page.scss',
 })

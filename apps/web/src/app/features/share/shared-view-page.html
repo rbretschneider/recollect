@@ -30,6 +30,9 @@
             <span class="chip">
               <img [src]="faceCropUrl(person.coverFaceId)" alt="" loading="lazy" />
               {{ person.name }}
+              @if (person.behindCamera) {
+                <app-icon name="camera" [size]="14" class="camera-tag" />
+              }
             </span>
           }
         </div>

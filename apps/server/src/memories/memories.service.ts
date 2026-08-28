@@ -184,7 +184,14 @@ export class MemoriesService {
     }>(sql`
       select coalesce(survivor.id, p.id) as id,
              coalesce(survivor.name, p.name) as name,
-             (array_agg(f.id order by f.quality desc))[1] as cover_face_id,
+             -- The avatar the household pinned via "Make avatar" wins; only when
+             -- none is set do we fall back to the best face in this memory. The
+             -- pinned id is constant per person, so array_agg[1] just reads it
+             -- (uuid has no max() aggregate).
+             coalesce(
+               (array_agg(coalesce(survivor.cover_face_id, p.cover_face_id)))[1],
+               (array_agg(f.id order by f.quality desc))[1]
+             ) as cover_face_id,
              count(distinct f.asset_id)::int as photo_count
       from memory_asset ma
       join face f on f.asset_id = ma.asset_id and f.ignored = false

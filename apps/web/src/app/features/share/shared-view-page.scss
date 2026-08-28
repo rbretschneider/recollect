@@ -57,6 +57,11 @@
         border-radius: 50%;
         object-fit: cover;
       }
+
+      // Marks someone known only as the photographer — never in the photos.
+      .camera-tag {
+        color: var(--text-muted);
+      }
     }
   }
 
