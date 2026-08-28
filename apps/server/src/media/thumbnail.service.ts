@@ -12,6 +12,14 @@ const execFileAsync = promisify(execFile);
 const WEBP_QUALITY_BY_SIZE: Record<number, number> = { 240: 68, 720: 80, 1440: 80 };
 const VIDEO_POSTER_SEEK_SECONDS = 1;
 const FFMPEG_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
+/** A poster extraction that hasn't produced a frame by now is hung on hostile input. */
+const FFMPEG_TIMEOUT_MS = 30_000;
+/**
+ * Hard ceiling on decoded pixels (~100MP). Blocks decompression bombs — a tiny
+ * file that expands to a multi-gigapixel raster — while still clearing real
+ * phone photos and generous panoramas. Untrusted guest uploads hit this path.
+ */
+const SHARP_MAX_PIXELS = 100_000_000;
 
 /** Pixel dimensions discovered while generating thumbnails. */
 export interface RenderedDimensions {
@@ -57,7 +65,10 @@ export class ThumbnailService {
     assetId: string,
     source: string | Buffer,
   ): Promise<RenderedDimensions> {
-    const pipeline = sharp(source, { failOn: 'truncated' }).rotate();
+    const pipeline = sharp(source, {
+      failOn: 'truncated',
+      limitInputPixels: SHARP_MAX_PIXELS,
+    }).rotate();
     const metadata = await pipeline.metadata();
     await Promise.all(
       THUMBNAIL_SIZES.map((size) =>
@@ -84,7 +95,7 @@ export class ThumbnailService {
   ): Promise<void> {
     const source =
       typeInfo.mediaType === 'video' ? await this.extractVideoPoster(absolutePath) : absolutePath;
-    await sharp(source, { failOn: 'truncated' })
+    await sharp(source, { failOn: 'truncated', limitInputPixels: SHARP_MAX_PIXELS })
       .rotate()
       .resize({ width: edge, height: edge, fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 78 })
@@ -113,6 +124,12 @@ export class ThumbnailService {
       const { stdout } = await execFileAsync(
         ffmpegPath,
         [
+          // Restrict input to the local-file protocol: a "video" whose bytes are
+          // really an HLS/concat playlist can otherwise make ffmpeg fetch
+          // file:/http: URLs of the attacker's choosing (LFI/SSRF). -nostdin
+          // stops it blocking on a prompt for a truncated input.
+          '-nostdin',
+          '-protocol_whitelist', 'file',
           '-ss', String(seekSeconds),
           '-i', absolutePath,
           '-frames:v', '1',
@@ -120,7 +137,7 @@ export class ThumbnailService {
           '-vcodec', 'png',
           '-',
         ],
-        { encoding: 'buffer', maxBuffer: FFMPEG_MAX_BUFFER_BYTES },
+        { encoding: 'buffer', maxBuffer: FFMPEG_MAX_BUFFER_BYTES, timeout: FFMPEG_TIMEOUT_MS },
       );
       return stdout;
     } catch {

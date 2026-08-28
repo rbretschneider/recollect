@@ -4,12 +4,13 @@
 
 FROM node:22-bookworm-slim AS build
 WORKDIR /repo
-COPY package.json ./
+COPY package.json package-lock.json ./
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
-# npm i (not ci): the Windows-generated lockfile omits Linux native optional
-# dependencies (npm/cli#4828). TODO: regenerate the lock on Linux CI and pin.
-RUN npm i
+# Reproducible, lockfile-pinned install. The lock now records the Linux native
+# optional deps (sharp, esbuild) — the old npm/cli#4828 gap no longer applies on
+# npm 11 — so `npm ci` builds deterministically from exactly what's committed.
+RUN npm ci
 COPY apps ./apps
 RUN npm run build --workspace @recollect/server \
   && npm run build --workspace @recollect/web \

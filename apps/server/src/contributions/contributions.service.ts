@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { copyFile, mkdir, rename, rm, stat } from 'fs/promises';
+import { copyFile, mkdir, readdir, rename, rm, stat } from 'fs/promises';
 import { extname, join, resolve } from 'path';
 import { v7 as uuidv7 } from 'uuid';
 import { AlbumsService } from '../albums/albums.service';
@@ -182,8 +182,10 @@ export class ContributionsService {
     clientIp: string,
     file: { originalname: string; path: string; size: number },
   ): Promise<{ id: string }> {
-    const link = await this.requireActiveLink(token);
     try {
+      // requireActiveLink lives INSIDE the try so a token that turns invalid
+      // between the guard and here still gets its temp file cleaned up.
+      const link = await this.requireActiveLink(token);
       this.assertRateLimit(`${link.id}:${clientIp}`);
       if (link.uploadCount >= MAX_UPLOADS_PER_LINK) {
         throw new BadRequestException('This link has reached its upload limit.');
@@ -242,10 +244,11 @@ export class ContributionsService {
         );
       }
       return { id };
-    } catch (error) {
-      // Never leave orphaned temp files behind a failed request.
+    } finally {
+      // A good upload was renamed out of tmp/ already, so this is a no-op on
+      // success and the orphan-cleaner on every failure path — including a
+      // token that was rejected before the body finished streaming.
       await rm(file.path, { force: true }).catch(() => undefined);
-      throw error;
     }
   }
 
@@ -373,6 +376,46 @@ export class ContributionsService {
 
   async ensureStagingDir(): Promise<void> {
     await mkdir(this.stagingDir, { recursive: true });
+  }
+
+  /**
+   * Cheap gate run by the upload guard BEFORE multer streams the body: a bogus,
+   * expired, revoked, or maxed-out token is rejected without a single byte of
+   * the (up to 2GB) upload ever touching disk. Deliberately does not touch the
+   * rate-limit window — registerUpload owns that once a body is actually taken.
+   */
+  async assertLinkAcceptsUploads(token: string): Promise<void> {
+    const link = await this.requireActiveLink(token);
+    if (link.uploadCount >= MAX_UPLOADS_PER_LINK) {
+      throw new BadRequestException('This link has reached its upload limit.');
+    }
+  }
+
+  /**
+   * Removes staging temp files left behind by interrupted or rejected uploads.
+   * Multer renames a good upload out of tmp/ within one request, so anything
+   * older than the cutoff is an orphan. Runs at boot and hourly.
+   */
+  async sweepStaging(maxAgeMs = 60 * 60_000): Promise<void> {
+    const tmpDir = join(this.stagingDir, 'tmp');
+    let entries: string[];
+    try {
+      entries = await readdir(tmpDir);
+    } catch {
+      return; // No tmp dir yet — nothing to sweep.
+    }
+    const cutoff = Date.now() - maxAgeMs;
+    for (const name of entries) {
+      const full = join(tmpDir, name);
+      try {
+        const info = await stat(full);
+        if (info.mtimeMs < cutoff) {
+          await rm(full, { force: true }).catch(() => undefined);
+        }
+      } catch {
+        // Vanished between readdir and stat — fine.
+      }
+    }
   }
 
   private stagedFilePath(uploadId: string, originalFilename: string): string {

@@ -151,6 +151,19 @@ export class UsersService {
       isAdmin: row.isAdmin,
       mustChangePassword: row.mustChangePassword,
       personId: row.personId,
+      tokenVersion: row.tokenVersion,
     };
+  }
+
+  /**
+   * Invalidates every live access token for the account at once by advancing
+   * its version. Callers that also need a fresh profile must read after this.
+   */
+  async bumpTokenVersion(userId: string): Promise<void> {
+    await this.db
+      .update(userAccount)
+      .set({ tokenVersion: sql`${userAccount.tokenVersion} + 1` })
+      .where(eq(userAccount.id, userId));
+    this.invalidateProfile(userId);
   }
 }

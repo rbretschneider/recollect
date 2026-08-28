@@ -16,9 +16,15 @@ interface FailureRecord {
 }
 
 /**
- * Brute-force protection for login: exponential backoff tracked per client IP
- * AND per account email, so a botnet can't spread guesses across addresses
- * and a single bad actor can't lock the family out from one address alone.
+ * Brute-force protection for login: exponential backoff per client IP.
+ *
+ * The lock is keyed on IP ONLY. An earlier version also locked on the account
+ * email — but since an attacker chooses the email, that let anyone lock a known
+ * victim out of their own account by burning failures against it from rotating
+ * addresses. The email counter is still kept (it feeds no denial, only future
+ * detection/telemetry), so a targeted lockout is impossible while per-IP
+ * backoff still makes bulk guessing from one host impractical.
+ *
  * In-memory by design — a restart forgiving the counters is acceptable, the
  * backoff math is what makes bulk guessing impractical.
  */
@@ -26,18 +32,16 @@ interface FailureRecord {
 export class LoginThrottleService {
   private readonly records = new Map<string, FailureRecord>();
 
-  /** Throws 429 (with Retry-After semantics in the message) while a key is locked. */
-  assertAllowed(ip: string, email: string): void {
+  /** Throws 429 (with Retry-After semantics in the message) while the IP is locked. */
+  assertAllowed(ip: string): void {
     this.prune();
-    for (const key of this.keysFor(ip, email)) {
-      const record = this.records.get(key);
-      if (record && record.lockedUntil > Date.now()) {
-        const seconds = Math.ceil((record.lockedUntil - Date.now()) / 1000);
-        throw new HttpException(
-          `Too many attempts. Try again in ${seconds}s.`,
-          HttpStatus.TOO_MANY_REQUESTS,
-        );
-      }
+    const record = this.records.get(`ip:${ip}`);
+    if (record && record.lockedUntil > Date.now()) {
+      const seconds = Math.ceil((record.lockedUntil - Date.now()) / 1000);
+      throw new HttpException(
+        `Too many attempts. Try again in ${seconds}s.`,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
   }
 

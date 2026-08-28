@@ -10,8 +10,11 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
     volumes:
       - db-data:/var/lib/postgresql/data
+    # Bind to loopback only by default: the server reaches the DB over the
+    # compose network, so publishing to all interfaces on a public host would
+    # expose Postgres needlessly. Override DB_BIND for remote admin access.
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "${DB_BIND:-127.0.0.1}:${DB_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-recollect} -d ${DB_NAME:-recollect}"]
       interval: 10s

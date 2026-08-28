@@ -19,7 +19,9 @@ export class SharingApiService {
         targetType,
         targetId,
         includeJournal,
-        ...(expiresInHours === null ? {} : { expiresInHours }),
+        // null is the user explicitly choosing "until turned off" — send the
+        // permanent opt-in so the server doesn't apply its bounded default.
+        ...(expiresInHours === null ? { neverExpires: true } : { expiresInHours }),
       }),
     );
   }

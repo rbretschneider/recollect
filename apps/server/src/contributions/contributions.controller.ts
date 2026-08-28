@@ -40,6 +40,7 @@ export class ContributionsController {
     return { link };
   }
 
+  @RequireGrant('write')
   @Get('albums/:albumId/links')
   async listLinks(
     @Param('albumId', ParseUUIDPipe) albumId: string,
@@ -54,6 +55,7 @@ export class ContributionsController {
     return { ok: true };
   }
 
+  @RequireGrant('write')
   @Get('albums/:albumId/uploads')
   async listPending(
     @Param('albumId', ParseUUIDPipe) albumId: string,
@@ -80,6 +82,7 @@ export class ContributionsController {
   }
 
   /** Review thumbnail for one pending upload (generated at upload time). */
+  @RequireGrant('write')
   @Get('uploads/:id/preview')
   async preview(
     @Param('id', ParseUUIDPipe) uploadId: string,

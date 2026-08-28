@@ -113,7 +113,7 @@ export class AuthService {
       })
       .where(eq(session.id, row.id));
     return {
-      accessToken: await this.tokens.signAccessToken(user.id),
+      accessToken: await this.tokens.signAccessToken(user.id, user.tokenVersion),
       refreshToken: rotated.token,
       user,
     };
@@ -151,6 +151,8 @@ export class AuthService {
       .update(session)
       .set({ revokedAt: new Date() })
       .where(and(eq(session.userId, userId), isNull(session.revokedAt)));
+    // Kill every live access token too, not just the refresh sessions.
+    await this.users.bumpTokenVersion(userId);
   }
 
   async logout(refreshToken: string): Promise<void> {
@@ -171,7 +173,7 @@ export class AuthService {
       expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_DAYS * MILLISECONDS_PER_DAY),
     });
     return {
-      accessToken: await this.tokens.signAccessToken(user.id),
+      accessToken: await this.tokens.signAccessToken(user.id, user.tokenVersion),
       refreshToken: refresh.token,
       user,
     };

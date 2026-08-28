@@ -10,6 +10,8 @@ export interface UserProfile {
   mustChangePassword: boolean;
   /** Their face-recognized identity ("this account IS this person"), if linked. */
   personId: string | null;
+  /** Access tokens minted before this version are rejected by the auth guard. */
+  tokenVersion: number;
 }
 
 /** Admin edits to an existing member; every field optional. */

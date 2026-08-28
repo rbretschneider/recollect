@@ -11,6 +11,14 @@ const execFileAsync = promisify(execFile);
 
 /** Old containers can spew megabytes of warnings; never let stderr kill the job. */
 const FFMPEG_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
+/**
+ * Wall-clock backstop. A transcode still running after this is hung on hostile
+ * input, not making progress — kill it so it can't pin a worker forever. Set
+ * generously so a genuinely long home video (2 threads, veryfast) finishes; a
+ * content-length cap (-t) is deliberately NOT used, as it would silently
+ * truncate the family's own long recordings.
+ */
+const FFMPEG_TIMEOUT_MS = 2 * 60 * 60_000;
 
 /** ffmpeg messages that mean the SOURCE file is broken, not the transcode. */
 const CORRUPT_SOURCE_MARKERS = [
@@ -67,6 +75,10 @@ export class TranscodeService {
         ffmpegPath,
         [
           '-y',
+          '-nostdin',
+          // Untrusted guest video reaches this path; keep ffmpeg on local files
+          // only so a disguised HLS/concat playlist can't fetch file:/http: URLs.
+          '-protocol_whitelist', 'file',
           '-loglevel', 'error',
           '-threads', String(this.config.transcodeThreads),
           '-i', sourcePath,
@@ -79,7 +91,7 @@ export class TranscodeService {
           '-movflags', '+faststart',
           temporary,
         ],
-        { maxBuffer: FFMPEG_MAX_BUFFER_BYTES },
+        { maxBuffer: FFMPEG_MAX_BUFFER_BYTES, timeout: FFMPEG_TIMEOUT_MS },
       );
     } catch (error) {
       const message = (error as Error).message ?? '';

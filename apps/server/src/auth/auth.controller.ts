@@ -40,7 +40,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ user: UserProfile }> {
     const ip = req.ip ?? 'unknown';
-    this.throttle.assertAllowed(ip, body.email);
+    this.throttle.assertAllowed(ip);
     let issued;
     try {
       issued = await this.auth.login(body.email, body.password, body.deviceLabel);

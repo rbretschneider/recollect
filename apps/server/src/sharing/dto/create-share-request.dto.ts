@@ -12,10 +12,19 @@ export class CreateShareRequestDto {
   @IsBoolean()
   includeJournal?: boolean;
 
-  /** Hours until the link expires; omit for a link that never expires (explicit choice). */
+  /** Hours until the link expires; omit to fall back to the 90-day default. */
   @IsOptional()
   @IsInt()
   @Min(1)
   @Max(24 * 365)
   expiresInHours?: number;
+
+  /**
+   * Opt in to a link that never expires. Requires an explicit choice — a link
+   * left to default is bounded, so a URL pasted into a chat can't quietly serve
+   * originals forever.
+   */
+  @IsOptional()
+  @IsBoolean()
+  neverExpires?: boolean;
 }

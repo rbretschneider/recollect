@@ -11,6 +11,7 @@ import {
   Req,
   Res,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -18,6 +19,7 @@ import type { Request, Response } from 'express';
 import { AssetsService } from '../assets/assets.service';
 import { Public } from '../auth/decorators/public.decorator';
 import { isThumbnailSize } from '../media/thumbnail-store';
+import { ContributionUploadGuard } from './contribution-upload.guard';
 import { ContributeView, ContributionsService } from './contributions.service';
 
 /** The shape multer hands us after streaming to the staging temp dir. */
@@ -47,6 +49,7 @@ export class PublicContributeController {
 
   @Public()
   @Post(':token/upload')
+  @UseGuards(ContributionUploadGuard)
   @UseInterceptors(FileInterceptor('file'))
   async upload(
     @Param('token') token: string,

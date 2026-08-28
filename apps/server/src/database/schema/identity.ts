@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   index,
+  integer,
   jsonb,
   pgTable,
   text,
@@ -22,6 +23,14 @@ export const userAccount = pgTable(
     permission: text('permission').notNull().default('read'),
     isAdmin: boolean('is_admin').notNull().default(false),
     mustChangePassword: boolean('must_change_password').notNull().default(false),
+    /**
+     * Bumped whenever every live access token for this account must die at once
+     * (password change, "sign out everywhere", disable). The access JWT carries
+     * the value it was minted with; the auth guard rejects any token whose
+     * version is behind the account's — closing the up-to-15-minute window a
+     * stateless JWT would otherwise stay valid for.
+     */
+    tokenVersion: integer('token_version').notNull().default(0),
     /**
      * "This account IS this person" — links the login to their face-recognized
      * identity (plain uuid: person lives in another schema file, and a FK here

@@ -24,20 +24,24 @@ export class TokenService {
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
-  async signAccessToken(userId: string): Promise<string> {
+  async signAccessToken(userId: string, tokenVersion: number): Promise<string> {
     return this.jwt.signAsync(
-      { sub: userId },
+      { sub: userId, ver: tokenVersion },
       { secret: this.config.authTokenSecret, expiresIn: ACCESS_TOKEN_TTL_SECONDS },
     );
   }
 
-  /** Returns the user id from a valid access token, or null when invalid/expired. */
-  async verifyAccessToken(token: string): Promise<string | null> {
+  /**
+   * Returns the user id and token version from a valid access token, or null
+   * when the signature/expiry is invalid. The version lets the guard reject
+   * tokens minted before a password change or "sign out everywhere".
+   */
+  async verifyAccessToken(token: string): Promise<{ userId: string; tokenVersion: number } | null> {
     try {
-      const payload = await this.jwt.verifyAsync<{ sub: string }>(token, {
+      const payload = await this.jwt.verifyAsync<{ sub: string; ver?: number }>(token, {
         secret: this.config.authTokenSecret,
       });
-      return payload.sub;
+      return { userId: payload.sub, tokenVersion: payload.ver ?? 0 };
     } catch {
       return null;
     }

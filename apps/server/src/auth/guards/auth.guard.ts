@@ -39,13 +39,19 @@ export class AuthGuard implements CanActivate {
     if (!token) {
       throw new UnauthorizedException('Not signed in.');
     }
-    const userId = await this.tokens.verifyAccessToken(token);
-    if (!userId) {
+    const verified = await this.tokens.verifyAccessToken(token);
+    if (!verified) {
       throw new UnauthorizedException('Session expired.');
     }
-    const user = await this.users.findById(userId);
+    const user = await this.users.findById(verified.userId);
     if (!user) {
       throw new UnauthorizedException('Account is no longer active.');
+    }
+    // A password change or "sign out everywhere" bumps the account's version,
+    // so an access token minted before it is dead immediately — not after its
+    // 15-minute lifetime.
+    if (verified.tokenVersion !== user.tokenVersion) {
+      throw new UnauthorizedException('Session expired.');
     }
     // A forced password change blocks everything except the auth endpoints
     // themselves (change password, who-am-I, logout). The web app routes the
