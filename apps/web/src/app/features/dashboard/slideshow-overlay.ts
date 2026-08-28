@@ -15,7 +15,24 @@ const MUSIC_TRACKS = [
   'audio/gymnopedie-1.m4a',
   'audio/clair-de-lune.m4a',
   'audio/gymnopedie-3.m4a',
+  'audio/maple-leaf-rag.m4a',
+  'audio/the-entertainer.m4a',
+  'audio/hungarian-dance-1.m4a',
+  'audio/hungarian-dance-4.m4a',
+  'audio/waltz-of-the-flowers.m4a',
+  'audio/turkey-in-the-straw.m4a',
+  'audio/washington-post-march.m4a',
 ];
+
+/** A fresh shuffled play order for each show — every track before any repeat. */
+function shuffledTracks(): string[] {
+  const order = [...MUSIC_TRACKS];
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return order;
+}
 const MUSIC_PREF_KEY = 'recollect.slideshowMusic';
 const MUSIC_VOLUME = 0.35;
 
@@ -57,7 +74,8 @@ export class SlideshowOverlay implements OnDestroy {
    */
   readonly musicOn = signal(this.loadMusicPref());
   private audio: HTMLAudioElement | null = null;
-  private trackIndex = Math.floor((Date.now() / 1000) % MUSIC_TRACKS.length);
+  private readonly playlist = shuffledTracks();
+  private trackIndex = 0;
 
   constructor() {
     effect(() => {
@@ -104,11 +122,11 @@ export class SlideshowOverlay implements OnDestroy {
   }
 
   private startMusic(): void {
-    const audio = new Audio(MUSIC_TRACKS[this.trackIndex % MUSIC_TRACKS.length]);
+    const audio = new Audio(this.playlist[this.trackIndex % this.playlist.length]);
     audio.volume = MUSIC_VOLUME;
     audio.addEventListener('ended', () => {
       this.trackIndex += 1;
-      audio.src = MUSIC_TRACKS[this.trackIndex % MUSIC_TRACKS.length];
+      audio.src = this.playlist[this.trackIndex % this.playlist.length];
       void audio.play().catch(() => undefined);
     });
     this.audio = audio;
