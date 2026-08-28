@@ -7,6 +7,7 @@ import { TimelineAsset } from '../../core/api/api-models';
 import { Icon } from '../../shared/icon';
 import { PageLoading } from '../../shared/page-loading';
 import { AssetViewer } from '../viewer/asset-viewer';
+import { SlideshowOverlay } from '../dashboard/slideshow-overlay';
 
 const GUEST_NAME_KEY = 'recollect.guestName';
 
@@ -27,7 +28,7 @@ interface UploadItem {
  */
 @Component({
   selector: 'app-contribute-page',
-  imports: [AssetViewer, FormsModule, Icon, PageLoading],
+  imports: [AssetViewer, FormsModule, Icon, PageLoading, SlideshowOverlay],
   templateUrl: './contribute-page.html',
   styleUrl: './contribute-page.scss',
 })
@@ -65,6 +66,8 @@ export class ContributePage implements OnInit {
   poolThumbUrl(assetId: string): string {
     return this.api.poolThumbUrl(this.token, assetId);
   }
+
+  readonly showSlideshow = signal(false);
 
   /** Fullscreen viewing for guests, through the token-scoped media routes. */
   readonly viewerIndex = signal<number | null>(null);

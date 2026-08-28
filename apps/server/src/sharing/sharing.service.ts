@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { v7 as uuidv7 } from 'uuid';
 import { AlbumsService } from '../albums/albums.service';
 import { DATABASE } from '../database/database.module';
@@ -34,6 +34,8 @@ export interface SharedView {
   startAt: string | null;
   endAt: string | null;
   assetIds: string[];
+  /** Same assets with media types, so viewers and slideshows play videos. */
+  mediaItems: Array<{ id: string; mediaType: 'image' | 'video' }>;
   journal: Array<{ authorName: string; bodyMd: string }>;
   quotes: Array<{ text: string; saidBy: string }>;
 }
@@ -124,6 +126,7 @@ export class SharingService {
         startAt: row.capturedAt.toISOString(),
         endAt: row.capturedAt.toISOString(),
         assetIds: [link.targetId],
+        mediaItems: await this.mediaItemsFor([link.targetId]),
         journal: [],
         quotes: [],
       };
@@ -137,6 +140,7 @@ export class SharingService {
         startAt: detail.startAt,
         endAt: detail.endAt,
         assetIds: detail.assetIds,
+        mediaItems: await this.mediaItemsFor(detail.assetIds),
         journal: link.includeJournal
           ? detail.journal.map((entry) => ({ authorName: entry.authorName, bodyMd: entry.bodyMd }))
           : [],
@@ -154,6 +158,7 @@ export class SharingService {
       startAt: null,
       endAt: null,
       assetIds: detail.assetIds,
+      mediaItems: await this.mediaItemsFor(detail.assetIds),
       journal: [],
       quotes: [],
     };
@@ -238,6 +243,24 @@ export class SharingService {
       sql`select asset_id from ${table} where ${column} = ${link.targetId} order by sort_order limit 1`,
     );
     return result.rows[0]?.asset_id ?? null;
+  }
+
+  /** Media types for a list of assets, preserving the list's order. */
+  private async mediaItemsFor(
+    assetIds: string[],
+  ): Promise<Array<{ id: string; mediaType: 'image' | 'video' }>> {
+    if (assetIds.length === 0) {
+      return [];
+    }
+    const rows = await this.db
+      .select({ id: asset.id, mediaType: asset.mediaType })
+      .from(asset)
+      .where(inArray(asset.id, assetIds));
+    const byId = new Map(rows.map((row) => [row.id, row.mediaType]));
+    return assetIds.map((id) => ({
+      id,
+      mediaType: (byId.get(id) ?? 'image') as 'image' | 'video',
+    }));
   }
 
   private async requireActiveLink(token: string): Promise<typeof shareLink.$inferSelect> {

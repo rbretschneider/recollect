@@ -37,8 +37,16 @@
         ></video>
       }
     }
-    @if (isPaused()) {
+    @if (isPaused() && !isFinished()) {
       <div class="paused-hint" aria-live="polite">Paused — tap to resume</div>
+    }
+    @if (isFinished()) {
+      <div class="end-card" aria-live="polite">
+        <p>That's everything ✨</p>
+        <button type="button" class="replay" (click)="replay(); $event.stopPropagation()">
+          ↺ Replay
+        </button>
+      </div>
     }
   </div>
 

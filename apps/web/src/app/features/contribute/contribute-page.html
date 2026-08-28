@@ -79,7 +79,14 @@
 
     @if (info.poolView) {
       <section class="pool" aria-label="The album so far">
-        <h2>The album so far</h2>
+        <div class="pool-head">
+          <h2>The album so far</h2>
+          @if (info.poolItems.length > 1) {
+            <button type="button" class="play" (click)="showSlideshow.set(true)">
+              ▶ Play
+            </button>
+          }
+        </div>
         @if (info.poolItems.length === 0) {
           <p class="hint">Nothing here yet — yours could be first.</p>
         } @else {
@@ -109,6 +116,15 @@
       [mediaBase]="viewerMediaBase"
       [allowInfo]="false"
       (closed)="closeViewer()"
+    />
+  }
+
+  @if (showSlideshow()) {
+    <app-slideshow-overlay
+      [items]="info.poolItems"
+      [title]="info.albumTitle"
+      [mediaBase]="viewerMediaBase"
+      (closed)="showSlideshow.set(false)"
     />
   }
 }

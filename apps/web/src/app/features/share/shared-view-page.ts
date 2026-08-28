@@ -2,12 +2,13 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { SharingApiService } from '../../core/api/sharing-api.service';
 import { SharedView, TimelineAsset } from '../../core/api/api-models';
+import { SlideItem, SlideshowOverlay } from '../dashboard/slideshow-overlay';
 import { AssetViewer } from '../viewer/asset-viewer';
 
 /** The public page behind a share link. No account, no navigation chrome. */
 @Component({
   selector: 'app-shared-view-page',
-  imports: [AssetViewer],
+  imports: [AssetViewer, SlideshowOverlay],
   templateUrl: './shared-view-page.html',
   styleUrl: './shared-view-page.scss',
 })
@@ -40,9 +41,10 @@ export class SharedViewPage implements OnInit {
     if (!view) {
       return [];
     }
+    const typeById = new Map((view.mediaItems ?? []).map((item) => [item.id, item.mediaType]));
     return view.assetIds.map((id) => ({
       id,
-      mediaType: 'image' as const,
+      mediaType: typeById.get(id) ?? ('image' as const),
       capturedAt: view.startAt ?? new Date(0).toISOString(),
       capturedDay: (view.startAt ?? '').slice(0, 10),
       width: null,
@@ -72,6 +74,13 @@ export class SharedViewPage implements OnInit {
   openViewer(index: number): void {
     this.viewerIndex.set(index);
   }
+
+  /** Play everything as a music-backed slideshow, token-scoped media. */
+  readonly showSlideshow = signal(false);
+
+  readonly slideshowItems = computed<SlideItem[]>(
+    () => this.view()?.mediaItems ?? [],
+  );
 
   closeViewer(): void {
     this.viewerIndex.set(null);

@@ -15,6 +15,11 @@
       @if (shared.description) {
         <p class="description">{{ shared.description }}</p>
       }
+      @if (shared.assetIds.length > 1) {
+        <button type="button" class="play" (click)="showSlideshow.set(true)">
+          ▶ Play slideshow
+        </button>
+      }
     </header>
 
     @for (entry of shared.journal; track entry.authorName + entry.bodyMd) {
@@ -41,6 +46,15 @@
 
     <footer>Shared with Recollect</footer>
   </main>
+}
+
+@if (showSlideshow()) {
+  <app-slideshow-overlay
+    [items]="slideshowItems()"
+    [title]="view()?.title ?? ''"
+    [mediaBase]="mediaBase"
+    (closed)="showSlideshow.set(false)"
+  />
 }
 
 @if (viewerIndex() !== null) {

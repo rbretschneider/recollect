@@ -194,6 +194,8 @@ export interface SharedView {
   startAt: string | null;
   endAt: string | null;
   assetIds: string[];
+  /** Same assets with media types, so viewers and slideshows play videos. */
+  mediaItems: Array<{ id: string; mediaType: 'image' | 'video' }>;
   journal: Array<{ authorName: string; bodyMd: string }>;
   quotes: Array<{ text: string; saidBy: string }>;
 }

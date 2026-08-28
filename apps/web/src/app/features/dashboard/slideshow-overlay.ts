@@ -33,10 +33,14 @@ const MUSIC_VOLUME = 0.35;
 export class SlideshowOverlay implements OnDestroy {
   readonly items = input.required<SlideItem[]>();
   readonly title = input<string>('');
+  /** Base URL for media routes; public pages point this at their token scope. */
+  readonly mediaBase = input<string>('/api/v1/assets');
   readonly closed = output<void>();
 
   readonly index = signal(0);
   readonly isPaused = signal(false);
+  /** True after the last slide: the show stops and offers a replay. */
+  readonly isFinished = signal(false);
   readonly current = computed<SlideItem | null>(() => this.items()[this.index()] ?? null);
   /** Single-item list so @for track recreates the element (crossfade). */
   readonly currentAsList = computed<SlideItem[]>(() => {
@@ -59,14 +63,15 @@ export class SlideshowOverlay implements OnDestroy {
     effect(() => {
       const item = this.current();
       const paused = this.isPaused();
+      const finished = this.isFinished();
       this.clearTimer();
       // Videos advance themselves via (ended); photos ride the clock.
-      if (item && item.mediaType === 'image' && !paused) {
+      if (item && item.mediaType === 'image' && !paused && !finished) {
         this.timer = setTimeout(() => this.next(), IMAGE_HOLD_MS);
       }
-      // Music ducks for videos and pause; resumes for photos.
+      // Music ducks for videos, pause, and the end card.
       if (this.audio) {
-        if (!this.musicOn() || paused || item?.mediaType === 'video') {
+        if (!this.musicOn() || paused || finished || item?.mediaType === 'video') {
           this.audio.pause();
         } else {
           void this.audio.play().catch(() => undefined);
@@ -119,20 +124,34 @@ export class SlideshowOverlay implements OnDestroy {
   }
 
   imageUrl(id: string): string {
-    return `/api/v1/assets/${id}/thumb/1440`;
+    return `${this.mediaBase()}/${id}/thumb/1440`;
   }
 
   videoUrl(id: string): string {
-    return `/api/v1/assets/${id}/playback`;
+    return `${this.mediaBase()}/${id}/playback`;
   }
 
   next(): void {
-    this.index.update((value) => (value + 1) % Math.max(1, this.items().length));
+    // The end is the end: stop and offer a replay instead of looping.
+    if (this.index() >= this.items().length - 1) {
+      this.isFinished.set(true);
+      return;
+    }
+    this.index.update((value) => value + 1);
   }
 
   previous(): void {
-    const count = Math.max(1, this.items().length);
-    this.index.update((value) => (value - 1 + count) % count);
+    if (this.isFinished()) {
+      this.isFinished.set(false);
+      return;
+    }
+    this.index.update((value) => Math.max(0, value - 1));
+  }
+
+  replay(): void {
+    this.isFinished.set(false);
+    this.isPaused.set(false);
+    this.index.set(0);
   }
 
   togglePause(): void {

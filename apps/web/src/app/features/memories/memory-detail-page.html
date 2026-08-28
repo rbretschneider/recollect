@@ -5,8 +5,18 @@
         <img [src]="cover" alt="" />
       }
       <app-back class="overlay" to="/memories" label="Back to memories" />
-      @if (canWrite) {
-        <div class="hero-actions">
+      <div class="hero-actions">
+        @if (memory.assetIds.length > 1) {
+          <button
+            type="button"
+            class="hero-play"
+            aria-label="Play slideshow"
+            (click)="openSlideshow()"
+          >
+            ▶
+          </button>
+        }
+        @if (canWrite) {
           <app-edit-toggle variant="overlay" />
           <app-share-button
             variant="overlay"
@@ -14,8 +24,8 @@
             [targetId]="memory.id"
             [includeJournal]="true"
           />
-        </div>
-      }
+        }
+      </div>
       <div class="hero-text">
         @if (isEditingTitle()) {
           <input
@@ -233,6 +243,14 @@
     [startIndex]="viewerIndex()!"
     (closed)="closeViewer()"
     (deleted)="onViewerDeleted($event)"
+  />
+}
+
+@if (slideshowItems(); as slides) {
+  <app-slideshow-overlay
+    [items]="slides"
+    [title]="detail()?.title ?? ''"
+    (closed)="slideshowItems.set(null)"
   />
 }
 

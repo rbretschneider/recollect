@@ -25,15 +25,16 @@ import { Icon } from '../../shared/icon';
 import { SafeResourcePipe } from '../../shared/safe-resource.pipe';
 import { ShareButton } from '../../shared/share-button';
 import { AssetViewer } from '../viewer/asset-viewer';
+import { SlideItem, SlideshowOverlay } from '../dashboard/slideshow-overlay';
 
 const JOURNAL_AUTOSAVE_MS = 1500;
 
 /** One Memory: hero, editable title, media grid, and the journal. */
 @Component({
   selector: 'app-memory-detail-page',
-  imports: [PageLoading, BackButton, 
+  imports: [PageLoading, BackButton,
     AssetViewer,
-
+    SlideshowOverlay,
     EditToggle,
     FormsModule,
     Icon,
@@ -380,4 +381,19 @@ export class MemoryDetailPage implements OnInit {
     this.viewerAssets.set(items);
   }
 
+  /** The whole memory as a music-backed slideshow (real media types). */
+  readonly slideshowItems = signal<SlideItem[] | null>(null);
+
+  async openSlideshow(): Promise<void> {
+    const detail = this.detail();
+    if (!detail) {
+      return;
+    }
+    if (this.viewerAssets().length === 0) {
+      await this.loadViewerAssets(detail.assetIds);
+    }
+    this.slideshowItems.set(
+      this.viewerAssets().map((asset) => ({ id: asset.id, mediaType: asset.mediaType })),
+    );
+  }
 }
