@@ -12,6 +12,7 @@ import { FoldersModule } from './folders/folders.module';
 import { HealthController } from './health/health.controller';
 import { JobsModule } from './jobs/jobs.module';
 import { LibraryModule } from './library/library.module';
+import { MailModule } from './mail/mail.module';
 import { MemoriesModule } from './memories/memories.module';
 import { MlModule } from './ml/ml.module';
 import { PeopleModule } from './people/people.module';
@@ -38,6 +39,7 @@ import { UsersModule } from './users/users.module';
     CleanupModule,
     ContributionsModule,
     DashboardModule,
+    MailModule,
     MlModule,
     PeopleModule,
     PlacesModule,

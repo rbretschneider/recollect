@@ -1,4 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DevicesApiService, DeviceView } from '../../core/api/devices-api.service';
@@ -23,6 +25,7 @@ import { Sheet } from '../../shared/sheet';
 })
 export class SettingsPage implements OnInit {
   private readonly usersApi = inject(UsersApiService);
+  private readonly http = inject(HttpClient);
   private readonly devicesApi = inject(DevicesApiService);
   private readonly peopleApi = inject(PeopleApiService);
   private readonly auth = inject(AuthStateService);
@@ -104,6 +107,28 @@ export class SettingsPage implements OnInit {
     }
     await this.auth.logoutAll();
     await this.router.navigateByUrl('/login');
+  }
+
+  /** Outgoing-mail status card (admin): configured state + test send. */
+  readonly mailStatus = signal<{ enabled: boolean; host: string; from: string } | null>(null);
+  readonly mailTestState = signal<'idle' | 'sending' | 'sent'>('idle');
+  readonly mailTestError = signal<string | null>(null);
+
+  async sendTestMail(): Promise<void> {
+    const to = this.auth.user()?.email;
+    if (!to || this.mailTestState() === 'sending') {
+      return;
+    }
+    this.mailTestState.set('sending');
+    this.mailTestError.set(null);
+    try {
+      await firstValueFrom(this.http.post('/api/v1/mail/test', { to }));
+      this.mailTestState.set('sent');
+      setTimeout(() => this.mailTestState.set('idle'), 2500);
+    } catch (error) {
+      this.mailTestState.set('idle');
+      this.mailTestError.set(this.messageFrom(error, 'Test send failed.'));
+    }
   }
 
   /** Member being edited (drives the edit sheet) and its working copy. */
@@ -216,6 +241,13 @@ export class SettingsPage implements OnInit {
     this.users.set(usersResult.users);
     this.devices.set(devicesResult.devices);
     this.namedPeople.set(peopleResult.people.filter((person) => person.name !== null));
+    if (this.isAdmin) {
+      this.mailStatus.set(
+        await firstValueFrom(
+          this.http.get<{ enabled: boolean; host: string; from: string }>('/api/v1/mail/status'),
+        ).catch(() => null),
+      );
+    }
     for (const device of devicesResult.devices) {
       this.deviceDrafts[this.deviceKey(device)] = device.personId ?? '';
     }

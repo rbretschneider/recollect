@@ -40,6 +40,13 @@ const configSchema = z.object({
    * empty falls back to APP_DATA_DIR/guest-library (the Docker volume).
    */
   guestLibraryDir: z.string().default(''),
+  /** SMTP for outgoing mail (invites, notifications). Empty host = mail off. */
+  smtpHost: z.string().default(''),
+  smtpPort: z.coerce.number().int().positive().default(587),
+  smtpUser: z.string().default(''),
+  smtpPass: z.string().default(''),
+  /** From header, e.g. "Recollect <you@gmail.com>". Required when host is set. */
+  smtpFrom: z.string().default(''),
   /** Comma-separated bases the library folder picker may browse (mounted volumes). */
   libraryBrowseBases: z
     .string()
@@ -74,6 +81,11 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     migrationsDir: env.MIGRATIONS_DIR,
     trustProxyHops: env.TRUST_PROXY_HOPS,
     guestLibraryDir: env.GUEST_LIBRARY_DIR,
+    smtpHost: env.SMTP_HOST,
+    smtpPort: env.SMTP_PORT,
+    smtpUser: env.SMTP_USER,
+    smtpPass: env.SMTP_PASS,
+    smtpFrom: env.SMTP_FROM,
     libraryBrowseBases: env.LIBRARY_BROWSE_BASES,
     mlUrl: env.RECOLLECT_ML_URL,
     faceClusterDistance: env.FACE_CLUSTER_DISTANCE,

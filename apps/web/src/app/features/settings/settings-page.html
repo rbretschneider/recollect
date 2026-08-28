@@ -33,6 +33,39 @@
     </div>
   </section>
 
+  @if (isAdmin && mailStatus(); as mail) {
+    <section aria-label="Email">
+      <div class="section-head">
+        <h2>Email</h2>
+      </div>
+      <div class="card row">
+        <div class="info">
+          <h3>
+            Outgoing mail
+            @if (!mail.enabled) { <span class="off-chip">Not set up</span> }
+          </h3>
+          @if (mail.enabled) {
+            <p class="muted">Sending as {{ mail.from }} via {{ mail.host }}</p>
+          } @else {
+            <p class="muted">
+              Set SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / SMTP_FROM in the
+              server's .env, then restart. Any plain SMTP works (Gmail app password,
+              Brevo, SMTP2GO…).
+            </p>
+          }
+        </div>
+        @if (mail.enabled) {
+          <button type="button" class="outline" [disabled]="mailTestState() === 'sending'" (click)="sendTestMail()">
+            {{ mailTestState() === 'sending' ? 'Sending…' : mailTestState() === 'sent' ? 'Sent ✓' : 'Send test' }}
+          </button>
+        }
+      </div>
+      @if (mailTestError(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+    </section>
+  }
+
   @if (isAdmin) {
     <section aria-label="Library">
       <a class="card row link-card" routerLink="/library">

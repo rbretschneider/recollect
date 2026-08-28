@@ -39,6 +39,14 @@ services:
       # mount (e.g. /library/Guest Uploads) so the NAS backup covers them;
       # empty keeps them in the app-data volume.
       GUEST_LIBRARY_DIR: ${GUEST_LIBRARY_DIR:-}
+      # Outgoing mail (test button in Settings). Any plain SMTP works:
+      # Gmail app password (smtp.gmail.com:587), Brevo, SMTP2GO, paid Proton
+      # Mail via their SMTP token. Empty host = mail features off.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
     volumes:
       - app-data:/app/data              # thumbnails, caches, guest uploads — the one place originals land is guest-library/
       - ${LIBRARY_PATH:?set LIBRARY_PATH in .env}:/library   # photo folder, indexed in place
