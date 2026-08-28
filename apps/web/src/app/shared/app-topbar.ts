@@ -40,28 +40,6 @@ import { Icon } from './icon';
       min-width: 0;
     }
 
-    .search-pill {
-      flex: 1;
-      min-width: 0;
-      max-width: 26rem;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.45rem;
-      min-height: 38px;
-      border: 1px solid var(--border);
-      border-radius: 2rem;
-      background: var(--surface);
-      color: var(--text-muted);
-      font-size: 0.9rem;
-      text-decoration: none;
-      transition: background-color 0.15s ease;
-
-      &:hover {
-        background: var(--surface-raised);
-      }
-    }
   `,
 })
 export class AppTopbar {}

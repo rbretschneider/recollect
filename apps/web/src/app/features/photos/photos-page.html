@@ -13,7 +13,20 @@
   } @else {
     <app-brand />
     <app-activity-spinner />
-    <span class="spacer"></span>
+    <a class="search-pill" routerLink="/search" aria-label="Search">
+      <app-icon name="search" [size]="17" />
+      <span>Search</span>
+    </a>
+    @if (canWrite) {
+      <button type="button" class="topbar-action" (click)="startSelecting()">Select</button>
+    }
+    <app-account-badge />
+  }
+</header>
+
+@if (!isSelecting()) {
+  <!-- Grid controls live with the grid they shape, not in the header. -->
+  <div class="grid-toolbar" role="toolbar" aria-label="Grid options">
     <button
       type="button"
       class="fav-filter"
@@ -50,12 +63,8 @@
         <app-icon name="view-large" [size]="17" />
       </button>
     </div>
-    @if (canWrite) {
-      <button type="button" class="topbar-action" (click)="startSelecting()">Select</button>
-    }
-    <app-account-badge />
-  }
-</header>
+  </div>
+}
 
 <main class="timeline">
   @if (showEmptyState) {

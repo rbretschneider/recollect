@@ -90,6 +90,15 @@ section h2 {
   }
 
   .stack {
+    position: relative;
+
+    &:hover .polaroid[data-card='0'] {
+      rotate: -9deg;
+      translate: -4px -6px;
+    }
+  }
+
+  .stack-tap {
     display: grid;
     justify-items: center;
     gap: 0.5rem;
@@ -98,10 +107,32 @@ section h2 {
     background: none;
     color: var(--text);
     cursor: pointer;
+  }
 
-    &:hover .polaroid[data-card='0'] {
-      rotate: -9deg;
-      translate: -4px -6px;
+  // One tap: this pile becomes a real album.
+  .save-album {
+    position: absolute;
+    top: 0.15rem;
+    right: 0.15rem;
+    z-index: 6;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 1.05rem;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--accent-contrast);
+    }
+
+    &:disabled {
+      opacity: 0.6;
     }
   }
 

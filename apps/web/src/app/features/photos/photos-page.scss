@@ -528,3 +528,12 @@
     }
   }
 }
+
+// Grid controls, parked with the grid instead of the header.
+.grid-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 1rem 0;
+}

@@ -1,7 +1,8 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { AlbumsApiService } from '../../core/api/albums-api.service';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { InboxSuggestion, MemorySummary, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
@@ -28,6 +29,8 @@ interface OnThisDayYear {
 export class DashboardPage implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly memoriesApi = inject(MemoriesApiService);
+  private readonly albumsApi = inject(AlbumsApiService);
+  private readonly router = inject(Router);
   private readonly auth = inject(AuthStateService);
 
   readonly onThisDay = signal<OnThisDayYear[]>([]);
@@ -88,6 +91,27 @@ export class DashboardPage implements OnInit {
   /** Up to four fanned photos per stack; the rest wait for the show. */
   stackPreview(group: OnThisDayYear): Array<{ id: string; mediaType: string }> {
     return group.items.slice(0, 4);
+  }
+
+  /** Which year's save-as-album is in flight (per-stack busy state). */
+  readonly savingAlbumYear = signal<number | null>(null);
+
+  /** One tap turns a year's pile into a real album and opens it. */
+  async saveAsAlbum(group: OnThisDayYear): Promise<void> {
+    if (this.savingAlbumYear() !== null) {
+      return;
+    }
+    this.savingAlbumYear.set(group.year);
+    try {
+      const dayLabel = new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+      const { albumId } = await this.albumsApi.create(
+        `${dayLabel}, ${group.year}`,
+        group.items.map((item) => item.id),
+      );
+      await this.router.navigate(['/albums', albumId]);
+    } finally {
+      this.savingAlbumYear.set(null);
+    }
   }
 
   closeViewer(): void {
