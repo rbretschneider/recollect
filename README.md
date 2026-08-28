@@ -8,6 +8,20 @@ library), detects events, suggests Memories, and lets your household confirm the
 It's also a genuinely good day-to-day photo app — grid, viewer, search, and safe file management
 (delete/move with a holding period) from anywhere.
 
+## Screenshots
+
+| Home | Memory | Photos |
+|---|---|---|
+| [<img src="docs/screenshots/dashboard.png" width="240" alt="Home dashboard: On This Day polaroids and recent memories" />](docs/screenshots/dashboard.png) | [<img src="docs/screenshots/memory.png" width="240" alt="A memory: journal, captioned moments, and a quote" />](docs/screenshots/memory.png) | [<img src="docs/screenshots/photos.png" width="240" alt="The photo grid, mosaic view, grouped by day" />](docs/screenshots/photos.png) |
+| **Album** | **Slideshow** | |
+| [<img src="docs/screenshots/album.png" width="240" alt="An album with share, guest, download, and memory actions" />](docs/screenshots/album.png) | [<img src="docs/screenshots/slideshow.png" width="240" alt="The music-backed memory slideshow" />](docs/screenshots/slideshow.png) | |
+
+- **Home** — "On this day" through the years as fanned polaroids, with your recent and suggested memories.
+- **Memory** — the scrapbook view: a journal entry, photos that step out as captioned *moments*, and quotes of the day.
+- **Photos** — the whole library, grouped by day, with card / mosaic / large layouts.
+- **Album** — a hand-picked set with one-tap Share, guest upload links, download, and "turn into a memory".
+- **Slideshow** — tap any memory or album to play it back full-screen with public-domain background music.
+
 ## Documentation
 
 | Doc | What's in it |
