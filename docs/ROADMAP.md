@@ -93,7 +93,41 @@ real-library testing (~18.5k assets on hawaii) teaches us things.
 ## Last, deliberately
 
 - **Guest uploads for an event** — the only public write path; ships after
-  everything above is boring and stable.
+  everything above is boring and stable. Design locked (2026-08-27):
+
+  **An event is not a new entity.** It's an album wearing a *contribution
+  link*, and the memory comes afterwards as curation. The layering is:
+  guest raw feed → album (bucket) → memory (story) — reusing the existing
+  album→memory conversion, no third top-level concept.
+
+  **Flow**
+  1. Create the album ("Nana's 80th"), enable a contribution link on it —
+     an unguessable token URL in the same family as share tokens.
+  2. Guest page is dead simple: type your name once (stored as uploader
+     attribution, feeds "Taken by"), pick photos, upload. No account.
+  3. Uploads land in a **quarantine inbox** tied to the event — a staging
+     directory, NOT a library root; never scanned into the timeline.
+     Household members review ("42 new from guests"), approve/reject in
+     bulk; approved photos ingest through the normal pipeline into the
+     album.
+  4. Curate the memory from the album afterwards, as with any album.
+
+  **Token scope** grants exactly: upload to this one event, plus an
+  optional *pool view* toggle (guests see approved photos — on for a
+  birthday, off for upload-only drops). Never people data, never search,
+  never anything outside the event.
+
+  **Security**
+  - Link auto-expires (default one week after the event date) and is
+    revocable instantly.
+  - Server-side validation, not trust: cap file size and per-token total
+    count; accept only media verified by probing bytes (sharp/ffprobe);
+    rate-limit per token/IP at Nest and at nginx.
+  - Quarantine is the security boundary: nothing reaches the library, ML
+    pipeline, or other guests (pool view shows approved items only)
+    without a household member approving it.
+  - Transport/HTTPS is the nginx reverse proxy's job — this feature only
+    makes sense once the public path exists, which is why it stays last.
 
 ## Decisions locked
 
