@@ -264,6 +264,8 @@ section h2 {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      // Bias the crop toward the upper third so faces aren't cut at the forehead.
+      object-position: 50% 38%;
       transition: transform 0.25s ease;
     }
 
@@ -273,8 +275,9 @@ section h2 {
 
     .veil {
       position: absolute;
-      inset: 40% 0 0;
-      background: linear-gradient(transparent, rgb(0 0 0 / 75%));
+      // Guaranteed scrim so white text stays legible over any cover photo.
+      inset: 0;
+      background: var(--cover-veil);
     }
 
     .caption {

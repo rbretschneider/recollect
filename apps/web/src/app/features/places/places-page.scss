@@ -46,10 +46,14 @@
     transform: scale(1.04);
   }
 
+  img {
+    object-position: 50% 38%;
+  }
+
   .veil {
     position: absolute;
     inset: 0;
-    background: linear-gradient(transparent 45%, rgb(0 0 0 / 75%));
+    background: var(--cover-veil);
   }
 
   .caption {
@@ -60,7 +64,7 @@
 
     h3 {
       margin: 0;
-      color: white;
+      color: var(--overlay-fg);
       font-size: 1.05rem;
       letter-spacing: -0.01em;
       text-shadow: 0 1px 3px rgb(0 0 0 / 60%);
