@@ -47,7 +47,7 @@
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 3;
+  z-index: var(--z-topbar);
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -106,6 +106,7 @@
 }
 
 :root {
+  /* --- Color ------------------------------------------------------------- */
   --bg: #101014;
   --surface: #1a1a20;
   --surface-raised: #24242c;
@@ -115,6 +116,57 @@
   --accent: #7aa2f7;
   --accent-contrast: #0d1117;
   --danger: #f7768e;
+  /* Contrast pair for solid-danger buttons (was hardcoded #1a0a0f in places). */
+  --danger-contrast: #1a0a0f;
+
+  /* Chrome floating over a photo — one definition for viewer/hero/edit-toggle
+     controls that used to hardcode `rgb(0 0 0 / 45%)` + white. */
+  --overlay-chrome: rgb(0 0 0 / 45%);
+  --overlay-fg: #ffffff;
+  /* The gradient that guarantees white text is legible over any cover photo,
+     however bright the pixels behind it happen to be. */
+  --cover-veil: linear-gradient(to top, rgb(0 0 0 / 78%) 0%, rgb(0 0 0 / 45%) 32%, rgb(0 0 0 / 0%) 68%);
+
+  /* --- Scrim & elevation ------------------------------------------------- */
+  --scrim: rgb(0 0 0 / 55%);
+  --shadow-raised: 0 6px 20px rgb(0 0 0 / 30%);
+  --shadow-sheet: 0 -12px 40px rgb(0 0 0 / 45%);
+
+  /* --- Spacing scale (0.25rem base) -------------------------------------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+
+  /* --- Radius scale ------------------------------------------------------ */
+  --radius-1: 0.4rem;
+  --radius-2: 0.6rem;
+  --radius-3: 0.8rem;
+  --radius-4: 1.25rem;
+  --radius-pill: 999px;
+
+  /* --- Type scale -------------------------------------------------------- */
+  --fs-xs: 0.72rem;
+  --fs-sm: 0.85rem;
+  --fs-base: 1rem;
+  --fs-lg: 1.15rem;
+  --fs-xl: 1.5rem;
+
+  /* --- Motion ------------------------------------------------------------ */
+  --dur-fast: 0.15s;
+  --dur-base: 0.22s;
+  --dur-slow: 0.32s;
+  --ease-emphasized: cubic-bezier(0.32, 0.72, 0.24, 1);
+
+  /* --- Z-index ladder ----------------------------------------------------
+     One ordered scale for every stacking surface. Overlays share --z-scrim /
+     --z-modal so a picker can never render beneath a sheet again. */
+  --z-topbar: 3;
+  --z-scrim: 40;
+  --z-modal: 41;
+  --z-toast: 60;
 }
 
 * {

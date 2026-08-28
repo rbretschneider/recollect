@@ -1,8 +1,11 @@
 @if (confirms.pending(); as pending) {
-  <div class="scrim" (click)="confirms.settle(false)"></div>
-  <div class="confirm-drawer" role="alertdialog" [attr.aria-label]="pending.title">
-    <h2>{{ pending.title }}</h2>
-    <p>{{ pending.message }}</p>
+  <app-sheet
+    [sheetTitle]="pending.title"
+    initialFocus=".ghost"
+    [danger]="pending.danger !== false"
+    (closed)="confirms.settle(false)"
+  >
+    <p class="message">{{ pending.message }}</p>
     <div class="actions">
       <button type="button" class="ghost" (click)="confirms.settle(false)">Cancel</button>
       <button
@@ -14,5 +17,5 @@
         {{ pending.confirmLabel }}
       </button>
     </div>
-  </div>
+  </app-sheet>
 }

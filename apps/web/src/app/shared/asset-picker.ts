@@ -1,6 +1,7 @@
 import { Component, inject, input, OnInit, output, signal } from '@angular/core';
 import { PhotosApiService } from '../core/api/photos-api.service';
 import { TimelineAsset } from '../core/api/api-models';
+import { Sheet } from './sheet';
 
 /** How many timeline assets to fetch per "Load more". */
 const PAGE_SIZE = 60;
@@ -8,11 +9,12 @@ const PAGE_SIZE = 60;
 /**
  * Overlay for picking extra photos off the timeline — used when a Memory needs
  * assets beyond what a suggestion proposed. Multi-select, paged, and blind to
- * why the caller wants them; it just returns the chosen ids.
+ * why the caller wants them; it just returns the chosen ids. Chrome comes from
+ * the shared <app-sheet>.
  */
 @Component({
   selector: 'app-asset-picker',
-  imports: [],
+  imports: [Sheet],
   templateUrl: './asset-picker.html',
   styleUrl: './asset-picker.scss',
 })

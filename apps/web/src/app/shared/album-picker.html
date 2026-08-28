@@ -1,8 +1,6 @@
-<div class="scrim" (click)="cancelled.emit()"></div>
-<div class="picker" role="dialog" aria-label="Add to album">
-  <h2>Add to album</h2>
-
+<app-sheet sheetTitle="Add to album" initialFocus=".filter" (closed)="cancelled.emit()">
   <input
+    class="filter"
     name="filterText"
     type="search"
     placeholder="Find or name an album…"
@@ -11,13 +9,13 @@
     (ngModelChange)="filterText.set($event)"
   />
 
-  <div class="list" role="listbox" aria-label="Albums">
+  <div class="list">
     @for (album of filtered(); track album.id) {
       <button type="button" (click)="choose(album.id)">
         @if (coverUrl(album); as cover) {
           <img [src]="cover" alt="" loading="lazy" />
         } @else {
-          <span class="cover-fallback">📔</span>
+          <span class="cover-fallback" aria-hidden="true">📔</span>
         }
         <span class="title">{{ album.title }}</span>
         <span class="count">{{ album.assetCount }}</span>
@@ -25,7 +23,7 @@
     }
     @if (canCreate()) {
       <button type="button" class="create" [disabled]="isBusy()" (click)="createAndChoose()">
-        <span class="cover-fallback">＋</span>
+        <span class="cover-fallback" aria-hidden="true">＋</span>
         <span class="title">Create “{{ filterText().trim() }}”</span>
       </button>
     }
@@ -33,4 +31,4 @@
       <p class="hint">Type a name to create your first album.</p>
     }
   </div>
-</div>
+</app-sheet>

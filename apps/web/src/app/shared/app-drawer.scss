@@ -1,9 +1,9 @@
 .scrim {
   position: fixed;
   inset: 0;
-  z-index: 28;
-  background: rgb(0 0 0 / 50%);
-  transition: opacity 0.2s ease;
+  z-index: var(--z-scrim);
+  background: var(--scrim);
+  transition: opacity var(--dur-base) ease;
 
   @starting-style {
     opacity: 0;
@@ -15,14 +15,14 @@
 .drawer {
   position: fixed;
   inset: 0 auto 0 0;
-  z-index: 29;
+  z-index: var(--z-modal);
   width: min(20rem, 85vw);
   display: flex;
   flex-direction: column;
   background: var(--surface);
   border-right: 1px solid var(--border);
   padding: 1.25rem 1rem calc(1rem + env(safe-area-inset-bottom));
-  transition: translate 0.22s ease;
+  transition: translate var(--dur-base) ease;
 
   @starting-style {
     translate: -100% 0;

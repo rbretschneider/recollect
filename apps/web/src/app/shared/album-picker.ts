@@ -2,14 +2,16 @@ import { Component, computed, inject, OnInit, output, signal } from '@angular/co
 import { FormsModule } from '@angular/forms';
 import { AlbumsApiService } from '../core/api/albums-api.service';
 import { AlbumSummary } from '../core/api/api-models';
+import { Sheet } from './sheet';
 
 /**
  * Typeahead album picker: one box filters existing albums as you type, and the
  * same text becomes the name of a new album when nothing matches exactly.
+ * Chrome (scrim, focus trap, close) comes from the shared <app-sheet>.
  */
 @Component({
   selector: 'app-album-picker',
-  imports: [FormsModule],
+  imports: [FormsModule, Sheet],
   templateUrl: './album-picker.html',
   styleUrl: './album-picker.scss',
 })

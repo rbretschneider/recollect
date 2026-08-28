@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, OnInit, output, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, OnInit, output, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ActivityService } from '../core/activity.service';
 import { LibraryApiService } from '../core/api/library-api.service';
@@ -6,6 +6,7 @@ import { LibraryFailure, LibraryStatus } from '../core/api/api-models';
 import { AuthStateService } from '../core/auth/auth-state.service';
 import { PwaInstallService } from '../core/pwa-install.service';
 import { ActivitySpinner } from './activity-spinner';
+import { OverlayFocus } from './overlay-focus.directive';
 
 /**
  * The app side panel: account, library management, and destinations that don't
@@ -13,7 +14,7 @@ import { ActivitySpinner } from './activity-spinner';
  */
 @Component({
   selector: 'app-drawer',
-  imports: [ActivitySpinner, RouterLink],
+  imports: [ActivitySpinner, RouterLink, OverlayFocus],
   templateUrl: './app-drawer.html',
   styleUrl: './app-drawer.scss',
 })
@@ -25,6 +26,11 @@ export class AppDrawer implements OnInit {
   protected readonly pwa = inject(PwaInstallService);
 
   readonly closed = output<void>();
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.closed.emit();
+  }
 
   readonly status = signal<LibraryStatus | null>(null);
   readonly isRescanBusy = signal(false);

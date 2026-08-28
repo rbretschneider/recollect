@@ -1,5 +1,5 @@
 <div class="scrim" (click)="closed.emit()"></div>
-<aside class="drawer" role="dialog" aria-label="Menu">
+<aside class="drawer" role="dialog" aria-modal="true" aria-label="Menu" overlayFocus>
   <header class="account">
     <span class="avatar" aria-hidden="true">{{ userInitial }}</span>
     <div>
@@ -11,48 +11,48 @@
 
   <nav class="items">
     <a routerLink="/" (click)="closed.emit()">
-      <span class="icon">🏠</span> Home
+      <span class="icon" aria-hidden="true">🏠</span> Home
     </a>
     <a routerLink="/photos" (click)="closed.emit()">
-      <span class="icon">🖼️</span> Photos
+      <span class="icon" aria-hidden="true">🖼️</span> Photos
     </a>
     <a routerLink="/memories" (click)="closed.emit()">
-      <span class="icon">✨</span> Memories
+      <span class="icon" aria-hidden="true">✨</span> Memories
     </a>
     <a routerLink="/albums" (click)="closed.emit()">
-      <span class="icon">📔</span> Albums
+      <span class="icon" aria-hidden="true">📔</span> Albums
     </a>
     <a routerLink="/search" (click)="closed.emit()">
-      <span class="icon">🔎</span> Search
+      <span class="icon" aria-hidden="true">🔎</span> Search
     </a>
     <hr />
     @if (isAdmin) {
       <a routerLink="/library" (click)="closed.emit()">
-        <span class="icon">🗂️</span> Library
+        <span class="icon" aria-hidden="true">🗂️</span> Library
       </a>
     }
     <a routerLink="/folders" (click)="closed.emit()">
-      <span class="icon">📁</span> Folders
+      <span class="icon" aria-hidden="true">📁</span> Folders
     </a>
     <a routerLink="/people" (click)="closed.emit()">
-      <span class="icon">🙂</span> People
+      <span class="icon" aria-hidden="true">🙂</span> People
     </a>
     <a routerLink="/places" (click)="closed.emit()">
-      <span class="icon">📍</span> Places
+      <span class="icon" aria-hidden="true">📍</span> Places
     </a>
     @if (isAdmin) {
       <a routerLink="/settings" (click)="closed.emit()">
-        <span class="icon">⚙️</span> Settings
+        <span class="icon" aria-hidden="true">⚙️</span> Settings
       </a>
     }
     @if (canDelete) {
       <a routerLink="/trash" (click)="closed.emit()">
-        <span class="icon">🗑</span> Trash
+        <span class="icon" aria-hidden="true">🗑</span> Trash
       </a>
     }
     @if (isAdmin) {
       <a routerLink="/logs" (click)="closed.emit()">
-        <span class="icon">📜</span> Logs
+        <span class="icon" aria-hidden="true">📜</span> Logs
       </a>
     }
   </nav>
@@ -100,7 +100,7 @@
   <footer>
     @if (pwa.canPrompt()) {
       <button type="button" class="install-cta" (click)="pwa.prompt(); closed.emit()">
-        📲 Install the app
+        <span aria-hidden="true">📲</span> Install the app
       </button>
     }
   </footer>

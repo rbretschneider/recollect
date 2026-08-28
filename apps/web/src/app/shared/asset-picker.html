@@ -1,11 +1,4 @@
-<div class="scrim" (click)="cancel()"></div>
-
-<section class="picker" role="dialog" aria-label="Add photos">
-  <header>
-    <h2>Add photos</h2>
-    <span class="chosen">{{ chosenCount() }} selected</span>
-  </header>
-
+<app-sheet sheetTitle="Add photos" [wide]="true" (closed)="cancel()">
   <div class="grid">
     @for (asset of items(); track asset.id) {
       <button
@@ -15,7 +8,7 @@
         [class.excluded]="isExcluded(asset.id)"
         [disabled]="isExcluded(asset.id)"
         [attr.aria-pressed]="isChosen(asset.id)"
-        aria-label="Photo"
+        [attr.aria-label]="isExcluded(asset.id) ? 'Photo, already added' : 'Photo'"
         (click)="toggle(asset.id)"
       >
         <img [src]="thumbUrl(asset.id)" alt="" loading="lazy" />
@@ -40,4 +33,4 @@
       Add {{ chosenCount() }} {{ chosenCount() === 1 ? 'photo' : 'photos' }}
     </button>
   </footer>
-</section>
+</app-sheet>
