@@ -34,6 +34,12 @@ const configSchema = z.object({
    * limiting sees every visitor as the proxy and Secure cookies never engage.
    */
   trustProxyHops: z.coerce.number().int().min(0).default(0),
+  /**
+   * Where approved guest uploads live as originals. Point this at the NAS
+   * (e.g. /library/Guest Uploads) so they're covered by the NAS backup;
+   * empty falls back to APP_DATA_DIR/guest-library (the Docker volume).
+   */
+  guestLibraryDir: z.string().default(''),
   /** Comma-separated bases the library folder picker may browse (mounted volumes). */
   libraryBrowseBases: z
     .string()
@@ -67,6 +73,7 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     webDistDir: env.WEB_DIST_DIR,
     migrationsDir: env.MIGRATIONS_DIR,
     trustProxyHops: env.TRUST_PROXY_HOPS,
+    guestLibraryDir: env.GUEST_LIBRARY_DIR,
     libraryBrowseBases: env.LIBRARY_BROWSE_BASES,
     mlUrl: env.RECOLLECT_ML_URL,
     faceClusterDistance: env.FACE_CLUSTER_DISTANCE,

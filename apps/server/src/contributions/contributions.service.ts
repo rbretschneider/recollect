@@ -90,9 +90,16 @@ export class ContributionsService {
     return resolve(this.config.appDataDir, 'staging');
   }
 
-  /** Where approved guest photos live permanently, registered as a library root. */
+  /**
+   * Where approved guest photos live permanently, registered as a library
+   * root. GUEST_LIBRARY_DIR points this at the NAS so guest originals ride
+   * the same backups as everything else; unset falls back to the app-data
+   * volume (the only originals that would live in Docker — set the env!).
+   */
   private get guestLibraryDir(): string {
-    return resolve(this.config.appDataDir, 'guest-library');
+    return this.config.guestLibraryDir.trim().length > 0
+      ? resolve(this.config.guestLibraryDir)
+      : resolve(this.config.appDataDir, 'guest-library');
   }
 
   async createLink(

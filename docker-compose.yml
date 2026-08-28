@@ -35,6 +35,10 @@ services:
       # Set to 1 when a reverse proxy (nginx) fronts the app: real client IPs
       # for rate limiting, and Secure session cookies over its HTTPS.
       TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-0}
+      # Where approved guest uploads land as ORIGINALS. Point at the library
+      # mount (e.g. /library/Guest Uploads) so the NAS backup covers them;
+      # empty keeps them in the app-data volume.
+      GUEST_LIBRARY_DIR: ${GUEST_LIBRARY_DIR:-}
     volumes:
       - app-data:/app/data              # thumbnails, caches, guest uploads — the one place originals land is guest-library/
       - ${LIBRARY_PATH:?set LIBRARY_PATH in .env}:/library   # photo folder, indexed in place
