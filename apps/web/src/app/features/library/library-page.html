@@ -15,6 +15,16 @@
     <p class="error" role="alert">{{ message }}</p>
   }
 
+  @if (canDelete) {
+    <a class="card cleanup-link" routerLink="/cleanup">
+      <div>
+        <h3>Cleanup advisor</h3>
+        <p>Junk flags and bloated videos — see how much NAS space is reclaimable.</p>
+      </div>
+      <span class="chevron" aria-hidden="true">›</span>
+    </a>
+  }
+
   @if (status(); as s) {
     <section class="state" aria-label="Indexing state">
       <div class="state-head">

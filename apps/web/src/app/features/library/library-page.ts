@@ -1,5 +1,6 @@
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { LibraryApiService, ScanScheduleView } from '../../core/api/library-api.service';
 import { LibraryFailure, LibraryRootView, LibraryStatus } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
@@ -35,7 +36,7 @@ const JOB_LABELS: Record<string, string> = {
  */
 @Component({
   selector: 'app-library-page',
-  imports: [AccountBadge, MenuButton, BackButton, FolderPicker, FormsModule, PageLoading, Sheet],
+  imports: [AccountBadge, MenuButton, BackButton, FolderPicker, FormsModule, PageLoading, RouterLink, Sheet],
   templateUrl: './library-page.html',
   styleUrl: './library-page.scss',
 })
@@ -93,6 +94,10 @@ export class LibraryPage implements OnInit {
 
   get isAdmin(): boolean {
     return this.auth.user()?.isAdmin ?? false;
+  }
+
+  get canDelete(): boolean {
+    return this.auth.user()?.permission === 'delete';
   }
 
   ngOnInit(): void {

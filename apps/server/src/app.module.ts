@@ -3,6 +3,7 @@ import { AlbumsModule } from './albums/albums.module';
 import { AssetsModule } from './assets/assets.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from './config/config.module';
+import { CleanupModule } from './cleanup/cleanup.module';
 import { ContributionsModule } from './contributions/contributions.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { DatabaseModule } from './database/database.module';
@@ -34,6 +35,7 @@ import { UsersModule } from './users/users.module';
     FoldersModule,
     MemoriesModule,
     AlbumsModule,
+    CleanupModule,
     ContributionsModule,
     DashboardModule,
     MlModule,

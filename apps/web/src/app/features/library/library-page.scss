@@ -282,3 +282,30 @@
 .topbar .spacer {
   flex: 1;
 }
+
+.cleanup-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 0.75rem;
+  padding: 0.85rem 1rem;
+  text-decoration: none;
+  color: var(--text);
+
+  h3 {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  p {
+    margin: 0.15rem 0 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .chevron {
+    color: var(--text-muted);
+    font-size: 1.3rem;
+  }
+}

@@ -1,0 +1,87 @@
+<header class="topbar">
+  <app-menu-button />
+  <app-back to="/library" label="Back to library" />
+  <h1>Cleanup advisor</h1>
+  <span class="spacer"></span>
+  <app-account-badge />
+</header>
+
+<main class="cleanup">
+  @if (data(); as suggestions) {
+    <section class="summary">
+      <h2>~{{ formatSize(suggestions.projectedSavingsBytes) }} reclaimable</h2>
+      <p>
+        Suggestions only — nothing is ever deleted automatically. Trashed items
+        keep their normal holding period; converted videos keep the original
+        for the same window.
+      </p>
+    </section>
+
+    @if (suggestions.junk.length === 0 && suggestions.hogs.length === 0) {
+      <section class="empty">
+        <h2>Nothing to clean up</h2>
+        <p>No junk flags and no bloated videos. Come back after big imports.</p>
+      </section>
+    }
+
+    @if (suggestions.junk.length > 0) {
+      <section class="junk" aria-label="Probably junk">
+        <div class="section-head">
+          <h2>Probably junk ({{ suggestions.junk.length }})</h2>
+          <button type="button" class="outline danger" [disabled]="isBusy()" (click)="trashAllJunk()">
+            {{ isBusy() ? 'Working…' : 'Trash all' }}
+          </button>
+        </div>
+        <div class="rows">
+          @for (item of suggestions.junk; track item.assetId) {
+            <div class="row">
+              <img [src]="thumbUrl(item.assetId)" alt="" loading="lazy" />
+              <div class="info">
+                <h3>{{ item.fileName }}</h3>
+                <p>{{ formatSize(item.sizeBytes) }} · {{ item.reason }}</p>
+              </div>
+              <button type="button" class="outline" (click)="dismissJunk(item)">Keep</button>
+              <button type="button" class="outline danger" (click)="trashJunk(item)">Trash</button>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    @if (suggestions.hogs.length > 0) {
+      <section class="hogs" aria-label="Space hogs">
+        <div class="section-head">
+          <h2>Space hogs ({{ suggestions.hogs.length }})</h2>
+        </div>
+        <p class="hint">
+          Bloated videos worth re-encoding. Conversion replaces the file on
+          disk; the original waits out the Trash holding period as the undo.
+        </p>
+        <div class="rows">
+          @for (item of suggestions.hogs; track item.assetId) {
+            <div class="row">
+              <img [src]="thumbUrl(item.assetId)" alt="" loading="lazy" />
+              <div class="info">
+                <h3>{{ item.fileName }}</h3>
+                <p>
+                  {{ formatSize(item.sizeBytes) }} · {{ formatBitrate(item.bitrate) }}
+                  @if (item.estimatedBytes !== null) {
+                    · save ~{{ savings(item) }}
+                  }
+                </p>
+              </div>
+              @if (isQueued(item)) {
+                <span class="chip">Converting…</span>
+              } @else {
+                <button type="button" class="outline" (click)="dismissHog(item)">Keep</button>
+                <button type="button" class="primary" (click)="convert(item)">Convert</button>
+              }
+            </div>
+          }
+        </div>
+      </section>
+    }
+  } @else {
+    <app-page-loading label="Sizing things up…" />
+  }
+</main>

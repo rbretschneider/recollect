@@ -77,6 +77,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/places/places-page').then((m) => m.PlacesPage),
   },
   {
+    path: 'cleanup',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/cleanup/cleanup-page').then((m) => m.CleanupPage),
+  },
+  {
     path: 'library',
     canActivate: [authGuard],
     loadComponent: () => import('./features/library/library-page').then((m) => m.LibraryPage),
