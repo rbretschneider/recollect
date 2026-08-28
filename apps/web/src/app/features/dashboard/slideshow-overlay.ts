@@ -12,18 +12,25 @@ export interface SlideItem {
 /** How long each photo holds the screen. Videos hold until they finish. */
 const IMAGE_HOLD_MS = 3800;
 
-/** Bundled public-domain tracks (Wikimedia Commons, PD performances). */
+/**
+ * Bundled public-domain tracks (Wikimedia Commons, PD performances). All mellow
+ * on purpose — quiet Satie/Debussy/Chopin, the kind of unobtrusive backdrop that
+ * lets the photos carry the moment rather than a marching band.
+ */
 const MUSIC_TRACKS = [
   'audio/gymnopedie-1.m4a',
-  'audio/clair-de-lune.m4a',
+  'audio/gymnopedie-2.m4a',
   'audio/gymnopedie-3.m4a',
-  'audio/maple-leaf-rag.m4a',
-  'audio/the-entertainer.m4a',
-  'audio/hungarian-dance-1.m4a',
-  'audio/hungarian-dance-4.m4a',
-  'audio/waltz-of-the-flowers.m4a',
-  'audio/turkey-in-the-straw.m4a',
-  'audio/washington-post-march.m4a',
+  'audio/gnossienne-1.m4a',
+  'audio/gnossienne-2.m4a',
+  'audio/gnossienne-3.m4a',
+  'audio/gnossienne-4.m4a',
+  'audio/gnossienne-5.m4a',
+  'audio/gnossienne-6.m4a',
+  'audio/gnossienne-7.m4a',
+  'audio/clair-de-lune.m4a',
+  'audio/chopin-nocturne-21.m4a',
+  'audio/air-on-g-string.m4a',
 ];
 
 /** A fresh shuffled play order for each show — every track before any repeat. */
