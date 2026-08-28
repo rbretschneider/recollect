@@ -377,3 +377,15 @@
     }
   }
 }
+
+// The one remaining escape hatch, quiet by design.
+.curation .danger-link {
+  margin-top: 0.75rem;
+  border: none;
+  background: none;
+  color: var(--danger);
+  font-size: 0.85rem;
+  min-height: 40px;
+  cursor: pointer;
+  padding: 0;
+}

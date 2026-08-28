@@ -10,14 +10,14 @@ import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
 import { PageLoading } from '../../shared/page-loading';
 import { EditToggle } from '../../shared/edit-toggle';
-import { Sheet } from '../../shared/sheet';
+
 import { AssetViewer } from '../viewer/asset-viewer';
 
 /** One person: name them, browse their photos, and in edit mode curate the
  *  cluster — split wrong faces out, ignore junk, merge duplicates, hide. */
 @Component({
   selector: 'app-person-page',
-  imports: [PageLoading, BackButton, AssetViewer, BottomNav, EditToggle, FormsModule, RouterLink, Sheet],
+  imports: [PageLoading, BackButton, AssetViewer, BottomNav, EditToggle, FormsModule, RouterLink],
   templateUrl: './person-page.html',
   styleUrl: './person-page.scss',
 })
@@ -36,8 +36,6 @@ export class PersonPage implements OnInit {
   readonly assetIds = signal<string[]>([]);
   readonly selectedFaceIds = signal<ReadonlySet<string>>(new Set());
   readonly viewerIndex = signal<number | null>(null);
-  readonly isMergePickerOpen = signal(false);
-  readonly mergeFilter = signal('');
   readonly saveState = signal<'idle' | 'saved'>('idle');
   readonly isBusy = signal(false);
   /** Mirrors the name input so suggestions react as the user types. */
@@ -67,16 +65,6 @@ export class PersonPage implements OnInit {
       .slice(0, 5);
   });
 
-  readonly mergeCandidates = computed(() => {
-    const needle = this.mergeFilter().trim().toLowerCase();
-    const selfId = this.person()?.id;
-    return this.everyone()
-      .filter((candidate) => candidate.id !== selfId)
-      .filter(
-        (candidate) =>
-          needle.length === 0 || (candidate.name ?? '').toLowerCase().includes(needle),
-      );
-  });
 
   /** Face curation (naming, merging, splitting) is admin territory. */
   get canWrite(): boolean {
@@ -161,46 +149,6 @@ export class PersonPage implements OnInit {
     }
   }
 
-  /** "Not the same person": selected faces move to a brand-new person. */
-  async splitSelected(): Promise<void> {
-    const person = this.person();
-    const faceIds = [...this.selectedFaceIds()];
-    if (!person || faceIds.length === 0 || this.isBusy()) {
-      return;
-    }
-    this.isBusy.set(true);
-    try {
-      const { personId } = await this.api.split(person.id, faceIds);
-      await this.router.navigate(['/people', personId]);
-    } finally {
-      this.isBusy.set(false);
-    }
-  }
-
-  /** Ignored faces disappear from People entirely (not a person / junk detection). */
-  async ignoreSelected(): Promise<void> {
-    const faceIds = [...this.selectedFaceIds()];
-    if (faceIds.length === 0 || this.isBusy()) {
-      return;
-    }
-    const confirmed = await this.confirms.ask({
-      title: `Ignore ${faceIds.length === 1 ? 'this face' : `these ${faceIds.length} faces`}?`,
-      message: 'Ignored faces disappear from People for good. The photos themselves stay put.',
-      confirmLabel: 'Ignore',
-    });
-    if (!confirmed) {
-      return;
-    }
-    this.isBusy.set(true);
-    try {
-      await this.api.ignoreFaces(faceIds);
-      this.selectedFaceIds.set(new Set());
-      await this.load();
-    } finally {
-      this.isBusy.set(false);
-    }
-  }
-
   async mergeInto(target: PersonSummary): Promise<void> {
     const person = this.person();
     if (!person || this.isBusy()) {
@@ -219,33 +167,7 @@ export class PersonPage implements OnInit {
     this.isBusy.set(true);
     try {
       await this.api.mergeInto(person.id, target.id);
-      this.isMergePickerOpen.set(false);
       await this.router.navigate(['/people', target.id]);
-    } finally {
-      this.isBusy.set(false);
-    }
-  }
-
-  /** The whole cluster is a jumble: send every auto face back for re-sorting. */
-  async disbandPerson(): Promise<void> {
-    const person = this.person();
-    if (!person || this.isBusy()) {
-      return;
-    }
-    const confirmed = await this.confirms.ask({
-      title: 'Split this jumble apart?',
-      message:
-        'Every automatically-grouped face here gets re-sorted from scratch — lookalikes regroup into their own people. Faces you pinned by hand stay. No photos are affected.',
-      confirmLabel: 'Re-sort faces',
-      danger: false,
-    });
-    if (!confirmed) {
-      return;
-    }
-    this.isBusy.set(true);
-    try {
-      await this.api.disband(person.id);
-      await this.router.navigateByUrl('/people');
     } finally {
       this.isBusy.set(false);
     }

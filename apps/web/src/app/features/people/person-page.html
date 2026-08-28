@@ -42,6 +42,9 @@
           autocomplete="off"
         />
         <button type="submit">Save name</button>
+        @if (person()?.name === null) {
+          <app-edit-toggle />
+        }
       </div>
       @if (nameSuggestions().length > 0) {
         <div class="suggestions" role="listbox" aria-label="Existing people with this name">
@@ -61,28 +64,16 @@
     </form>
   }
 
-  <!-- Unnamed clusters have no profile header; the pencil still needs a home. -->
-  @if (canWrite && person()?.name === null) {
-    <section class="manage" aria-label="Person actions">
-      <app-edit-toggle />
-    </section>
-  }
 
   @if (editMode.isEditing() && canWrite) {
     <section class="curation" aria-label="Fix this person">
       <div class="curation-head">
         <h2>Faces ({{ faces().length }})</h2>
-        <button type="button" class="outline" (click)="isMergePickerOpen.set(true)">
-          Merge into…
-        </button>
-        <button type="button" class="outline danger" (click)="hidePerson()">Hide person</button>
-        <button type="button" class="outline danger" (click)="disbandPerson()">
-          These are different people
-        </button>
       </div>
       <p class="hint">
         Tap a face to pick a better avatar, or tap the ones that don’t belong
         and remove them — they go back into the pool and re-sort themselves.
+        To combine two people, just give this one the other's name.
       </p>
       <div class="face-grid">
         @for (face of faces(); track face.id) {
@@ -112,6 +103,10 @@
           </button>
         </div>
       }
+      <!-- Strangers and photobombers: the one quiet destructive-ish escape hatch. -->
+      <button type="button" class="danger-link" (click)="hidePerson()">
+        Hide this person from People
+      </button>
     </section>
   }
 
@@ -123,31 +118,6 @@
     }
   </div>
 </main>
-
-@if (isMergePickerOpen()) {
-  <app-sheet [sheetTitle]="'Merge “' + title() + '” into…'" (closed)="isMergePickerOpen.set(false)">
-    <div class="merge-content">
-      <input
-        type="search"
-        placeholder="Filter by name…"
-        autocomplete="off"
-        [value]="mergeFilter()"
-        (input)="mergeFilter.set($any($event.target).value)"
-      />
-      <div class="candidates">
-        @for (candidate of mergeCandidates(); track candidate.id) {
-          <button type="button" [disabled]="isBusy()" (click)="mergeInto(candidate)">
-            @if (candidate.coverFaceId; as cover) {
-              <img [src]="cropUrl(cover)" alt="" loading="lazy" />
-            }
-            <span class="name">{{ candidate.name ?? 'Who’s this?' }}</span>
-            <span class="count">{{ candidate.faceCount }}</span>
-          </button>
-        }
-      </div>
-    </div>
-  </app-sheet>
-}
 
 @if (viewerIndex() !== null) {
   <app-asset-viewer
