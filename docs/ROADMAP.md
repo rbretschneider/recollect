@@ -44,8 +44,9 @@ real-library testing (~18.5k assets on hawaii) teaches us things.
    album-add and trash.
 4. **Person ↔ user linking** ("this is Andrea") — data model reserves it;
    unlocks "photos of us". Also: viewer info "Taken by" links to the person.
-5. **Settings completeness** — edit/disable members, change password
-   (incl. forced first-login change), remove/re-enable library roots.
+5. **Settings completeness** — edit/disable members and remove/re-enable
+   library roots. (Password lifecycle SHIPPED 2026-08-27: self change,
+   admin reset with forced next-login change, sign-out-everywhere.)
 6. **Live Photos pairing** (needs real iPhone HEIC+MOV pairs).
 7. **Cleanup advisor (storage on location)** — a suggestion panel for
    reclaiming NAS space, review-inbox style (accept / dismiss, never
@@ -82,8 +83,9 @@ real-library testing (~18.5k assets on hawaii) teaches us things.
 
 ## Later
 
-- **Places v2**: interactive pin-cluster map (Leaflet) over the shipped
-  place-card view; per-place date ranges; places in search results
+- **Places v2**: bubble map SHIPPED 2026-08-27 (card/map toggle, Leaflet,
+  count-sized bubbles, tap-to-drill). Remaining: per-place date ranges;
+  places in search results; maybe per-cell dots / heatmap at high zoom
 - **ML auto-tagging** (zero-shot CLIP over a tag vocabulary) + a download
   button that names files from tags + original name (yearly family book flow)
 - Smarter clustering, year-in-review
@@ -106,15 +108,15 @@ real-library testing (~18.5k assets on hawaii) teaches us things.
      an unguessable token URL in the same family as share tokens.
   2. Guest page is dead simple: type your name once (stored as uploader
      attribution, feeds "Taken by"), pick photos, upload. No account.
-  3. Uploads land in a **quarantine inbox** tied to the event — a staging
-     directory, NOT a library root; never scanned into the timeline.
-     Household members review ("42 new from guests"), approve/reject in
-     bulk; approved photos ingest through the normal pipeline into the
-     album.
+  3. Uploads are validated by actually decoding the file (the security
+     review), then auto-ingest through the normal pipeline straight into
+     the album (design revised 2026-08-28: near-immediate, no human
+     gate). The quarantine review queue remains as the FALLBACK for
+     files that fail ingest (approve = retry, reject = delete).
   4. Curate the memory from the album afterwards, as with any album.
 
   **Token scope** grants exactly: upload to this one event, plus an
-  optional *pool view* toggle (guests see approved photos — on for a
+  optional *pool view* toggle (guests see the whole album — on for a
   birthday, off for upload-only drops). Never people data, never search,
   never anything outside the event.
 
