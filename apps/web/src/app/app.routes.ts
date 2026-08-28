@@ -11,7 +11,14 @@ export const routes: Routes = [
     loadComponent: () => import('./features/login/login-page').then((m) => m.LoginPage),
   },
   {
+    // Home: the dashboard — on this day, suggestions, recent memories.
     path: '',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/dashboard/dashboard-page').then((m) => m.DashboardPage),
+  },
+  {
+    path: 'photos',
     canActivate: [authGuard],
     loadComponent: () => import('./features/photos/photos-page').then((m) => m.PhotosPage),
   },

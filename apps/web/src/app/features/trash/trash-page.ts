@@ -4,13 +4,12 @@ import { TrashApiService, TrashItem } from '../../core/api/trash-api.service';
 import { AccountBadge } from '../../shared/account-badge';
 import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
-import { BottomNav } from '../../shared/bottom-nav';
 import { PageLoading } from '../../shared/page-loading';
 
 /** The Trash view: what's held, when it purges, and restore (S5.2/S5.3). */
 @Component({
   selector: 'app-trash-page',
-  imports: [AccountBadge, MenuButton, PageLoading, BackButton, BottomNav, RouterLink],
+  imports: [AccountBadge, MenuButton, PageLoading, BackButton, RouterLink],
   templateUrl: './trash-page.html',
   styleUrl: './trash-page.scss',
 })

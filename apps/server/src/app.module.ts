@@ -4,6 +4,7 @@ import { AssetsModule } from './assets/assets.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from './config/config.module';
 import { ContributionsModule } from './contributions/contributions.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { DatabaseModule } from './database/database.module';
 import { DevicesModule } from './devices/devices.module';
 import { FoldersModule } from './folders/folders.module';
@@ -34,6 +35,7 @@ import { UsersModule } from './users/users.module';
     MemoriesModule,
     AlbumsModule,
     ContributionsModule,
+    DashboardModule,
     MlModule,
     PeopleModule,
     PlacesModule,

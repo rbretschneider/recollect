@@ -4,7 +4,7 @@
     <app-back to="/places" label="Back to all places" />
     <h1>{{ selectedPlace()?.town ?? 'Place' }}</h1>
   } @else {
-    <app-back to="/" label="Back to photos" />
+    <app-back to="/" label="Home" />
     <h1>Places</h1>
   }
   <span class="spacer"></span>
@@ -102,4 +102,3 @@
   />
 }
 
-<app-bottom-nav />

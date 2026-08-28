@@ -5,7 +5,6 @@ import { ActivitySpinner } from '../../shared/activity-spinner';
 import { AccountBadge } from '../../shared/account-badge';
 import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
-import { BottomNav } from '../../shared/bottom-nav';
 
 const TAIL_LINES = 500;
 const REFRESH_MS = 5000;
@@ -13,7 +12,7 @@ const REFRESH_MS = 5000;
 /** Live tail of the server log, with download (admin). */
 @Component({
   selector: 'app-logs-page',
-  imports: [AccountBadge, MenuButton, BackButton, ActivitySpinner, BottomNav, RouterLink],
+  imports: [AccountBadge, MenuButton, BackButton, ActivitySpinner, RouterLink],
   templateUrl: './logs-page.html',
   styleUrl: './logs-page.scss',
 })

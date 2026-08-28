@@ -10,7 +10,6 @@ import { TimelineAsset } from '../../core/api/api-models';
 import { AccountBadge } from '../../shared/account-badge';
 import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
-import { BottomNav } from '../../shared/bottom-nav';
 import { Icon } from '../../shared/icon';
 import { PageLoading } from '../../shared/page-loading';
 import { AssetViewer } from '../viewer/asset-viewer';
@@ -37,7 +36,7 @@ function loadFolderView(): 'cards' | 'list' {
  */
 @Component({
   selector: 'app-folders-page',
-  imports: [AccountBadge, MenuButton, PageLoading, BackButton, AssetViewer, BottomNav, Icon, RouterLink],
+  imports: [AccountBadge, MenuButton, PageLoading, BackButton, AssetViewer, Icon, RouterLink],
   templateUrl: './folders-page.html',
   styleUrl: './folders-page.scss',
 })

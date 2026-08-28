@@ -1,0 +1,94 @@
+<app-topbar />
+
+<main class="dashboard">
+  <header class="hello">
+    <h1>{{ greeting() }}</h1>
+    <p>{{ todayLabel }}</p>
+  </header>
+
+  @if (isLoaded() && onThisDay().length === 0 && suggestions().length === 0 && recentMemories().length === 0) {
+    <section class="empty">
+      <h2>Nothing here yet</h2>
+      <p>As your library grows, this page fills with photos from past years and fresh memories.</p>
+      <a class="cta" routerLink="/photos">Browse photos</a>
+    </section>
+  }
+
+  @if (onThisDay().length > 0) {
+    <section class="on-this-day" aria-label="On this day">
+      <h2>On this day</h2>
+      @for (group of onThisDay(); track group.year) {
+        <article class="year">
+          <h3>{{ yearsAgo(group.year) }} <span class="muted">· {{ group.year }}</span></h3>
+          <div class="strip">
+            @for (assetId of group.assetIds; track assetId) {
+              <button
+                type="button"
+                class="frame"
+                aria-label="Open photo"
+                (click)="openViewer(group, assetId)"
+              >
+                <img [src]="thumbUrl(assetId, 720)" alt="" loading="lazy" />
+              </button>
+            }
+          </div>
+        </article>
+      }
+    </section>
+  }
+
+  @if (suggestions().length > 0) {
+    <section class="suggestions" aria-label="Suggested memories">
+      <div class="section-head">
+        <h2>Suggested memories</h2>
+        <a routerLink="/memories/inbox">Review all ›</a>
+      </div>
+      <div class="cards">
+        @for (suggestion of suggestions(); track suggestion.id) {
+          <a class="card" routerLink="/memories/inbox">
+            @if (suggestion.previewAssetIds[0]; as cover) {
+              <img [src]="thumbUrl(cover, 720)" alt="" loading="lazy" />
+            }
+            <div class="veil"></div>
+            <div class="caption">
+              <h3>{{ suggestion.seedTitle }}</h3>
+              <p>{{ spanLabel(suggestion) }} · {{ suggestion.assetCount }} photos</p>
+            </div>
+          </a>
+        }
+      </div>
+    </section>
+  }
+
+  @if (recentMemories().length > 0) {
+    <section class="recent" aria-label="Recent memories">
+      <div class="section-head">
+        <h2>Jump back in</h2>
+        <a routerLink="/memories">All memories ›</a>
+      </div>
+      <div class="cards">
+        @for (memory of recentMemories(); track memory.id) {
+          <a class="card" [routerLink]="['/memories', memory.id]">
+            @if (memory.coverAssetId; as cover) {
+              <img [src]="thumbUrl(cover, 720)" alt="" loading="lazy" />
+            }
+            <div class="veil"></div>
+            <div class="caption">
+              <h3>{{ memory.title }}</h3>
+              <p>{{ spanLabel(memory) }} · {{ memory.assetCount }} photos</p>
+            </div>
+          </a>
+        }
+      </div>
+    </section>
+  }
+</main>
+
+@if (viewerIndex() !== null) {
+  <app-asset-viewer
+    [assets]="viewerAssets()"
+    [startIndex]="viewerIndex()!"
+    (closed)="closeViewer()"
+    (deleted)="onViewerDeleted($event)"
+  />
+}

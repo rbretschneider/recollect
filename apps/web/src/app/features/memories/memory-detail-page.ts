@@ -18,7 +18,6 @@ import { MemoryDetail, MemoryQuote, TimelineAsset } from '../../core/api/api-mod
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { EditModeService } from '../../core/edit-mode.service';
 import { BackButton } from '../../shared/back-button';
-import { BottomNav } from '../../shared/bottom-nav';
 import { PageLoading } from '../../shared/page-loading';
 import { ConfirmService } from '../../shared/confirm.service';
 import { EditToggle } from '../../shared/edit-toggle';
@@ -34,7 +33,7 @@ const JOURNAL_AUTOSAVE_MS = 1500;
   selector: 'app-memory-detail-page',
   imports: [PageLoading, BackButton, 
     AssetViewer,
-    BottomNav,
+
     EditToggle,
     FormsModule,
     Icon,

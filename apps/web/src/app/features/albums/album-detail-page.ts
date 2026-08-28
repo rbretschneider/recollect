@@ -15,7 +15,6 @@ import { EditModeService } from '../../core/edit-mode.service';
 import { AccountBadge } from '../../shared/account-badge';
 import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
-import { BottomNav } from '../../shared/bottom-nav';
 import { PageLoading } from '../../shared/page-loading';
 import { ConfirmService } from '../../shared/confirm.service';
 import { EditToggle } from '../../shared/edit-toggle';
@@ -34,7 +33,7 @@ import { AssetViewer } from '../viewer/asset-viewer';
     PageLoading,
     BackButton,
     AssetViewer,
-    BottomNav,
+
     EditToggle,
     FormsModule,
     GuestLinkButton,

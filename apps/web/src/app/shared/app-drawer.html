@@ -10,6 +10,22 @@
   </header>
 
   <nav class="items">
+    <a routerLink="/" (click)="closed.emit()">
+      <span class="icon">🏠</span> Home
+    </a>
+    <a routerLink="/photos" (click)="closed.emit()">
+      <span class="icon">🖼️</span> Photos
+    </a>
+    <a routerLink="/memories" (click)="closed.emit()">
+      <span class="icon">✨</span> Memories
+    </a>
+    <a routerLink="/albums" (click)="closed.emit()">
+      <span class="icon">📔</span> Albums
+    </a>
+    <a routerLink="/search" (click)="closed.emit()">
+      <span class="icon">🔎</span> Search
+    </a>
+    <hr />
     @if (isAdmin) {
       <a routerLink="/library" (click)="closed.emit()">
         <span class="icon">🗂️</span> Library

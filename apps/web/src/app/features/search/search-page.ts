@@ -7,7 +7,6 @@ import {
 } from '../../core/api/search-api.service';
 import { TimelineAsset } from '../../core/api/api-models';
 import { AppTopbar } from '../../shared/app-topbar';
-import { BottomNav } from '../../shared/bottom-nav';
 import { AssetViewer } from '../viewer/asset-viewer';
 
 const DEBOUNCE_MS = 300;
@@ -29,7 +28,7 @@ function loadRecentSearches(): string[] {
 /** One search box for the whole library: memories, albums, folders, files, dates. */
 @Component({
   selector: 'app-search-page',
-  imports: [AppTopbar, AssetViewer, BottomNav, RouterLink],
+  imports: [AppTopbar, AssetViewer, RouterLink],
   templateUrl: './search-page.html',
   styleUrl: './search-page.scss',
 })

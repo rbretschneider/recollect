@@ -17,7 +17,6 @@ import { Icon } from '../../shared/icon';
 import { AccountBadge } from '../../shared/account-badge';
 import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
-import { BottomNav } from '../../shared/bottom-nav';
 import { PageLoading } from '../../shared/page-loading';
 import { SafeResourcePipe } from '../../shared/safe-resource.pipe';
 import { AssetViewer } from '../viewer/asset-viewer';
@@ -31,7 +30,7 @@ const PLACES_VIEW_KEY = 'recollect.placesView';
  */
 @Component({
   selector: 'app-places-page',
-  imports: [AccountBadge, Icon, MenuButton, BackButton, AssetViewer, BottomNav, PageLoading, SafeResourcePipe],
+  imports: [AccountBadge, Icon, MenuButton, BackButton, AssetViewer, PageLoading, SafeResourcePipe],
   templateUrl: './places-page.html',
   styleUrl: './places-page.scss',
 })

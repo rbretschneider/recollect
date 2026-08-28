@@ -211,3 +211,9 @@ footer {
   color: var(--text-muted);
   line-height: 1.4;
 }
+
+.items hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0.4rem 0;
+}

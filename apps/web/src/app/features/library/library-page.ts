@@ -6,7 +6,6 @@ import { AuthStateService } from '../../core/auth/auth-state.service';
 import { AccountBadge } from '../../shared/account-badge';
 import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
-import { BottomNav } from '../../shared/bottom-nav';
 import { ConfirmService } from '../../shared/confirm.service';
 import { FolderPicker } from '../../shared/folder-picker';
 import { PageLoading } from '../../shared/page-loading';
@@ -36,7 +35,7 @@ const JOB_LABELS: Record<string, string> = {
  */
 @Component({
   selector: 'app-library-page',
-  imports: [AccountBadge, MenuButton, BackButton, BottomNav, FolderPicker, FormsModule, PageLoading, Sheet],
+  imports: [AccountBadge, MenuButton, BackButton, FolderPicker, FormsModule, PageLoading, Sheet],
   templateUrl: './library-page.html',
   styleUrl: './library-page.scss',
 })

@@ -4,13 +4,12 @@ import { LibraryApiService } from '../../core/api/library-api.service';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { LibraryStatus, MemorySummary } from '../../core/api/api-models';
 import { AppTopbar } from '../../shared/app-topbar';
-import { BottomNav } from '../../shared/bottom-nav';
 import { PageLoading } from '../../shared/page-loading';
 
 /** The Memories tab: the timeline of confirmed memories; suggestions live on their own review page. */
 @Component({
   selector: 'app-memories-page',
-  imports: [PageLoading, AppTopbar, BottomNav, RouterLink],
+  imports: [PageLoading, AppTopbar, RouterLink],
   templateUrl: './memories-page.html',
   styleUrl: './memories-page.scss',
 })

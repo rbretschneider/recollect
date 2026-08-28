@@ -22,7 +22,6 @@ import { AccountBadge } from '../../shared/account-badge';
 import { Brand } from '../../shared/brand';
 import { ConfirmService } from '../../shared/confirm.service';
 import { Icon } from '../../shared/icon';
-import { BottomNav } from '../../shared/bottom-nav';
 import { LongPressDirective } from '../../shared/long-press.directive';
 import { AssetViewer } from '../viewer/asset-viewer';
 import { RouterLink } from '@angular/router';
@@ -61,7 +60,7 @@ const STATUS_POLL_MS = 4000;
     ActivitySpinner,
     AlbumPicker,
     AssetViewer,
-    BottomNav,
+
     AccountBadge,
     Brand,
     Icon,
