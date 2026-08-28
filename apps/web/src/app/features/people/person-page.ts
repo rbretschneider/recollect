@@ -144,6 +144,23 @@ export class PersonPage implements OnInit {
     }
   }
 
+  /** Detaches the selected faces back into the pool; they re-cluster elsewhere. */
+  async removeSelected(): Promise<void> {
+    const person = this.person();
+    const faceIds = [...this.selectedFaceIds()];
+    if (!person || faceIds.length === 0 || this.isBusy()) {
+      return;
+    }
+    this.isBusy.set(true);
+    try {
+      await this.api.removeFaces(person.id, faceIds);
+      this.selectedFaceIds.set(new Set());
+      await this.load();
+    } finally {
+      this.isBusy.set(false);
+    }
+  }
+
   /** "Not the same person": selected faces move to a brand-new person. */
   async splitSelected(): Promise<void> {
     const person = this.person();

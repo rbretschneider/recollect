@@ -183,6 +183,44 @@ export class PeopleService {
     return result.rows.map((row) => row.asset_id as string);
   }
 
+  /**
+   * "Remove from this person": the faces go back into the pool and re-cluster
+   * — excluding this person, so they land on the next-best match or start a
+   * fresh unnamed cluster instead of bouncing straight back.
+   */
+  async removeFaces(personId: string, faceIds: string[]): Promise<{ removed: number }> {
+    await this.requirePerson(personId);
+    const detached = await this.db
+      .update(face)
+      .set({ personId: null })
+      .where(and(inArray(face.id, faceIds), eq(face.personId, personId), eq(face.ignored, false)))
+      .returning({ id: face.id });
+    for (const row of detached) {
+      const [withEmbedding] = await this.db
+        .execute<{ embedding: string }>(
+          sql`select embedding::text as embedding from face where id = ${row.id}`,
+        )
+        .then((result) => result.rows);
+      if (!withEmbedding) {
+        continue;
+      }
+      const newPersonId = await this.mlProcessing.clusterIntoPerson(
+        JSON.parse(withEmbedding.embedding) as number[],
+        personId,
+      );
+      await this.db.update(face).set({ personId: newPersonId }).where(eq(face.id, row.id));
+    }
+    // Removing the last face means the identity itself was a mistake; drop it.
+    const [remaining] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(face)
+      .where(eq(face.personId, personId));
+    if (remaining.count === 0) {
+      await this.db.delete(person).where(eq(person.id, personId));
+    }
+    return { removed: detached.length };
+  }
+
   /** Pins one of the person's own faces as their avatar everywhere. */
   async setCoverFace(personId: string, faceId: string): Promise<void> {
     await this.requirePerson(personId);

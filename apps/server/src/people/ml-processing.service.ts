@@ -103,14 +103,19 @@ export class MlProcessingService {
    * Incremental greedy clustering: join the person of the nearest existing
    * face when it's close enough, otherwise start a new unnamed person.
    */
-  /** Public so disbanding a bad cluster can re-cluster its faces one by one. */
-  async clusterIntoPerson(embedding: number[]): Promise<string> {
+  /**
+   * Public so disbanding a bad cluster can re-cluster its faces one by one.
+   * excludePersonId keeps a face REMOVED from a person from snapping straight
+   * back to it (its nearest neighbors are usually its old cluster).
+   */
+  async clusterIntoPerson(embedding: number[], excludePersonId?: string): Promise<string> {
     const vectorLiteral = JSON.stringify(embedding);
     const nearest = await this.db.execute(sql`
       SELECT f.person_id, f.embedding <=> ${vectorLiteral}::vector AS distance
       FROM face f
       JOIN person p ON p.id = f.person_id AND p.merged_into_id IS NULL
       WHERE f.person_id IS NOT NULL AND f.ignored = false
+        ${excludePersonId ? sql`AND f.person_id != ${excludePersonId}` : sql``}
       ORDER BY f.embedding <=> ${vectorLiteral}::vector
       LIMIT 1
     `);

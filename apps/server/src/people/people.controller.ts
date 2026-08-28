@@ -50,6 +50,15 @@ export class PeopleController {
   }
 
   @RequireAdmin()
+  @Post(':id/faces/remove')
+  async removeFaces(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: FaceIdsRequestDto,
+  ): Promise<{ removed: number }> {
+    return this.people.removeFaces(id, body.faceIds);
+  }
+
+  @RequireAdmin()
   @Put(':id/cover-face')
   @HttpCode(HttpStatus.NO_CONTENT)
   async setCoverFace(

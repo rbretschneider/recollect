@@ -81,8 +81,8 @@
         </button>
       </div>
       <p class="hint">
-        Tap the faces that don’t belong, then split them into their own person
-        or ignore them entirely.
+        Tap a face to pick a better avatar, or tap the ones that don’t belong
+        and remove them — they go back into the pool and re-sort themselves.
       </p>
       <div class="face-grid">
         @for (face of faces(); track face.id) {
@@ -100,16 +100,15 @@
       @if (selectedFaceIds().size > 0) {
         <div class="face-actions" role="toolbar" aria-label="Selected face actions">
           <span>{{ selectedFaceIds().size }} selected</span>
-          @if (selectedFaceIds().size === 1) {
-            <button type="button" [disabled]="isBusy()" (click)="useSelectedAsAvatar()">
-              Use as avatar
-            </button>
-          }
-          <button type="button" [disabled]="isBusy()" (click)="splitSelected()">
-            Not this person
+          <button
+            type="button"
+            [disabled]="isBusy() || selectedFaceIds().size !== 1"
+            (click)="useSelectedAsAvatar()"
+          >
+            Make avatar
           </button>
-          <button type="button" class="danger" [disabled]="isBusy()" (click)="ignoreSelected()">
-            Ignore
+          <button type="button" class="danger" [disabled]="isBusy()" (click)="removeSelected()">
+            Remove from this person
           </button>
         </div>
       }

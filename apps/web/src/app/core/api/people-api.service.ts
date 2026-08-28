@@ -36,6 +36,13 @@ export class PeopleApiService {
     return firstValueFrom(this.http.patch<void>(`/api/v1/people/${personId}`, { name }));
   }
 
+  /** Admin: detach faces back into the pool; they re-cluster elsewhere. */
+  removeFaces(personId: string, faceIds: string[]): Promise<{ removed: number }> {
+    return firstValueFrom(
+      this.http.post<{ removed: number }>(`/api/v1/people/${personId}/faces/remove`, { faceIds }),
+    );
+  }
+
   /** Admin: pin one of this person's faces as their avatar everywhere. */
   setCoverFace(personId: string, faceId: string): Promise<void> {
     return firstValueFrom(
