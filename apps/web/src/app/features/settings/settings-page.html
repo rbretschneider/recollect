@@ -33,6 +33,38 @@
     </div>
   </section>
 
+  @if (isAdmin) {
+    <section aria-label="Household members">
+      @if (inviteNote(); as note) {
+        <p class="invite-note" role="status">{{ note }}</p>
+      }
+      <div class="section-head">
+        <h2>Household</h2>
+        @if (!isAddingUser()) {
+          <button type="button" class="outline" (click)="isAddingUser.set(true)">Add member</button>
+        }
+      </div>
+
+      @for (user of users(); track user.id) {
+        <div class="card row" [class.disabled-member]="user.disabled">
+          <div class="info">
+            <h3>{{ user.displayName }} @if (user.disabled) { <span class="off-chip">Disabled</span> }</h3>
+            <p>{{ user.email }}</p>
+            <p class="muted">
+              {{ grantLabel(user) }}
+              @if (personName(user.personId); as who) { · is {{ who }} }
+            </p>
+          </div>
+          @if (user.disabled) {
+            <button type="button" class="outline" (click)="enableMember(user)">Enable</button>
+          } @else {
+            <button type="button" class="outline" (click)="startEditingMember(user)">Edit</button>
+          }
+        </div>
+      }
+    </section>
+  }
+
   @if (isAdmin && mailStatus(); as mail) {
     <section aria-label="Email">
       <div class="section-head">
@@ -115,37 +147,6 @@
     </section>
   }
 
-  @if (isAdmin) {
-    <section aria-label="Household members">
-      @if (inviteNote(); as note) {
-        <p class="invite-note" role="status">{{ note }}</p>
-      }
-      <div class="section-head">
-        <h2>Household</h2>
-        @if (!isAddingUser()) {
-          <button type="button" class="outline" (click)="isAddingUser.set(true)">Add member</button>
-        }
-      </div>
-
-      @for (user of users(); track user.id) {
-        <div class="card row" [class.disabled-member]="user.disabled">
-          <div class="info">
-            <h3>{{ user.displayName }} @if (user.disabled) { <span class="off-chip">Disabled</span> }</h3>
-            <p>{{ user.email }}</p>
-            <p class="muted">
-              {{ grantLabel(user) }}
-              @if (personName(user.personId); as who) { · is {{ who }} }
-            </p>
-          </div>
-          @if (user.disabled) {
-            <button type="button" class="outline" (click)="enableMember(user)">Enable</button>
-          } @else {
-            <button type="button" class="outline" (click)="startEditingMember(user)">Edit</button>
-          }
-        </div>
-      }
-    </section>
-  }
 </main>
 
 @if (isAddingUser()) {
