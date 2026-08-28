@@ -6,7 +6,9 @@ import {
   SpaceHogSuggestion,
 } from '../../core/api/cleanup-api.service';
 import { TrashApiService } from '../../core/api/trash-api.service';
+import { FormsModule } from '@angular/forms';
 import { AccountBadge } from '../../shared/account-badge';
+import { Sheet } from '../../shared/sheet';
 import { BackButton } from '../../shared/back-button';
 import { ConfirmService } from '../../shared/confirm.service';
 import { MenuButton } from '../../shared/menu-button';
@@ -19,7 +21,7 @@ import { PageLoading } from '../../shared/page-loading';
  */
 @Component({
   selector: 'app-cleanup-page',
-  imports: [AccountBadge, BackButton, MenuButton, PageLoading],
+  imports: [AccountBadge, BackButton, FormsModule, MenuButton, PageLoading, Sheet],
   templateUrl: './cleanup-page.html',
   styleUrl: './cleanup-page.scss',
 })
@@ -115,17 +117,43 @@ export class CleanupPage implements OnInit {
     }
   }
 
-  async convert(item: SpaceHogSuggestion): Promise<void> {
-    const confirmed = await this.confirms.ask({
-      title: `Convert “${item.fileName}”?`,
-      message: `Re-encodes it to an efficient format and REPLACES the file on disk (est. ${this.formatSize(item.estimatedBytes ?? 0)} instead of ${this.formatSize(item.sizeBytes)}). The original is kept for the Trash holding period as the undo. If conversion barely helps, the original is kept automatically.`,
-      confirmLabel: 'Convert & replace',
-    });
-    if (!confirmed) {
+  /** The hog whose conversion options sheet is open. */
+  readonly convertTarget = signal<SpaceHogSuggestion | null>(null);
+  convertCodec: 'hevc' | 'h264' = 'hevc';
+
+  openConvert(item: SpaceHogSuggestion): void {
+    this.convertCodec = 'hevc';
+    this.convertTarget.set(item);
+  }
+
+  async confirmConvert(): Promise<void> {
+    const item = this.convertTarget();
+    if (!item) {
       return;
     }
-    await this.api.convert(item.assetId);
+    await this.api.convert(item.assetId, this.convertCodec);
     this.queuedConversions.update((set) => new Set([...set, item.assetId]));
+    this.convertTarget.set(null);
+  }
+
+  /** Originals slated for deletion after conversion (the visible undo). */
+  readonly convertedOriginals = signal<
+    Array<{ assetId: string; fileName: string; sizeBytes: number; deletesAt: string }>
+  >([]);
+  readonly restoringId = signal<string | null>(null);
+
+  deletesAtLabel(iso: string): string {
+    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  async restoreOriginal(assetId: string): Promise<void> {
+    this.restoringId.set(assetId);
+    try {
+      await this.api.restore(assetId);
+      await this.load();
+    } finally {
+      this.restoringId.set(null);
+    }
   }
 
   private removeJunk(assetId: string): void {
@@ -136,6 +164,11 @@ export class CleanupPage implements OnInit {
   }
 
   private async load(): Promise<void> {
-    this.data.set(await this.api.suggestions());
+    const [suggestions, converted] = await Promise.all([
+      this.api.suggestions(),
+      this.api.listConverted().catch(() => ({ originals: [] })),
+    ]);
+    this.data.set(suggestions);
+    this.convertedOriginals.set(converted.originals);
   }
 }

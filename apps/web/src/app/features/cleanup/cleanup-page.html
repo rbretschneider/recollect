@@ -74,8 +74,39 @@
                 <span class="chip">Converting…</span>
               } @else {
                 <button type="button" class="outline" (click)="dismissHog(item)">Keep</button>
-                <button type="button" class="primary" (click)="convert(item)">Convert</button>
+                <button type="button" class="primary" (click)="openConvert(item)">Convert</button>
               }
+            </div>
+          }
+        </div>
+      </section>
+    }
+    @if (convertedOriginals().length > 0) {
+      <section class="converted" aria-label="Recently converted">
+        <div class="section-head">
+          <h2>Recently converted</h2>
+        </div>
+        <p class="hint">
+          These are the ORIGINAL files, kept as the undo after conversion.
+          Each deletes automatically on its date; Restore puts one back and
+          removes its converted copy.
+        </p>
+        <div class="rows">
+          @for (original of convertedOriginals(); track original.assetId) {
+            <div class="row">
+              <img [src]="thumbUrl(original.assetId)" alt="" loading="lazy" />
+              <div class="info">
+                <h3>{{ original.fileName }}</h3>
+                <p>{{ formatSize(original.sizeBytes) }} · deletes {{ deletesAtLabel(original.deletesAt) }}</p>
+              </div>
+              <button
+                type="button"
+                class="outline"
+                [disabled]="restoringId() === original.assetId"
+                (click)="restoreOriginal(original.assetId)"
+              >
+                {{ restoringId() === original.assetId ? 'Restoring…' : 'Restore original' }}
+              </button>
             </div>
           }
         </div>
@@ -85,3 +116,40 @@
     <app-page-loading label="Sizing things up…" />
   }
 </main>
+
+@if (convertTarget(); as item) {
+  <app-sheet [sheetTitle]="'Convert ' + item.fileName" (closed)="convertTarget.set(null)">
+    <div class="convert-options">
+      <p class="hint">
+        A new, much smaller copy is encoded next to the original
+        ({{ formatSize(item.sizeBytes) }} → est. {{ formatSize(item.estimatedBytes ?? 0) }}).
+        The new file takes the original's place in your library; the original
+        moves to “Recently converted” below, where it can be restored for
+        {{ '' }}the Trash holding period before it's deleted for good.
+        Nothing changes if the re-encode barely saves space — the original
+        is kept automatically.
+      </p>
+      <label class="codec">
+        <input type="radio" name="codec" value="hevc" [(ngModel)]="convertCodec" />
+        <span>
+          <strong>HEVC (H.265)</strong> — smallest files, best for archiving.
+          Plays in the app everywhere (a playback copy is prepared once);
+          some older TVs and set-top boxes can't play the raw file directly.
+        </span>
+      </label>
+      <label class="codec">
+        <input type="radio" name="codec" value="h264" [(ngModel)]="convertCodec" />
+        <span>
+          <strong>H.264</strong> — bigger than HEVC but still a huge saving,
+          and plays natively on practically everything ever made.
+        </span>
+      </label>
+      <div class="actions">
+        <button type="button" class="ghost" (click)="convertTarget.set(null)">Cancel</button>
+        <button type="button" class="primary" (click)="confirmConvert()">
+          Convert to {{ convertCodec === 'hevc' ? 'HEVC' : 'H.264' }}
+        </button>
+      </div>
+    </div>
+  </app-sheet>
+}

@@ -11,6 +11,7 @@ import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
 import { asset, assetFile, cleanupDismissal, libraryRoot } from '../database/schema';
 import { JobHandler, JobHandlerRegistry } from '../jobs/job-handler';
+import { JobQueueService } from '../jobs/job-queue.service';
 import { CleanupService, CONVERT_VIDEO_JOB } from './cleanup.service';
 
 const execFileAsync = promisify(execFile);
@@ -33,6 +34,7 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
     @Inject(DATABASE) private readonly db: Database,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     private readonly cleanup: CleanupService,
+    private readonly queue: JobQueueService,
   ) {}
 
   onModuleInit(): void {
@@ -40,7 +42,7 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
   }
 
   async handle(payload: unknown): Promise<void> {
-    const { assetId } = payload as { assetId: string };
+    const { assetId, codec = 'hevc' } = payload as { assetId: string; codec?: 'hevc' | 'h264' };
     if (!ffmpegPath) {
       throw new Error('ffmpeg binary is not available on this platform.');
     }
@@ -64,6 +66,12 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
     const temp = resolve(this.config.appDataDir, 'staging', `convert_${assetId}.mp4`);
     await mkdir(dirname(temp), { recursive: true });
     this.logger.log(`Converting ${sourcePath}…`);
+    // HEVC (~40% smaller, the archive choice; playback renditions cover old
+    // browsers) or H.264 (plays natively everywhere, incl. old set-top boxes).
+    const videoArgs =
+      codec === 'hevc'
+        ? ['-c:v', 'libx265', '-preset', 'medium', '-crf', '26', '-tag:v', 'hvc1']
+        : ['-c:v', 'libx264', '-preset', 'medium', '-crf', '23'];
     await execFileAsync(
       ffmpegPath,
       [
@@ -72,9 +80,7 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
         '-threads', String(this.config.transcodeThreads),
         '-i', sourcePath,
         '-map_metadata', '0',
-        '-c:v', 'libx264',
-        '-preset', 'medium',
-        '-crf', '23',
+        ...videoArgs,
         '-pix_fmt', 'yuv420p',
         '-c:a', 'aac',
         '-b:a', '160k',
@@ -125,9 +131,10 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
       .where(eq(assetFile.id, row.fileId));
     await this.db
       .update(asset)
-      .set({ videoCodec: 'h264', mime: 'video/mp4', updatedAt: new Date() })
+      .set({ videoCodec: codec === 'hevc' ? 'hvc1' : 'h264', mime: 'video/mp4', updatedAt: new Date() })
       .where(eq(asset.id, assetId));
-    // The old playback rendition (if any) is stale; H.264 streams directly.
+    // The old playback rendition is stale either way. H.264 streams directly;
+    // HEVC gets a fresh rendition queued so playback is ready before first view.
     const playback = resolve(
       this.config.appDataDir,
       'playback',
@@ -135,6 +142,13 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
       `${assetId}.mp4`,
     );
     await rm(playback, { force: true }).catch(() => undefined);
+    if (codec === 'hevc') {
+      await this.queue.enqueue(
+        'transcode_playback',
+        { assetId },
+        { dedupeKey: `transcode_playback:${assetId}`, priority: 190 },
+      );
+    }
     // Retire the suggestion.
     await this.db
       .insert(cleanupDismissal)

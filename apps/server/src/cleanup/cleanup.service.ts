@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
-import { mkdir, readdir, rm, stat } from 'fs/promises';
+import { mkdir, readdir, rename, rm, stat } from 'fs/promises';
 import { join, resolve } from 'path';
 import { APP_CONFIG } from '../config/app-config';
 import type { AppConfig } from '../config/app-config';
@@ -33,6 +33,14 @@ export interface SpaceHogSuggestion {
   /** Estimated bytes after H.264 re-encode; null when conversion isn't offered. */
   estimatedBytes: number | null;
   converting: boolean;
+}
+
+/** One original slated for deletion after conversion (the undo window). */
+export interface ConvertedOriginal {
+  assetId: string;
+  fileName: string;
+  sizeBytes: number;
+  deletesAt: string;
 }
 
 export interface CleanupSuggestions {
@@ -164,8 +172,8 @@ export class CleanupService {
       .onConflictDoNothing();
   }
 
-  /** Queues the in-place H.264 re-encode for one video. */
-  async queueConversion(assetId: string): Promise<void> {
+  /** Queues the in-place re-encode for one video (HEVC default, H.264 option). */
+  async queueConversion(assetId: string, codec: 'hevc' | 'h264'): Promise<void> {
     const [row] = await this.db.execute<{ id: string }>(
       sql`select id from asset where id = ${assetId} and media_type = 'video' and status = 'active'`,
     ).then((result) => result.rows.length ? [result.rows[0]] : []);
@@ -174,8 +182,90 @@ export class CleanupService {
     }
     await this.queue.enqueue(
       CONVERT_VIDEO_JOB,
-      { assetId },
+      { assetId, codec },
       { dedupeKey: `${CONVERT_VIDEO_JOB}:${assetId}`, priority: 200 },
+    );
+  }
+
+  /** Originals slated for deletion after conversion, restorable until purge. */
+  async listConvertedOriginals(): Promise<ConvertedOriginal[]> {
+    let names: string[];
+    try {
+      names = await readdir(this.convertedOriginalsDir);
+    } catch {
+      return [];
+    }
+    const retentionMs = this.config.trashRetentionDays * 24 * 60 * 60 * 1000;
+    const originals: ConvertedOriginal[] = [];
+    for (const name of names) {
+      const match = /^([0-9a-f-]{36})_(.+)$/.exec(name);
+      if (!match) {
+        continue;
+      }
+      try {
+        const info = await stat(join(this.convertedOriginalsDir, name));
+        originals.push({
+          assetId: match[1],
+          fileName: match[2],
+          sizeBytes: info.size,
+          deletesAt: new Date(info.mtimeMs + retentionMs).toISOString(),
+        });
+      } catch {
+        // Racing the purge is fine.
+      }
+    }
+    return originals.sort((a, b) => a.deletesAt.localeCompare(b.deletesAt));
+  }
+
+  /**
+   * Undo a conversion: the parked original goes back where it was, the
+   * converted file is deleted, and metadata re-extracts (codec included).
+   */
+  async restoreOriginal(assetId: string): Promise<void> {
+    const originals = await this.listConvertedOriginals();
+    const parked = originals.find((entry) => entry.assetId === assetId);
+    if (!parked) {
+      throw new NotFoundException('No parked original for that video.');
+    }
+    const result = await this.db.execute<{
+      file_id: string;
+      rel_path: string;
+      root_path: string;
+    }>(sql`
+      select f.id as file_id, f.rel_path, r.path as root_path
+      from asset_file f join library_root r on r.id = f.root_id
+      where f.asset_id = ${assetId} and f.state = 'present'
+      limit 1
+    `);
+    const row = result.rows[0];
+    if (!row) {
+      throw new NotFoundException('That video has no present file.');
+    }
+    const parkedPath = join(this.convertedOriginalsDir, `${assetId}_${parked.fileName}`);
+    const convertedPath = join(row.root_path, row.rel_path);
+    // Original file name back in the original folder.
+    const originalRelPath = row.rel_path.replace(/[^/\\]+$/, parked.fileName);
+    const restoredPath = join(row.root_path, originalRelPath);
+    await rename(parkedPath, restoredPath);
+    if (convertedPath !== restoredPath) {
+      await rm(convertedPath, { force: true }).catch(() => undefined);
+    }
+    await this.db.execute(sql`
+      update asset_file
+      set rel_path = ${originalRelPath.replaceAll('\\', '/')},
+          file_name = ${parked.fileName},
+          size_bytes = ${parked.sizeBytes},
+          fs_mtime = now(), last_verified_at = now()
+      where id = ${row.file_id}
+    `);
+    await this.db.execute(
+      sql`delete from cleanup_dismissal where asset_id = ${assetId}`,
+    );
+    // Re-extract metadata (true codec, dimensions) and re-queue playback prep.
+    await this.queue.enqueue(
+      'reprocess_asset',
+      { assetId },
+      { dedupeKey: `reprocess_asset:${assetId}`, priority: 50 },
     );
   }
 

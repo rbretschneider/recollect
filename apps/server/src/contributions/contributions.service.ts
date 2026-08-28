@@ -322,7 +322,7 @@ export class ContributionsService {
     userId: string,
   ): Promise<void> {
     const root = await this.ensureGuestRoot();
-    const relPath = await this.moveIntoGuestRoot(root.path, row);
+    const relPath = await this.moveIntoGuestRoot(root, row);
     await this.ingest.ingestFile({ rootId: root.id, relPath });
     const assetId = await this.findIngestedAssetId(root.id, relPath);
     await this.albums.addAssets(row.albumId, [assetId], userId);
@@ -409,34 +409,45 @@ export class ContributionsService {
     await this.albums.getDetail(albumId); // Throws NotFound when missing.
   }
 
-  /** The guest library root is created lazily on first approval — no scan enqueued. */
-  private async ensureGuestRoot(): Promise<{ id: string; path: string }> {
+  /**
+   * Where guest files ingest. If the guest dir sits INSIDE an existing
+   * library root, that root is reused with a path prefix — a second root
+   * nested under the first would index every guest file twice. A dedicated
+   * root is only created when the dir lives outside every root.
+   */
+  private async ensureGuestRoot(): Promise<{ id: string; path: string; prefix: string }> {
     await mkdir(this.guestLibraryDir, { recursive: true });
-    const [existing] = await this.db
+    const dir = this.guestLibraryDir.replaceAll('\\', '/').replace(/\/+$/, '');
+    const roots = await this.db
       .select({ id: libraryRoot.id, path: libraryRoot.path })
-      .from(libraryRoot)
-      .where(eq(libraryRoot.path, this.guestLibraryDir))
-      .limit(1);
-    if (existing) {
-      return existing;
+      .from(libraryRoot);
+    for (const root of roots) {
+      const rootPath = root.path.replaceAll('\\', '/').replace(/\/+$/, '');
+      if (dir === rootPath) {
+        return { id: root.id, path: root.path, prefix: '' };
+      }
+      if (dir.startsWith(`${rootPath}/`)) {
+        return { id: root.id, path: root.path, prefix: dir.slice(rootPath.length + 1) };
+      }
     }
     const [row] = await this.db
       .insert(libraryRoot)
       .values({ id: uuidv7(), path: this.guestLibraryDir, name: 'Guest uploads', excludeGlobs: [] })
       .returning({ id: libraryRoot.id, path: libraryRoot.path });
-    return row;
+    return { ...row, prefix: '' };
   }
 
   private async moveIntoGuestRoot(
-    rootPath: string,
+    root: { path: string; prefix: string },
     row: typeof guestUpload.$inferSelect,
   ): Promise<string> {
+    const rootPath = root.path;
     const [albumRow] = await this.db
       .select({ title: album.title })
       .from(album)
       .where(eq(album.id, row.albumId))
       .limit(1);
-    const folder = this.toFolderName(albumRow?.title ?? 'Event');
+    const folder = join(root.prefix, this.toFolderName(albumRow?.title ?? 'Event'));
     const fileName = `${row.id.slice(-8)}_${this.toSafeFileName(row.originalFilename)}`;
     const relPath = join(folder, fileName).replaceAll('\\', '/');
     await mkdir(join(rootPath, folder), { recursive: true });

@@ -40,9 +40,23 @@ export class CleanupApiService {
     return firstValueFrom(this.http.post<void>('/api/v1/cleanup/dismiss', { assetIds }));
   }
 
-  convert(assetId: string): Promise<{ accepted: true }> {
+  convert(assetId: string, codec: 'hevc' | 'h264'): Promise<{ accepted: true }> {
     return firstValueFrom(
-      this.http.post<{ accepted: true }>(`/api/v1/cleanup/convert/${assetId}`, {}),
+      this.http.post<{ accepted: true }>(`/api/v1/cleanup/convert/${assetId}`, { codec }),
     );
+  }
+
+  listConverted(): Promise<{
+    originals: Array<{ assetId: string; fileName: string; sizeBytes: number; deletesAt: string }>;
+  }> {
+    return firstValueFrom(
+      this.http.get<{
+        originals: Array<{ assetId: string; fileName: string; sizeBytes: number; deletesAt: string }>;
+      }>('/api/v1/cleanup/converted'),
+    );
+  }
+
+  restore(assetId: string): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`/api/v1/cleanup/restore/${assetId}`, {}));
   }
 }

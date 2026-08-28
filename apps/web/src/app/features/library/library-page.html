@@ -15,7 +15,7 @@
     <p class="error" role="alert">{{ message }}</p>
   }
 
-  @if (canDelete) {
+  @if (isAdmin) {
     <a class="card cleanup-link" routerLink="/cleanup">
       <div>
         <h3>Cleanup advisor</h3>
