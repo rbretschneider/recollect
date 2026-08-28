@@ -173,7 +173,7 @@ export class AssetViewer implements OnInit, OnDestroy {
         if (this.ghostTimer !== null) {
           clearTimeout(this.ghostTimer);
         }
-        this.ghostTimer = setTimeout(() => this.ghostUrl.set(null), 260);
+        this.ghostTimer = setTimeout(() => this.ghostUrl.set(null), 340);
       }
       this.lastShownWasImage = this.current()?.mediaType === 'image';
       this.lastResetAssetId = assetId;

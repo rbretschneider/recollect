@@ -92,14 +92,14 @@ section {
 
   .folder-icon {
     width: 40px;
+    flex-shrink: 0;
     text-align: center;
     font-size: 1.3rem;
   }
 
   span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    min-width: 0; // Flex items refuse to shrink below content without this.
+    overflow-wrap: anywhere; // Long folder paths wrap instead of running off-screen.
   }
 }
 

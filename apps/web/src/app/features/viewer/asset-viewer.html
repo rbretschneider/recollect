@@ -54,7 +54,15 @@
       (click)="onStageClick($event)"
     >
       @if (ghostUrl(); as ghost) {
-        <img class="ghost" [src]="ghost" alt="" aria-hidden="true" draggable="false" />
+        <img
+          class="ghost"
+          [class.exit-forward]="navDirection() === 'forward'"
+          [class.exit-backward]="navDirection() === 'backward'"
+          [src]="ghost"
+          alt=""
+          aria-hidden="true"
+          draggable="false"
+        />
       }
       @for (media of currentAsList(); track media.id) {
         @if (media.mediaType === 'image') {
