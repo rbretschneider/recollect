@@ -4,9 +4,9 @@
   <app-sheet sheetTitle="Invite guests to add photos" (closed)="close()">
     <div class="guest-content">
       <p class="hint">
-        Anyone with this link can add photos and videos to the review queue —
-        nothing joins the album until someone in the household approves it.
-        Guests never see the rest of your library.
+        Anyone with this link can add photos and videos straight to this album —
+        every file is checked before it's accepted. Guests see only this album,
+        never the rest of your library.
       </p>
 
       @for (link of links(); track link.id) {
@@ -15,7 +15,7 @@
             <input type="text" readonly [value]="urlFor(link)" aria-label="Guest link URL" />
             <span class="meta">
               {{ expiryLabel(link) }} · {{ link.uploadCount }} uploads ·
-              {{ link.poolView ? 'guests see approved photos' : 'upload only' }}
+              {{ link.poolView ? 'guests see the album' : 'upload only' }}
             </span>
           </div>
           <button type="button" class="small" (click)="copy(link)">
@@ -36,7 +36,7 @@
         </label>
         <label class="toggle">
           <input type="checkbox" name="poolView" [(ngModel)]="poolView" />
-          Guests can see the approved photos
+          Guests can see the album
         </label>
         <button type="button" class="primary" [disabled]="isBusy()" (click)="createLink()">
           {{ isBusy() ? 'Creating…' : 'Create guest link' }}

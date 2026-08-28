@@ -34,11 +34,11 @@
     @if (canWrite && pendingUploads().length > 0) {
       <section class="review" aria-label="Guest photos awaiting review">
         <h2>
-          Guest photos waiting for review
+          Guest photos needing attention
           <span class="count">{{ pendingUploads().length }}</span>
         </h2>
         <p class="hint">
-          Approved photos join the album and your library; rejected ones are deleted.
+          These didn't import automatically. Approve to retry; reject to delete them.
         </p>
         <div class="review-grid">
           @for (upload of pendingUploads(); track upload.id) {

@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { mkdir, rename, rm, stat } from 'fs/promises';
+import { copyFile, mkdir, rename, rm, stat } from 'fs/promises';
 import { extname, join, resolve } from 'path';
 import { v7 as uuidv7 } from 'uuid';
 import { AlbumsService } from '../albums/albums.service';
@@ -138,16 +138,9 @@ export class ContributionsService {
     }
     let poolAssetIds: string[] = [];
     if (link.poolView) {
-      // Album-wide, not per-link: replacing an expired link mid-event must
-      // not hide the photos guests already contributed.
-      const rows = await this.db
-        .select({ assetId: guestUpload.assetId })
-        .from(guestUpload)
-        .where(and(eq(guestUpload.albumId, link.albumId), eq(guestUpload.status, 'approved')))
-        .orderBy(guestUpload.createdAt);
-      poolAssetIds = rows
-        .map((row) => row.assetId)
-        .filter((id): id is string => id !== null);
+      // The WHOLE album, not just guest uploads: guests at the party see the
+      // shared album grow — theirs and everyone else's alike.
+      poolAssetIds = (await this.albums.getDetail(link.albumId)).assetIds;
     }
     return {
       albumTitle: albumRow.title,
@@ -212,6 +205,22 @@ export class ContributionsService {
         .update(contributionLink)
         .set({ uploadCount: sql`${contributionLink.uploadCount} + 1` })
         .where(eq(contributionLink.id, link.id));
+      // The decode probe above WAS the security review: a validated file goes
+      // straight into the album, attributed to the link's creator. If ingest
+      // fails, the row stays pending and surfaces in the household review
+      // queue instead of being lost.
+      try {
+        const [row] = await this.db
+          .select()
+          .from(guestUpload)
+          .where(eq(guestUpload.id, id))
+          .limit(1);
+        await this.approveOne(row, link.createdBy);
+      } catch (error) {
+        this.logger.error(
+          `Auto-ingest of guest upload ${id} (${file.originalname}) failed; left for review: ${(error as Error).message}`,
+        );
+      }
       return { id };
     } catch (error) {
       // Never leave orphaned temp files behind a failed request.
@@ -220,17 +229,16 @@ export class ContributionsService {
     }
   }
 
-  /** Public pool thumbs: the asset must be an approved upload of this active link. */
+  /** Public pool thumbs: the asset must belong to this active link's album. */
   async assertPoolAsset(token: string, assetId: string): Promise<void> {
     const result = await this.db.execute<{ ok: number }>(sql`
       select 1 as ok
       from contribution_link cl
-      join guest_upload gu on gu.album_id = cl.album_id and gu.asset_id = ${assetId}
+      join album_asset aa on aa.album_id = cl.album_id and aa.asset_id = ${assetId}
       where cl.token = ${token}
         and cl.pool_view = true
         and cl.revoked_at is null
         and cl.expires_at > now()
-        and gu.status = 'approved'
       limit 1
     `);
     if (result.rows.length === 0) {
@@ -273,19 +281,10 @@ export class ContributionsService {
     if (rows.length === 0) {
       return { approved: 0 };
     }
-    const root = await this.ensureGuestRoot();
     let approved = 0;
     for (const row of rows) {
       try {
-        const relPath = await this.moveIntoGuestRoot(root.path, row);
-        await this.ingest.ingestFile({ rootId: root.id, relPath });
-        const assetId = await this.findIngestedAssetId(root.id, relPath);
-        await this.albums.addAssets(row.albumId, [assetId], userId);
-        await this.db
-          .update(guestUpload)
-          .set({ status: 'approved', assetId, reviewedBy: userId, reviewedAt: new Date() })
-          .where(eq(guestUpload.id, row.id));
-        await rm(this.previewPath(row.id), { force: true }).catch(() => undefined);
+        await this.approveOne(row, userId);
         approved += 1;
       } catch (error) {
         // One bad file must not block the batch; it stays pending with a log.
@@ -295,6 +294,23 @@ export class ContributionsService {
       }
     }
     return { approved };
+  }
+
+  /** Moves one staged upload into the guest root, ingests it, joins the album. */
+  private async approveOne(
+    row: typeof guestUpload.$inferSelect,
+    userId: string,
+  ): Promise<void> {
+    const root = await this.ensureGuestRoot();
+    const relPath = await this.moveIntoGuestRoot(root.path, row);
+    await this.ingest.ingestFile({ rootId: root.id, relPath });
+    const assetId = await this.findIngestedAssetId(root.id, relPath);
+    await this.albums.addAssets(row.albumId, [assetId], userId);
+    await this.db
+      .update(guestUpload)
+      .set({ status: 'approved', assetId, reviewedBy: userId, reviewedAt: new Date() })
+      .where(eq(guestUpload.id, row.id));
+    await rm(this.previewPath(row.id), { force: true }).catch(() => undefined);
   }
 
   /** Rejection deletes the staged bytes immediately; the row stays as audit trail. */
@@ -406,8 +422,22 @@ export class ContributionsService {
     await mkdir(join(rootPath, folder), { recursive: true });
     const stagedPath = this.stagedFilePath(row.id, row.originalFilename);
     await stat(stagedPath); // Surfaces a missing staged file as a clear error.
-    await rename(stagedPath, join(rootPath, folder, fileName));
+    await this.moveFile(stagedPath, join(rootPath, folder, fileName));
     return relPath;
+  }
+
+  /**
+   * rename() with a copy+delete fallback: staging and the guest root can sit
+   * on different mounts (EXDEV), and on Windows a just-probed file can still
+   * be briefly locked (EBUSY).
+   */
+  private async moveFile(from: string, to: string): Promise<void> {
+    try {
+      await rename(from, to);
+    } catch {
+      await copyFile(from, to);
+      await rm(from, { force: true }).catch(() => undefined);
+    }
   }
 
   private async findIngestedAssetId(rootId: string, relPath: string): Promise<string> {

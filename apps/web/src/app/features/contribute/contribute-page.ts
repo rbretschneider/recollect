@@ -114,6 +114,9 @@ export class ContributePage implements OnInit {
     } finally {
       this.isUploading.set(false);
     }
+    // Uploads land in the album right away — show the guest their photos
+    // in the pool as soon as the batch settles.
+    await this.load();
   }
 
   private uploadOne(item: UploadItem): Promise<void> {
