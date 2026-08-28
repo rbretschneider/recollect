@@ -392,3 +392,9 @@
   cursor: pointer;
   padding: 0;
 }
+
+.curation .face-actions .ghost {
+  background: var(--surface-raised);
+  color: var(--text);
+  border: 1px solid var(--border);
+}

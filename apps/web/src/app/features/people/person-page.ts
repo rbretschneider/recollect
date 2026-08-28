@@ -115,6 +115,22 @@ export class PersonPage implements OnInit {
     });
   }
 
+  /**
+   * Opens the photo a face was found in — a tiny background face crop can
+   * look like a total stranger until you see where it came from.
+   */
+  viewSelectedFacePhoto(): void {
+    const [faceId] = [...this.selectedFaceIds()];
+    if (!faceId || this.selectedFaceIds().size !== 1) {
+      return;
+    }
+    const assetId = this.faces().find((face) => face.id === faceId)?.assetId;
+    const index = assetId ? this.assetIds().indexOf(assetId) : -1;
+    if (index >= 0) {
+      this.viewerIndex.set(index);
+    }
+  }
+
   /** Pins the one selected face as this person's avatar app-wide. */
   async useSelectedAsAvatar(): Promise<void> {
     const person = this.person();

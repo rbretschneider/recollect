@@ -93,6 +93,14 @@
           <span>{{ selectedFaceIds().size }} selected</span>
           <button
             type="button"
+            class="ghost"
+            [disabled]="selectedFaceIds().size !== 1"
+            (click)="viewSelectedFacePhoto()"
+          >
+            See the photo
+          </button>
+          <button
+            type="button"
             [disabled]="isBusy() || selectedFaceIds().size !== 1"
             (click)="useSelectedAsAvatar()"
           >
