@@ -36,43 +36,17 @@ real-library testing (~18.5k assets on hawaii) teaches us things.
 
 ## Next up
 
-1. **On This Day** — resurface past years' photos for today's date on the
-   Memories page; cheap on existing clustering, big emotional payoff.
-2. **Share a single photo** — the most common share intent; extends
-   share_link to asset targets with the same private-until-action policy.
-3. **Selection → create memory/album** — multi-select currently only offers
-   album-add and trash.
-4. **Person ↔ user linking** ("this is Andrea") — data model reserves it;
-   unlocks "photos of us". Also: viewer info "Taken by" links to the person.
-5. **Settings completeness** — edit/disable members and remove/re-enable
-   library roots. (Password lifecycle SHIPPED 2026-08-27: self change,
-   admin reset with forced next-login change, sign-out-everywhere.)
-6. **Live Photos pairing** (needs real iPhone HEIC+MOV pairs).
-7. **Cleanup advisor (storage on location)** — a suggestion panel for
-   reclaiming NAS space, review-inbox style (accept / dismiss, never
-   auto-delete):
-   - **No-subject flags**: CLIP zero-shot against junk categories (floor /
-     ceiling / pocket shot / all-black / heavy blur) plus cheap signals
-     (near-zero luminance variance, tiny stub files like the 7KB cloud-only
-     placeholders, 0-byte and moov-less videos already marked by the
-     pipeline). Accept = Trash (normal holding period applies).
-   - **Space hogs**: biggest files by absolute size and videos by
-     bytes-per-second; offer **in-place conversion** (re-encode bloated
-     video to efficient H.264/HEVC at sane bitrate, oversized images to
-     high-quality JPEG/WebP). Conversion REPLACES the original on the NAS —
-     delete-grant only, confirm drawer, original goes through the trash
-     holding period as the undo window.
-   - Panel shows projected savings ("~14.2 GB reclaimable") and per-item
-     before/after sizes; lives next to the Library page's health card.
-8. **Special photo types**: photospheres/panoramas currently display as flat
-   wide images (correct data, no 360° projection) — add an interactive 360°
-   viewer for assets with GPano XMP or `.PHOTOSPHERE.` names; Pixel motion
-   photos show their still (embedded video not yet played). Note: a
-   `PHOTOSPHERE.jpg` that renders as a grey mountain icon is a Google Photos
-   cloud-only stub on the NAS (7KB placeholder), not an app bug. Also: BMP
-   thumbnails via ffmpeg fallback (old scanned-photo folders have them).
-9. **Wait-state sweep** — audit remaining async actions against the
-   three-signal standard.
+(2026-08-28 sweep: items 1–5, 7–9 SHIPPED, plus a Dashboard home with On
+This Day, suggestions, and recent memories; the bottom nav folded into the
+left drawer. Details in git history.)
+
+1. **Live Photos pairing** (needs real iPhone HEIC+MOV pairs).
+2. **Memory day-by-day chapters** — date subheads inside multi-day
+   memories (needs per-asset dates on MemoryDetail).
+3. **Cleanup advisor v2**: CLIP zero-shot junk categories (floor/pocket/
+   blur), oversized-image conversion, photo-frame-face cluster flag (every
+   face under ~5% of frame width).
+4. **Pixel motion photos** — play the embedded video, not just the still.
 
 ## The big design pass
 

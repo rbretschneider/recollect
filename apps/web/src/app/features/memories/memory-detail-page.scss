@@ -150,6 +150,16 @@
     white-space: pre-wrap;
   }
 
+  // The opening letter gets the print treatment.
+  .entry:first-of-type .prose::first-letter {
+    float: left;
+    font-size: 3.1em;
+    line-height: 0.85;
+    padding: 0.05em 0.12em 0 0;
+    font-family: Georgia, 'Times New Roman', serif;
+    color: var(--accent);
+  }
+
   .entry .author {
     margin: 0;
     font-size: 0.85rem;
@@ -206,6 +216,45 @@
       color: var(--text-muted);
       text-align: right;
       font-style: italic;
+    }
+  }
+}
+
+// Captioned photos as full-width story figures — the journalistic layer.
+.moments {
+  max-width: 38rem;
+  margin: 0 auto;
+  padding: 1rem 1.5rem 0;
+
+  .moment {
+    margin: 0 0 1.5rem;
+
+    button {
+      display: block;
+      width: 100%;
+      padding: 0;
+      border: none;
+      border-radius: 0.9rem;
+      overflow: hidden;
+      background: var(--surface);
+      cursor: pointer;
+
+      img {
+        display: block;
+        width: 100%;
+        max-height: 30rem;
+        object-fit: cover;
+      }
+    }
+
+    figcaption {
+      margin-top: 0.5rem;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-style: italic;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+      text-align: center;
     }
   }
 }
@@ -268,6 +317,12 @@
     margin: 1.25rem 0;
     padding-left: 1rem;
     border-left: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
+
+    // The first quote is the pull-quote: set larger, like a magazine deck.
+    &:first-of-type p {
+      font-size: 1.35rem;
+      line-height: 1.4;
+    }
 
     // Quieter than the journal: the quotes are marginalia, not the headline.
     p {

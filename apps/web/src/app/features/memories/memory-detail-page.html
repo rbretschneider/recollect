@@ -92,6 +92,25 @@
       </section>
     }
 
+    <!-- Captioned photos step out of the strip and into the story as
+         full-width figures — the journalistic layer (read mode only). -->
+    @if (!editMode.isEditing() && storyMoments().length > 0) {
+      <section class="moments" aria-label="Moments">
+        @for (moment of storyMoments(); track moment.assetId) {
+          <figure class="moment">
+            <button
+              type="button"
+              aria-label="Open photo"
+              (click)="openViewer(moment.assetId)"
+            >
+              <img [src]="thumbUrl(moment.assetId, 1440)" alt="" loading="lazy" />
+            </button>
+            <figcaption>{{ moment.caption }}</figcaption>
+          </figure>
+        }
+      </section>
+    }
+
     <!-- Scrapbook order: the story, then the photos (with their captions),
          then the little things people said, underneath. -->
     <section class="filmstrip-section" aria-label="Photos in this memory">

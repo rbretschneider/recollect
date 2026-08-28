@@ -119,6 +119,17 @@ export class MemoryDetailPage implements OnInit {
   /** Which caption just saved, for the flash of confirmation. */
   readonly captionJustSaved = signal<string | null>(null);
 
+  /** Captioned photos, in album order — the story's inline figures. */
+  readonly storyMoments = computed<Array<{ assetId: string; caption: string }>>(() => {
+    const detail = this.detail();
+    if (!detail) {
+      return [];
+    }
+    return detail.assetIds
+      .filter((id) => detail.captions[id])
+      .map((assetId) => ({ assetId, caption: detail.captions[assetId] }));
+  });
+
   /** Saves one photo's scrapbook caption as soon as the field settles. */
   async saveCaption(assetId: string, value: string): Promise<void> {
     const detail = this.detail();
@@ -164,8 +175,8 @@ export class MemoryDetailPage implements OnInit {
     void this.load();
   }
 
-  thumbUrl(assetId: string): string {
-    return `/api/v1/assets/${assetId}/thumb/240`;
+  thumbUrl(assetId: string, size: 240 | 720 | 1440 = 240): string {
+    return `/api/v1/assets/${assetId}/thumb/${size}`;
   }
 
   cropUrl(faceId: string): string {
