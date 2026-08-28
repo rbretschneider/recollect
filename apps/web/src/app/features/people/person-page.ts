@@ -41,6 +41,8 @@ export class PersonPage implements OnInit {
   readonly faces = signal<PersonFace[]>([]);
   readonly assetIds = signal<string[]>([]);
   readonly selectedFaceIds = signal<ReadonlySet<string>>(new Set());
+  /** Photos tap-selected in the main grid (edit mode) for "not this person". */
+  readonly selectedAssetIds = signal<ReadonlySet<string>>(new Set());
   readonly viewerIndex = signal<number | null>(null);
   readonly saveState = signal<'idle' | 'saved'>('idle');
   readonly isBusy = signal(false);
@@ -231,6 +233,76 @@ export class PersonPage implements OnInit {
     }
   }
 
+  /** In edit mode a tap curates (select for removal); otherwise it opens the photo. */
+  tileTapped(index: number, assetId: string): void {
+    if (this.editMode.isEditing() && this.canWrite) {
+      this.toggleAssetSelect(assetId);
+    } else {
+      this.openViewer(index);
+    }
+  }
+
+  clearAssetSelection(): void {
+    this.selectedAssetIds.set(new Set());
+  }
+
+  toggleAssetSelect(assetId: string): void {
+    this.selectedAssetIds.update((current) => {
+      const next = new Set(current);
+      if (next.has(assetId)) {
+        next.delete(assetId);
+      } else {
+        next.add(assetId);
+      }
+      return next;
+    });
+  }
+
+  /**
+   * "These photos aren't this person": maps the tapped photos to this person's
+   * faces on them and detaches those — the whole point being you can do it from
+   * the newest-first photo grid (where a wrongly-added shot sits at the top),
+   * instead of hunting a low-quality face crop at the bottom of thousands.
+   */
+  async removeSelectedPhotos(): Promise<void> {
+    const person = this.person();
+    const assetIds = this.selectedAssetIds();
+    if (!person || assetIds.size === 0 || this.isBusy()) {
+      return;
+    }
+    const faceIds = this.faces()
+      .filter((face) => assetIds.has(face.assetId))
+      .map((face) => face.id);
+    if (faceIds.length === 0) {
+      return;
+    }
+    const removedCount = assetIds.size;
+    this.isBusy.set(true);
+    try {
+      await this.api.removeFaces(person.id, faceIds);
+      // Optimistically drop them from the grid; the reload confirms the truth.
+      this.assetIds.update((ids) => ids.filter((id) => !assetIds.has(id)));
+      this.selectedAssetIds.set(new Set());
+      this.toasts.success(
+        removedCount === 1 ? 'Photo removed from this person.' : `${removedCount} photos removed.`,
+      );
+      // Pulling the last photo means the person no longer exists — don't reload
+      // into a "couldn't load" error; float back to the People list.
+      if (this.assetIds().length === 0) {
+        await this.router.navigateByUrl('/people');
+        return;
+      }
+      await this.load();
+    } catch {
+      this.toasts.error("Couldn't remove those photos.", {
+        label: 'Retry',
+        run: () => void this.removeSelectedPhotos(),
+      });
+    } finally {
+      this.isBusy.set(false);
+    }
+  }
+
   openViewer(index: number): void {
     this.viewerIndex.set(index);
   }
@@ -257,6 +329,7 @@ export class PersonPage implements OnInit {
     }
     this.loadFailed.set(false);
     this.selectedFaceIds.set(new Set());
+    this.selectedAssetIds.set(new Set());
     try {
       const [{ people }, { assetIds }, { faces }] = await Promise.all([
         this.api.list(),

@@ -23,6 +23,17 @@ const configSchema = z.object({
   mlUrl: z.string().default(''),
   /** Cosine distance below which a face joins an existing person cluster. */
   faceClusterDistance: z.coerce.number().positive().default(0.45),
+  /**
+   * Detector confidence a face must clear to be ATTRIBUTED to a person. The
+   * sidecar already drops non-faces below its own detection floor, but a
+   * borderline detection (a pet's face, a patterned cushion, a tiny blurred
+   * head in the background) can still clear it — and greedy nearest-neighbour
+   * over a huge cluster will then happily snap it onto whoever has the most
+   * photos. Faces below this are still stored (bbox + embedding) but left
+   * unassigned, so they never pollute a person. Tune down to catch more blurry
+   * real faces, up to be stricter.
+   */
+  faceMinClusterScore: z.coerce.number().min(0).max(1).default(0.62),
   /** Reverse-geocoding of memory locations via Nominatim; 'off' disables. */
   geocodeEnabled: z
     .string()
@@ -89,6 +100,7 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     libraryBrowseBases: env.LIBRARY_BROWSE_BASES,
     mlUrl: env.RECOLLECT_ML_URL,
     faceClusterDistance: env.FACE_CLUSTER_DISTANCE,
+    faceMinClusterScore: env.FACE_MIN_CLUSTER_SCORE,
     geocodeEnabled: env.RECOLLECT_GEOCODE,
   });
   if (!parsed.success) {

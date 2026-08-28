@@ -122,10 +122,39 @@
     </section>
   }
 
-  <div class="grid">
+  @if (editMode.isEditing() && canWrite) {
+    <p class="hint grid-hint">
+      Tap any photo that isn’t {{ person()?.name ?? 'this person' }} to pull it out —
+      handy for a stray shot the auto-grouping got wrong.
+    </p>
+  }
+
+  @if (editMode.isEditing() && canWrite && selectedAssetIds().size > 0) {
+    <div class="photo-actions" role="toolbar" aria-label="Selected photo actions">
+      <span>{{ selectedAssetIds().size }} selected</span>
+      <button type="button" class="ghost" [disabled]="isBusy()" (click)="clearAssetSelection()">
+        Clear
+      </button>
+      <button type="button" class="danger" [disabled]="isBusy()" (click)="removeSelectedPhotos()">
+        Remove from {{ person()?.name ?? 'this person' }}
+      </button>
+    </div>
+  }
+
+  <div class="grid" [class.selecting]="editMode.isEditing() && canWrite">
     @for (assetId of assetIds(); track assetId; let index = $index) {
-      <button type="button" class="tile" aria-label="Open photo" (click)="openViewer(index)">
+      <button
+        type="button"
+        class="tile"
+        [class.selected]="selectedAssetIds().has(assetId)"
+        [attr.aria-pressed]="editMode.isEditing() ? selectedAssetIds().has(assetId) : null"
+        [attr.aria-label]="editMode.isEditing() ? 'Select photo' : 'Open photo'"
+        (click)="tileTapped(index, assetId)"
+      >
         <img [src]="thumbUrl(assetId)" alt="" loading="lazy" />
+        @if (editMode.isEditing() && canWrite) {
+          <span class="check" [class.on]="selectedAssetIds().has(assetId)" aria-hidden="true">✓</span>
+        }
       </button>
     }
   </div>

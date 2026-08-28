@@ -61,10 +61,17 @@ export class MlProcessingService {
     for (const detected of result.faces) {
       const [x1, y1, x2, y2] = detected.bbox;
       const faceId = uuidv7();
+      // Only attribute confident detections to a person. A borderline one (a
+      // pet, a cushion, a tiny background head) is still recorded but left
+      // unassigned, so it can never snap onto whoever has the most photos.
+      const personId =
+        detected.score >= this.config.faceMinClusterScore
+          ? await this.clusterIntoPerson(detected.embedding)
+          : null;
       await this.db.insert(face).values({
         id: faceId,
         assetId,
-        personId: await this.clusterIntoPerson(detected.embedding),
+        personId,
         bbox: [x1 / width, y1 / height, (x2 - x1) / width, (y2 - y1) / height],
         quality: detected.score,
         embedding: detected.embedding,
