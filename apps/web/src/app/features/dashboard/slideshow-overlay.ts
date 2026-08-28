@@ -74,7 +74,37 @@ export class SlideshowOverlay implements OnDestroy {
     this.isPaused.update((value) => !value);
   }
 
+  /** Swipe tracking: a real swipe navigates and swallows the tap. */
+  private pointerStartX: number | null = null;
+  private didSwipe = false;
+
+  onPointerDown(event: PointerEvent): void {
+    this.pointerStartX = event.clientX;
+    this.didSwipe = false;
+  }
+
+  onPointerUp(event: PointerEvent): void {
+    if (this.pointerStartX === null) {
+      return;
+    }
+    const delta = event.clientX - this.pointerStartX;
+    this.pointerStartX = null;
+    if (Math.abs(delta) >= 50) {
+      this.didSwipe = true;
+      if (delta < 0) {
+        this.next();
+      } else {
+        this.previous();
+      }
+    }
+  }
+
   onStageClick(event: MouseEvent): void {
+    // The click after a swipe is the same gesture — don't also steer by zones.
+    if (this.didSwipe) {
+      this.didSwipe = false;
+      return;
+    }
     const width = (event.currentTarget as HTMLElement).clientWidth;
     const x = event.clientX;
     if (x < width * 0.3) {

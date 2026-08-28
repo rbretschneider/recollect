@@ -7,7 +7,12 @@
     </button>
   </header>
 
-  <div class="stage" (click)="onStageClick($event)">
+  <div
+    class="stage"
+    (click)="onStageClick($event)"
+    (pointerdown)="onPointerDown($event)"
+    (pointerup)="onPointerUp($event)"
+  >
     @for (item of currentAsList(); track item.id) {
       @if (item.mediaType === 'image') {
         <img class="slide" [src]="imageUrl(item.id)" alt="" />

@@ -54,6 +54,8 @@
   place-items: center;
   overflow: hidden;
   cursor: pointer;
+  // Horizontal swipes are ours; the browser keeps vertical (nothing scrolls).
+  touch-action: pan-y;
 
   .slide {
     max-width: 100vw;
