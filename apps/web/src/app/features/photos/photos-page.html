@@ -233,9 +233,10 @@
 
 @if (isSelecting() && selectedIds().size > 0) {
   <div class="action-bar" role="toolbar" aria-label="Selection actions">
-    <span>{{ selectedIds().size }} selected</span>
+    <!-- Count already lives in the select-mode header; keep the bar to actions. -->
+    <!-- One album action: the picker adds to an existing album, or creates a new
+         one when you type a name it doesn't recognize. -->
     <button type="button" (click)="startAlbumPick()">Add to album</button>
-    <button type="button" (click)="isNamingCreation.set('album')">New album</button>
     <button type="button" (click)="isNamingCreation.set('memory')">New memory</button>
     @if (canDelete) {
       <button type="button" class="danger" (click)="deleteSelected()">Move to Trash</button>
