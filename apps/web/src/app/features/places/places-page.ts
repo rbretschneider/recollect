@@ -86,9 +86,9 @@ export class PlacesPage implements OnInit, OnDestroy {
 
   private loadViewMode(): 'cards' | 'map' {
     try {
-      return localStorage.getItem(PLACES_VIEW_KEY) === 'map' ? 'map' : 'cards';
+      return localStorage.getItem(PLACES_VIEW_KEY) === 'cards' ? 'cards' : 'map';
     } catch {
-      return 'cards';
+      return 'map';
     }
   }
 

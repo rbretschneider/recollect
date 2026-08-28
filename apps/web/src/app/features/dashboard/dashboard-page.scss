@@ -79,45 +79,73 @@ section h2 {
   }
 }
 
+// Fanned polaroid stacks: one pile per year, tap to run the slideshow.
 .on-this-day {
-  .year {
-    margin-bottom: 1rem;
+  .stacks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem 2rem;
+  }
 
-    h3 {
-      margin: 0 0 0.4rem;
-      font-size: 0.9rem;
+  .stack {
+    display: grid;
+    justify-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 0.5rem 0.25rem;
+    border: none;
+    background: none;
+    color: var(--text);
+    cursor: pointer;
 
-      .muted {
-        color: var(--text-muted);
-        font-weight: 400;
-      }
+    &:hover .polaroid[data-card='0'] {
+      rotate: -9deg;
+      translate: -4px -6px;
     }
   }
 
-  .strip {
-    display: flex;
-    gap: 0.4rem;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    border-radius: 0.75rem;
+  .fan {
+    position: relative;
+    width: 11rem;
+    height: 11.5rem;
+  }
 
-    .frame {
-      flex-shrink: 0;
-      height: 11rem;
-      padding: 0;
-      border: none;
-      border-radius: 0.6rem;
-      overflow: hidden;
-      background: var(--surface);
-      cursor: pointer;
+  .polaroid {
+    position: absolute;
+    inset: 0.25rem auto auto 0.75rem;
+    width: 9.5rem;
+    padding: 0.4rem 0.4rem 1.5rem;
+    background: #f4f1ea;
+    border-radius: 2px;
+    box-shadow: 0 6px 18px rgb(0 0 0 / 45%);
+    transition: rotate 0.25s ease, translate 0.25s ease;
 
-      img {
-        display: block;
-        height: 100%;
-        width: auto;
-        max-width: 18rem;
-        object-fit: cover;
-      }
+    img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      background: #ddd;
+    }
+
+    // The fan: deeper cards twist further and peek out from under the top one.
+    &[data-card='0'] { rotate: -5deg; z-index: 4; }
+    &[data-card='1'] { rotate: 4deg; translate: 10px 4px; z-index: 3; }
+    &[data-card='2'] { rotate: -10deg; translate: -8px 7px; z-index: 2; }
+    &[data-card='3'] { rotate: 9deg; translate: 4px 10px; z-index: 1; }
+  }
+
+  .caption {
+    display: grid;
+    justify-items: center;
+    gap: 0.1rem;
+
+    strong {
+      font-size: 0.95rem;
+    }
+
+    .sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
     }
   }
 }

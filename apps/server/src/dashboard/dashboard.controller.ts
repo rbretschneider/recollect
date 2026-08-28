@@ -6,7 +6,7 @@ import type { Database } from '../database/database.module';
 /** One past year's photos for today's date. */
 export interface OnThisDayYear {
   year: number;
-  assetIds: string[];
+  items: Array<{ id: string; mediaType: 'image' | 'video' }>;
 }
 
 /** Home-page data: "on this day" through the years. */
@@ -24,23 +24,27 @@ export class DashboardController {
     if (!/^\d{2}-\d{2}$/.test(day ?? '')) {
       throw new BadRequestException('day must be MM-DD.');
     }
-    const result = await this.db.execute<{ id: string; year: number }>(sql`
-      select id, extract(year from captured_day)::int as year
+    const result = await this.db.execute<{
+      id: string;
+      year: number;
+      media_type: 'image' | 'video';
+    }>(sql`
+      select id, extract(year from captured_day)::int as year, media_type
       from asset
       where status = 'active' and to_char(captured_day, 'MM-DD') = ${day}
       order by captured_day desc, captured_at asc
       limit 400
     `);
-    const byYear = new Map<number, string[]>();
+    const byYear = new Map<number, Array<{ id: string; mediaType: 'image' | 'video' }>>();
     for (const row of result.rows) {
       const list = byYear.get(row.year) ?? [];
-      list.push(row.id);
+      list.push({ id: row.id, mediaType: row.media_type });
       byYear.set(row.year, list);
     }
     return {
       years: [...byYear.entries()]
         .sort((a, b) => b[0] - a[0])
-        .map(([year, assetIds]) => ({ year, assetIds })),
+        .map(([year, items]) => ({ year, items })),
     };
   }
 }

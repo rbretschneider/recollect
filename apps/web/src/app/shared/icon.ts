@@ -24,7 +24,8 @@ export type IconName =
   | 'check'
   | 'pencil'
   | 'users'
-  | 'sparkles';
+  | 'sparkles'
+  | 'search';
 
 /**
  * Crisp stroke icons, inlined so the app stays dependency-free. Sized by the
@@ -148,6 +149,10 @@ export type IconName =
         }
         @case ('check') {
           <path d="M20 6 9 17l-5-5" />
+        }
+        @case ('search') {
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.3-4.3" />
         }
         @case ('users') {
           <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />

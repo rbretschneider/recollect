@@ -12,19 +12,19 @@
     <div class="view-switch" role="group" aria-label="Places layout">
       <button
         type="button"
-        [class.active]="viewMode() === 'cards'"
-        aria-label="Card view"
-        (click)="setViewMode('cards')"
-      >
-        <app-icon name="view-cards" [size]="17" />
-      </button>
-      <button
-        type="button"
         [class.active]="viewMode() === 'map'"
         aria-label="Map view"
         (click)="setViewMode('map')"
       >
         <app-icon name="map-pin" [size]="17" />
+      </button>
+      <button
+        type="button"
+        [class.active]="viewMode() === 'cards'"
+        aria-label="Card view"
+        (click)="setViewMode('cards')"
+      >
+        <app-icon name="view-cards" [size]="17" />
       </button>
     </div>
   }

@@ -1,0 +1,35 @@
+<div class="slideshow" role="dialog" aria-label="Slideshow">
+  <header class="bar">
+    <span class="title">{{ title() }}</span>
+    <span class="counter">{{ index() + 1 }} / {{ items().length }}</span>
+    <button type="button" class="chrome" aria-label="Close slideshow" (click)="close()">
+      <app-icon name="close" />
+    </button>
+  </header>
+
+  <div class="stage" (click)="onStageClick($event)">
+    @for (item of currentAsList(); track item.id) {
+      @if (item.mediaType === 'image') {
+        <img class="slide" [src]="imageUrl(item.id)" alt="" />
+      } @else {
+        <video
+          class="slide"
+          [src]="videoUrl(item.id)"
+          autoplay
+          playsinline
+          (ended)="onVideoEnded()"
+          (error)="onVideoError()"
+        ></video>
+      }
+    }
+    @if (isPaused()) {
+      <div class="paused-hint" aria-live="polite">Paused — tap to resume</div>
+    }
+  </div>
+
+  <div class="progress" aria-hidden="true">
+    @for (item of items(); track item.id; let dotIndex = $index) {
+      <span class="dot" [class.done]="dotIndex <= index()"></span>
+    }
+  </div>
+</div>

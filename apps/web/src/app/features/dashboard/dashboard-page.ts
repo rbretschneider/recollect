@@ -8,10 +8,11 @@ import { AuthStateService } from '../../core/auth/auth-state.service';
 import { AppTopbar } from '../../shared/app-topbar';
 import { PageLoading } from '../../shared/page-loading';
 import { AssetViewer } from '../viewer/asset-viewer';
+import { SlideshowOverlay, SlideItem } from './slideshow-overlay';
 
 interface OnThisDayYear {
   year: number;
-  assetIds: string[];
+  items: Array<{ id: string; mediaType: 'image' | 'video' }>;
 }
 
 /**
@@ -20,7 +21,7 @@ interface OnThisDayYear {
  */
 @Component({
   selector: 'app-dashboard-page',
-  imports: [AppTopbar, AssetViewer, PageLoading, RouterLink],
+  imports: [AppTopbar, AssetViewer, PageLoading, RouterLink, SlideshowOverlay],
   templateUrl: './dashboard-page.html',
   styleUrl: './dashboard-page.scss',
 })
@@ -71,15 +72,22 @@ export class DashboardPage implements OnInit {
     return start.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
-  async openViewer(yearGroup: OnThisDayYear, assetId: string): Promise<void> {
-    const { items } = await firstValueFrom(
-      this.http.post<{ items: TimelineAsset[] }>('/api/v1/assets/items', {
-        assetIds: yearGroup.assetIds,
-      }),
-    );
-    this.viewerAssets.set(items);
-    const index = items.findIndex((item) => item.id === assetId);
-    this.viewerIndex.set(index >= 0 ? index : 0);
+  /** The polaroid stack was tapped: run that year as a slideshow. */
+  readonly slideshowItems = signal<SlideItem[] | null>(null);
+  readonly slideshowTitle = signal('');
+
+  openSlideshow(group: OnThisDayYear): void {
+    this.slideshowTitle.set(`${this.yearsAgo(group.year)} · ${group.year}`);
+    this.slideshowItems.set(group.items);
+  }
+
+  closeSlideshow(): void {
+    this.slideshowItems.set(null);
+  }
+
+  /** Up to four fanned photos per stack; the rest wait for the show. */
+  stackPreview(group: OnThisDayYear): Array<{ id: string; mediaType: string }> {
+    return group.items.slice(0, 4);
   }
 
   closeViewer(): void {
@@ -88,12 +96,6 @@ export class DashboardPage implements OnInit {
 
   onViewerDeleted(assetId: string): void {
     this.viewerAssets.update((assets) => assets.filter((asset) => asset.id !== assetId));
-    this.onThisDay.update((years) =>
-      years.map((group) => ({
-        ...group,
-        assetIds: group.assetIds.filter((id) => id !== assetId),
-      })),
-    );
   }
 
   private async load(): Promise<void> {

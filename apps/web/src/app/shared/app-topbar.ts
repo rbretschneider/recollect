@@ -1,21 +1,26 @@
 import { Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AccountBadge } from './account-badge';
 import { ActivitySpinner } from './activity-spinner';
 import { Brand } from './brand';
+import { Icon } from './icon';
 
 /**
- * The persistent app header: brand (opens the left drawer), live activity,
- * projected page actions, and the account badge top-right. The bottom nav
- * says where you are; this bar stays the same everywhere.
+ * The persistent app header: brand (opens the left drawer), a centered
+ * search pill, live activity, projected page actions, and the account
+ * badge top-right. This bar stays the same everywhere.
  */
 @Component({
   selector: 'app-topbar',
-  imports: [AccountBadge, ActivitySpinner, Brand],
+  imports: [AccountBadge, ActivitySpinner, Brand, Icon, RouterLink],
   template: `
     <header class="topbar">
       <app-brand />
       <app-activity-spinner />
-      <span class="spacer"></span>
+      <a class="search-pill" routerLink="/search" aria-label="Search">
+        <app-icon name="search" [size]="17" />
+        <span>Search</span>
+      </a>
       <ng-content />
       <app-account-badge />
     </header>
@@ -35,8 +40,27 @@ import { Brand } from './brand';
       min-width: 0;
     }
 
-    .spacer {
+    .search-pill {
       flex: 1;
+      min-width: 0;
+      max-width: 26rem;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      min-height: 38px;
+      border: 1px solid var(--border);
+      border-radius: 2rem;
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: background-color 0.15s ease;
+
+      &:hover {
+        background: var(--surface-raised);
+      }
     }
   `,
 })

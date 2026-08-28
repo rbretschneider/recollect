@@ -21,23 +21,24 @@
   @if (onThisDay().length > 0) {
     <section class="on-this-day" aria-label="On this day">
       <h2>On this day</h2>
-      @for (group of onThisDay(); track group.year) {
-        <article class="year">
-          <h3>{{ yearsAgo(group.year) }} <span class="muted">· {{ group.year }}</span></h3>
-          <div class="strip">
-            @for (assetId of group.assetIds; track assetId) {
-              <button
-                type="button"
-                class="frame"
-                aria-label="Open photo"
-                (click)="openViewer(group, assetId)"
-              >
-                <img [src]="thumbUrl(assetId, 720)" alt="" loading="lazy" />
-              </button>
-            }
-          </div>
-        </article>
-      }
+      <div class="stacks">
+        @for (group of onThisDay(); track group.year) {
+          <button type="button" class="stack" (click)="openSlideshow(group)">
+            <span class="fan">
+              @for (item of stackPreview(group); track item.id; let cardIndex = $index) {
+                <span class="polaroid" [attr.data-card]="cardIndex">
+                  <img [src]="thumbUrl(item.id, 720)" alt="" loading="lazy" />
+                </span>
+              }
+            </span>
+            <span class="caption">
+              <strong>{{ yearsAgo(group.year) }}</strong>
+              <span class="sub">{{ group.year }} · {{ group.items.length }}
+                {{ group.items.length === 1 ? 'photo' : 'photos' }} · tap to relive</span>
+            </span>
+          </button>
+        }
+      </div>
     </section>
   }
 
@@ -95,4 +96,8 @@
     (closed)="closeViewer()"
     (deleted)="onViewerDeleted($event)"
   />
+}
+
+@if (slideshowItems(); as items) {
+  <app-slideshow-overlay [items]="items" [title]="slideshowTitle()" (closed)="closeSlideshow()" />
 }

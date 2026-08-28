@@ -1,0 +1,116 @@
+.slideshow {
+  position: fixed;
+  inset: 0;
+  z-index: 22;
+  background: black;
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.25s ease;
+
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+.bar {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: linear-gradient(rgb(0 0 0 / 65%), transparent);
+  color: white;
+
+  .title {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .counter {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: rgb(255 255 255 / 75%);
+  }
+
+  .chrome {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: rgb(0 0 0 / 40%);
+    color: white;
+    cursor: pointer;
+  }
+}
+
+.stage {
+  position: relative;
+  flex: 1;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  cursor: pointer;
+
+  .slide {
+    max-width: 100vw;
+    max-height: 100dvh;
+    object-fit: contain;
+    transition: opacity 0.6s ease, transform 6s linear;
+
+    // Gentle Ken Burns drift + crossfade in.
+    @starting-style {
+      opacity: 0;
+    }
+  }
+
+  img.slide {
+    transform: scale(1.05);
+
+    @starting-style {
+      transform: scale(1);
+    }
+  }
+
+  .paused-hint {
+    position: absolute;
+    bottom: 3rem;
+    padding: 0.4rem 1rem;
+    border-radius: 2rem;
+    background: rgb(0 0 0 / 55%);
+    color: white;
+    font-size: 0.85rem;
+  }
+}
+
+.progress {
+  position: absolute;
+  inset: auto 0 0.8rem;
+  display: flex;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0 1rem;
+  flex-wrap: wrap;
+
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 30%);
+    transition: background-color 0.3s ease;
+
+    &.done {
+      background: white;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage .slide {
+    transition: opacity 0.3s ease;
+    transform: none;
+  }
+}
