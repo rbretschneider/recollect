@@ -11,8 +11,12 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
+import { Logger, Req } from '@nestjs/common';
+import type { Request } from 'express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequireAdmin } from '../auth/decorators/require-admin.decorator';
+import { MailService } from '../mail/mail.service';
+import { memberInviteEmail } from '../mail/templates';
 import { CreateUserRequestDto } from './dto/create-user-request.dto';
 import { UpdateUserRequestDto } from './dto/update-user-request.dto';
 import { UsersService } from './users.service';
@@ -22,7 +26,12 @@ import type { UserProfile } from './user.types';
 @RequireAdmin()
 @Controller('users')
 export class UsersController {
-  constructor(private readonly users: UsersService) {}
+  private readonly logger = new Logger(UsersController.name);
+
+  constructor(
+    private readonly users: UsersService,
+    private readonly mail: MailService,
+  ) {}
 
   @Get()
   async list(): Promise<{ users: Array<UserProfile & { disabled: boolean }> }> {
@@ -64,7 +73,11 @@ export class UsersController {
   }
 
   @Post()
-  async create(@Body() body: CreateUserRequestDto): Promise<{ user: UserProfile }> {
+  async create(
+    @Body() body: CreateUserRequestDto,
+    @CurrentUser() actor: UserProfile,
+    @Req() req: Request,
+  ): Promise<{ user: UserProfile; inviteEmailSent: boolean }> {
     const existing = await this.users.findByEmailWithHash(body.email);
     if (existing) {
       throw new ConflictException('An account with that email already exists.');
@@ -76,6 +89,23 @@ export class UsersController {
       permission: body.permission,
       isAdmin: body.isAdmin ?? false,
     });
-    return { user };
+    // A missing/broken SMTP setup must never block creating the account.
+    let inviteEmailSent = false;
+    if (this.mail.isEnabled) {
+      try {
+        const origin = `${req.protocol}://${req.get('host') ?? ''}`;
+        const invite = memberInviteEmail({
+          displayName: user.displayName,
+          email: user.email,
+          inviterName: actor.displayName,
+          origin,
+        });
+        await this.mail.send({ to: user.email, ...invite });
+        inviteEmailSent = true;
+      } catch (error) {
+        this.logger.warn(`Invite email to ${user.email} failed: ${(error as Error).message}`);
+      }
+    }
+    return { user, inviteEmailSent };
   }
 }

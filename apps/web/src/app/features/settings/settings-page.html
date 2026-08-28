@@ -117,6 +117,9 @@
 
   @if (isAdmin) {
     <section aria-label="Household members">
+      @if (inviteNote(); as note) {
+        <p class="invite-note" role="status">{{ note }}</p>
+      }
       <div class="section-head">
         <h2>Household</h2>
         @if (!isAddingUser()) {

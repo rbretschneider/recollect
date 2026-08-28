@@ -264,6 +264,15 @@ a.outline {
   vertical-align: middle;
 }
 
+.invite-note {
+  margin: 0 0 0.6rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
 .member-form .sub {
   display: block;
   margin-top: 0.25rem;

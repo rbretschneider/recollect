@@ -47,6 +47,13 @@ left drawer. Details in git history.)
    blur), oversized-image conversion, photo-frame-face cluster flag (every
    face under ~5% of frame width).
 4. **Pixel motion photos** — play the embedded video, not just the still.
+5. **Push notifications (larger feature)** — installed PWA users can be
+   notified on certain conditions (conditions TBD — user is mulling;
+   candidates: new guest photos on your album, new suggested memories,
+   On This Day mornings, a member joined). Shape: Web Push (VAPID keys
+   server-side, service-worker push handler, per-user subscription table,
+   per-condition opt-in toggles in Settings). No third-party service
+   required — works self-hosted over the existing HTTPS.
 
 ## The big design pass
 

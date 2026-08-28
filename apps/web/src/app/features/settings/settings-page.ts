@@ -56,10 +56,22 @@ export class SettingsPage implements OnInit {
     void this.reload();
   }
 
+  /** "Invite email sent to X" flash after member creation (or a heads-up). */
+  readonly inviteNote = signal<string | null>(null);
+
   async createUser(): Promise<void> {
     this.error.set(null);
     try {
-      await this.usersApi.create(this.newUser);
+      const created = (await this.usersApi.create(this.newUser)) as {
+        user: UserProfile;
+        inviteEmailSent?: boolean;
+      };
+      this.inviteNote.set(
+        created.inviteEmailSent
+          ? `Invite email sent to ${created.user.email} ✓`
+          : `Account created — no invite email (outgoing mail ${this.mailStatus()?.enabled ? 'failed' : 'not set up'}), share the password yourself.`,
+      );
+      setTimeout(() => this.inviteNote.set(null), 6000);
       this.newUser = this.emptyUser();
       this.isAddingUser.set(false);
       await this.reload();
