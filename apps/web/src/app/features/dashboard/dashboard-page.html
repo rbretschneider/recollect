@@ -10,7 +10,7 @@
     <app-page-loading label="Gathering your day…" />
   }
 
-  @if (isLoaded() && onThisDay().length === 0 && suggestions().length === 0 && recentMemories().length === 0) {
+  @if (isLoaded() && onThisDay().length === 0 && suggestions().length === 0 && recentMemories().length === 0 && recentlyAdded().length === 0) {
     <section class="empty">
       <h2>Nothing here yet</h2>
       <p>As your library grows, this page fills with photos from past years and fresh memories.</p>
@@ -54,6 +54,25 @@
               }
             </button>
           </div>
+        }
+      </div>
+    </section>
+  }
+
+  @if (recentlyAdded().length > 0) {
+    <section class="recently-added" aria-label="Recently added">
+      <div class="section-head">
+        <h2>Recently added</h2>
+        <a routerLink="/photos">All photos ›</a>
+      </div>
+      <div class="recent-row">
+        @for (item of recentlyAdded().slice(0, 4); track item.id; let i = $index) {
+          <button type="button" class="recent-tile" aria-label="Open photo" (click)="openRecent(i)">
+            <img [src]="thumbUrl(item.id, 720)" alt="" loading="lazy" />
+            @if (item.mediaType === 'video') {
+              <span class="video-badge" aria-hidden="true">▶</span>
+            }
+          </button>
         }
       </div>
     </section>

@@ -47,4 +47,25 @@ export class DashboardController {
         .map(([year, items]) => ({ year, items })),
     };
   }
+
+  /**
+   * The newest photos to land in the library, by when they were added (not when
+   * they were taken) — so a just-imported batch or a fresh guest upload shows up
+   * at the top of the home page.
+   */
+  @Get('recently-added')
+  async recentlyAdded(
+    @Query('limit') limit?: string,
+  ): Promise<{ items: Array<{ id: string; mediaType: 'image' | 'video' }> }> {
+    const parsed = Number(limit ?? '8');
+    const count = Number.isInteger(parsed) ? Math.min(Math.max(parsed, 1), 24) : 8;
+    const result = await this.db.execute<{ id: string; media_type: 'image' | 'video' }>(sql`
+      select id, media_type
+      from asset
+      where status = 'active'
+      order by created_at desc, id desc
+      limit ${count}
+    `);
+    return { items: result.rows.map((row) => ({ id: row.id, mediaType: row.media_type })) };
+  }
 }

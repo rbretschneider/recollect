@@ -5,7 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
-import { InboxSuggestion, MemorySummary, TimelineAsset } from '../../core/api/api-models';
+import { InboxSuggestion, MemorySummary, TimelineAsset, toViewerAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { AppTopbar } from '../../shared/app-topbar';
 import { PageLoading } from '../../shared/page-loading';
@@ -38,11 +38,19 @@ export class DashboardPage implements OnInit {
   readonly onThisDay = signal<OnThisDayYear[]>([]);
   readonly suggestions = signal<InboxSuggestion[]>([]);
   readonly recentMemories = signal<MemorySummary[]>([]);
+  /** The newest photos to land in the library, by when they were added. */
+  readonly recentlyAdded = signal<Array<{ id: string; mediaType: 'image' | 'video' }>>([]);
   readonly isLoaded = signal(false);
 
-  /** Viewer over one year's strip. */
+  /** Viewer over a strip (a year's photos, or the recently-added row). */
   readonly viewerAssets = signal<TimelineAsset[]>([]);
   readonly viewerIndex = signal<number | null>(null);
+
+  /** Opens the recently-added row in the fullscreen viewer at the tapped photo. */
+  openRecent(index: number): void {
+    this.viewerAssets.set(this.recentlyAdded().map((item) => toViewerAsset(item.id, item.mediaType)));
+    this.viewerIndex.set(index);
+  }
 
   readonly todayLabel = new Date().toLocaleDateString(undefined, {
     month: 'long',
@@ -127,10 +135,15 @@ export class DashboardPage implements OnInit {
   private async load(): Promise<void> {
     const now = new Date();
     const day = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const [otd, inbox, memories] = await Promise.all([
+    const [otd, recent, inbox, memories] = await Promise.all([
       firstValueFrom(
         this.http.get<{ years: OnThisDayYear[] }>(`/api/v1/dashboard/on-this-day?day=${day}`),
       ).catch(() => ({ years: [] })),
+      firstValueFrom(
+        this.http.get<{ items: Array<{ id: string; mediaType: 'image' | 'video' }> }>(
+          `/api/v1/dashboard/recently-added?limit=8`,
+        ),
+      ).catch(() => ({ items: [] })),
       this.memoriesApi.listInbox().catch(() => ({ suggestions: [] })),
       this.memoriesApi.listMemories().catch(() => ({ memories: [] })),
     ]);
@@ -140,6 +153,7 @@ export class DashboardPage implements OnInit {
     this.onThisDay.set(
       otd.years.filter((group) => fibonacci.has(now.getFullYear() - group.year)),
     );
+    this.recentlyAdded.set(recent.items);
     this.suggestions.set(inbox.suggestions.slice(0, 4));
     this.recentMemories.set(memories.memories.slice(0, 4));
     this.isLoaded.set(true);

@@ -240,6 +240,27 @@
   }
 }
 
+// Always-visible tag naming the guest who uploaded this photo.
+.guest-tag {
+  position: absolute;
+  top: 3.75rem;
+  left: 0.75rem;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 2rem;
+  background: rgb(0 0 0 / 55%);
+  color: white;
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+
+.guest-note {
+  color: var(--text-muted);
+}
+
 // The scrapbook caption, laid over the foot of the photo. A fade-to-black
 // gradient keeps it readable against a bright image; it never gates the photo.
 .caption-band {

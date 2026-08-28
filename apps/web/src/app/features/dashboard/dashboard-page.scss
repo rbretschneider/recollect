@@ -79,6 +79,48 @@ section h2 {
   }
 }
 
+// The newest four photos to land in the library, as a quick tappable row.
+.recently-added {
+  .recent-row {
+    margin-top: 0.6rem;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.4rem;
+  }
+
+  .recent-tile {
+    position: relative;
+    padding: 0;
+    border: none;
+    border-radius: 0.6rem;
+    overflow: hidden;
+    aspect-ratio: 1;
+    background: var(--surface);
+    cursor: pointer;
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .video-badge {
+      position: absolute;
+      right: 0.3rem;
+      bottom: 0.3rem;
+      display: grid;
+      place-items: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgb(0 0 0 / 55%);
+      color: white;
+      font-size: 0.6rem;
+    }
+  }
+}
+
 // Fanned polaroid stacks: one pile per year, tap to run the slideshow.
 .on-this-day {
   // Two piles per row on a phone, more as the screen allows.

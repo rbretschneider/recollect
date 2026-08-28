@@ -50,6 +50,13 @@
     </button>
   </header>
 
+  @if (detail()?.uploadedByGuest; as guestName) {
+    <div class="guest-tag" aria-label="Uploaded by a guest">
+      <app-icon name="upload" [size]="14" />
+      <span>Added by {{ guestName }}</span>
+    </div>
+  }
+
   @if (current(); as asset) {
     <div
       class="stage"
@@ -165,6 +172,12 @@
                     {{ info.takenBy }}
                   }
                 </dd>
+              </div>
+            }
+            @if (info.uploadedByGuest) {
+              <div>
+                <dt>Added by</dt>
+                <dd>{{ info.uploadedByGuest }} <span class="guest-note">(guest)</span></dd>
               </div>
             }
             @if (info.cameraMake || info.cameraModel) {

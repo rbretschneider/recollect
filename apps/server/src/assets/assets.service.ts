@@ -10,6 +10,7 @@ import {
   deviceOwner,
   favorite,
   geocodeCache,
+  guestUpload,
   libraryRoot,
   person,
 } from '../database/schema';
@@ -80,6 +81,8 @@ export interface AssetDetail {
   takenBy: string | null;
   /** The mapped person's id, so "Taken by" can link to their page. */
   takenByPersonId: string | null;
+  /** Name a guest gave when uploading this through a contribution link. */
+  uploadedByGuest: string | null;
   /** True for 360° equirectangular panoramas (GPano metadata or filename). */
   isPhotosphere: boolean;
   gpsLat: number | null;
@@ -280,6 +283,13 @@ export class AssetsService {
     if (!row) {
       throw new NotFoundException('That photo does not exist.');
     }
+    // A guest upload records the name the contributor typed — surface it so the
+    // household knows who added a photo that no camera-owner mapping covers.
+    const [guest] = await this.db
+      .select({ uploaderName: guestUpload.uploaderName })
+      .from(guestUpload)
+      .where(and(eq(guestUpload.assetId, assetId), eq(guestUpload.status, 'approved')))
+      .limit(1);
     const [owner] =
       row.cameraMake !== null || row.cameraModel !== null
         ? await this.db
@@ -307,6 +317,7 @@ export class AssetsService {
       lensModel: row.lensModel,
       takenBy: owner?.ownerName ?? null,
       takenByPersonId: owner?.ownerPersonId ?? null,
+      uploadedByGuest: guest?.uploaderName ?? null,
       isPhotosphere: await this.isPhotosphere(assetId, file?.relPath ?? null),
       gpsLat: row.gpsLat,
       gpsLon: row.gpsLon,
