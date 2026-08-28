@@ -94,9 +94,29 @@
 }
 
 .album-card {
+  position: relative;
   text-decoration: none;
   color: inherit;
   transition: transform 0.18s ease;
+
+  // Public/Guests chips over the cover's top-left corner.
+  .exposure {
+    position: absolute;
+    top: 0.4rem;
+    left: 0.4rem;
+    display: flex;
+    gap: 0.3rem;
+
+    .chip {
+      padding: 0.15rem 0.55rem;
+      border-radius: 1rem;
+      background: rgb(0 0 0 / 60%);
+      backdrop-filter: blur(4px);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+  }
 
   &:hover {
     transform: translateY(-2px);

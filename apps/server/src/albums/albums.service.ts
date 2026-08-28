@@ -12,6 +12,10 @@ export interface AlbumSummary {
   coverAssetId: string | null;
   assetCount: number;
   updatedAt: string;
+  /** An active public share link exists. */
+  isPublic: boolean;
+  /** An active guest contribution link exists. */
+  hasGuestLink: boolean;
 }
 
 /** Full album detail. */
@@ -43,6 +47,17 @@ export class AlbumsService {
           where aa.album_id = ${album.id}
           order by aa.sort_order limit 1
         )`,
+        isPublic: sql<boolean>`exists(
+          select 1 from share_link sl
+          where sl.target_type = 'album' and sl.target_id = ${album.id}
+            and sl.revoked_at is null
+            and (sl.expires_at is null or sl.expires_at > now())
+        )`,
+        hasGuestLink: sql<boolean>`exists(
+          select 1 from contribution_link cl
+          where cl.album_id = ${album.id}
+            and cl.revoked_at is null and cl.expires_at > now()
+        )`,
       })
       .from(album)
       .leftJoin(albumAsset, eq(albumAsset.albumId, album.id))
@@ -55,6 +70,8 @@ export class AlbumsService {
       coverAssetId: row.coverAssetId ?? row.firstMember,
       assetCount: row.assetCount,
       updatedAt: row.updatedAt.toISOString(),
+      isPublic: row.isPublic,
+      hasGuestLink: row.hasGuestLink,
     }));
   }
 

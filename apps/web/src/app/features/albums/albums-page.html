@@ -24,6 +24,12 @@
         } @else {
           <div class="placeholder"></div>
         }
+        @if (album.isPublic || album.hasGuestLink) {
+          <span class="exposure" aria-label="Who can see this album">
+            @if (album.isPublic) { <span class="chip">Public</span> }
+            @if (album.hasGuestLink) { <span class="chip">Guests</span> }
+          </span>
+        }
         <h3>{{ album.title }}</h3>
         <p>{{ album.assetCount }} photos</p>
       </a>

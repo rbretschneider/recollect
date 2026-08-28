@@ -163,6 +163,8 @@ export interface AlbumSummary {
   coverAssetId: string | null;
   assetCount: number;
   updatedAt: string;
+  isPublic: boolean;
+  hasGuestLink: boolean;
 }
 
 /** Mirrors the server's AlbumDetail. */
