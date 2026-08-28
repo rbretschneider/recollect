@@ -1,4 +1,5 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PeopleApiService, PersonFace, PersonSummary } from '../../core/api/people-api.service';
@@ -78,7 +79,7 @@ export class PersonPage implements OnInit {
   }
 
   thumbUrl(assetId: string): string {
-    return `/api/v1/assets/${assetId}/thumb/240`;
+    return assetThumbUrl(assetId);
   }
 
   cropUrl(faceId: string): string {

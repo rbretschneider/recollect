@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { RouterLink } from '@angular/router';
 import { TrashApiService, TrashItem } from '../../core/api/trash-api.service';
 import { AccountBadge } from '../../shared/account-badge';
@@ -24,7 +25,7 @@ export class TrashPage implements OnInit {
   }
 
   thumbUrl(assetId: string): string {
-    return `/api/v1/assets/${assetId}/thumb/240`;
+    return assetThumbUrl(assetId);
   }
 
   daysUntilPurge(item: TrashItem): number {

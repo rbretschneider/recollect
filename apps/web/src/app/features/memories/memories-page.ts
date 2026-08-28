@@ -1,4 +1,5 @@
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { formatDateSpan } from '../../core/format-date';
 import { RouterLink } from '@angular/router';
 import { LibraryApiService } from '../../core/api/library-api.service';
@@ -41,7 +42,7 @@ export class MemoriesPage implements OnInit {
   }
 
   coverUrl(memory: MemorySummary): string | null {
-    return memory.coverAssetId ? `/api/v1/assets/${memory.coverAssetId}/thumb/720` : null;
+    return memory.coverAssetId ? assetThumbUrl(memory.coverAssetId, 720) : null;
   }
 
   formatSpan(memory: MemorySummary): string {

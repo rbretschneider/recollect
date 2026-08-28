@@ -8,6 +8,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { formatDateSpan } from '../../core/format-date';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -179,7 +180,7 @@ export class MemoryDetailPage implements OnInit {
   }
 
   thumbUrl(assetId: string, size: 240 | 720 | 1440 = 240): string {
-    return `/api/v1/assets/${assetId}/thumb/${size}`;
+    return assetThumbUrl(assetId, size);
   }
 
   cropUrl(faceId: string): string {
@@ -187,7 +188,7 @@ export class MemoryDetailPage implements OnInit {
   }
 
   coverUrl(detail: MemoryDetail): string | null {
-    return detail.coverAssetId ? `/api/v1/assets/${detail.coverAssetId}/thumb/1440` : null;
+    return detail.coverAssetId ? assetThumbUrl(detail.coverAssetId, 1440) : null;
   }
 
   formatSpan(detail: MemoryDetail): string {
@@ -260,7 +261,7 @@ export class MemoryDetailPage implements OnInit {
 
   /** The filmstrip runs at a fixed height; 720 keeps frames sharp. */
   stripThumbUrl(assetId: string): string {
-    return `/api/v1/assets/${assetId}/thumb/720`;
+    return assetThumbUrl(assetId, 720);
   }
 
   async addQuote(): Promise<void> {

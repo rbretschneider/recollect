@@ -1,4 +1,5 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   FolderAsset,
@@ -82,11 +83,11 @@ export class FoldersPage implements OnInit {
   }
 
   thumbUrl(assetId: string): string {
-    return `/api/v1/assets/${assetId}/thumb/240`;
+    return assetThumbUrl(assetId);
   }
 
   coverUrl(coverAssetId: string | null): string | null {
-    return coverAssetId ? `/api/v1/assets/${coverAssetId}/thumb/240` : null;
+    return coverAssetId ? assetThumbUrl(coverAssetId) : null;
   }
 
   openRoot(root: RootEntry): void {

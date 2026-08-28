@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
@@ -36,7 +37,7 @@ export class AlbumsPage implements OnInit {
   }
 
   coverUrl(album: AlbumSummary): string | null {
-    return album.coverAssetId ? `/api/v1/assets/${album.coverAssetId}/thumb/720` : null;
+    return album.coverAssetId ? assetThumbUrl(album.coverAssetId, 720) : null;
   }
 
   startCreating(): void {

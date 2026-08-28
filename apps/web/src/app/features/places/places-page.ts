@@ -9,6 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import * as L from 'leaflet';
 import { PlacesApiService, PlaceView } from '../../core/api/places-api.service';
@@ -138,7 +139,7 @@ export class PlacesPage implements OnInit, OnDestroy {
   }
 
   thumbUrl(assetId: string, size: 240 | 720 = 240): string {
-    return `/api/v1/assets/${assetId}/thumb/${size}`;
+    return assetThumbUrl(assetId, size);
   }
 
   openPlace(place: PlaceView): void {

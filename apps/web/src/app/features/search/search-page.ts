@@ -1,4 +1,5 @@
 import { AfterViewInit, Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { RouterLink } from '@angular/router';
 import {
   SearchApiService,
@@ -108,11 +109,11 @@ export class SearchPage implements AfterViewInit {
   }
 
   thumbUrl(assetId: string): string {
-    return `/api/v1/assets/${assetId}/thumb/240`;
+    return assetThumbUrl(assetId);
   }
 
   coverUrl(assetId: string | null): string | null {
-    return assetId ? `/api/v1/assets/${assetId}/thumb/240` : null;
+    return assetId ? assetThumbUrl(assetId) : null;
   }
 
   openViewer(index: number): void {

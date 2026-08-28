@@ -1,4 +1,5 @@
 import { Component, computed, inject, input, OnInit, output, signal } from '@angular/core';
+import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { FormsModule } from '@angular/forms';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { InboxSuggestion } from '../../core/api/api-models';
@@ -50,7 +51,7 @@ export class SuggestionCard implements OnInit {
   }
 
   thumbUrl(assetId: string): string {
-    return `/api/v1/assets/${assetId}/thumb/240`;
+    return assetThumbUrl(assetId);
   }
 
   formatSpan(): string {

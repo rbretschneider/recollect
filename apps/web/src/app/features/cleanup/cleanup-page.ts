@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { formatBytes } from '../../core/format-date';
 import {
   CleanupApiService,
@@ -41,7 +42,7 @@ export class CleanupPage implements OnInit {
   }
 
   thumbUrl(assetId: string): string {
-    return `/api/v1/assets/${assetId}/thumb/240`;
+    return assetThumbUrl(assetId);
   }
 
   formatSize(bytes: number): string {

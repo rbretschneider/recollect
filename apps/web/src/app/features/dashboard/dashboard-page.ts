@@ -1,4 +1,5 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { HttpClient } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -60,7 +61,7 @@ export class DashboardPage implements OnInit {
   }
 
   thumbUrl(assetId: string, size: 240 | 720 = 240): string {
-    return `/api/v1/assets/${assetId}/thumb/${size}`;
+    return assetThumbUrl(assetId, size);
   }
 
   yearsAgo(year: number): string {
