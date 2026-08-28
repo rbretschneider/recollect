@@ -23,6 +23,10 @@
             {{ assetIds().length }} {{ assetIds().length === 1 ? 'photo' : 'photos' }}
           </p>
         </div>
+        @if (canWrite) {
+          <span class="profile-spacer"></span>
+          <app-edit-toggle />
+        }
       </header>
     }
   }
@@ -55,7 +59,10 @@
         </div>
       }
     </form>
+  }
 
+  <!-- Unnamed clusters have no profile header; the pencil still needs a home. -->
+  @if (canWrite && person()?.name === null) {
     <section class="manage" aria-label="Person actions">
       <app-edit-toggle />
     </section>

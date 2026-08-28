@@ -47,6 +47,10 @@
   gap: 0.9rem;
   padding: 1.25rem 1rem 0.5rem;
 
+  .profile-spacer {
+    flex: 1;
+  }
+
   .avatar {
     width: 64px;
     height: 64px;
