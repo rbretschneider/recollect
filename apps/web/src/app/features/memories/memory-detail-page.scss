@@ -134,24 +134,23 @@
   }
 }
 
-// The journal reads and writes like a story, not a form.
-.story {
+// Read mode is a blog post: journal paragraphs interleaved with captioned photo
+// figures, all in one measured column.
+.story-post {
   padding: 1.25rem 1.5rem 0;
   max-width: 38rem;
   margin: 0 auto;
 
-  // Read mode is prose — the journal is the loudest voice on the page,
-  // set in the scrapbook serif, larger than the quotes below the photos.
-  .entry .prose {
-    margin: 0 0 0.25rem;
+  .prose {
+    margin: 0 0 1rem;
     font-family: Georgia, 'Times New Roman', serif;
-    font-size: 1.2rem;
-    line-height: 1.65;
+    font-size: 1.15rem;
+    line-height: 1.7;
     white-space: pre-wrap;
   }
 
-  // The opening letter gets the print treatment.
-  .entry:first-of-type .prose::first-letter {
+  // The opening letter of the story gets the print treatment.
+  > .prose:first-of-type::first-letter {
     float: left;
     font-size: 3.1em;
     line-height: 0.85;
@@ -160,75 +159,17 @@
     color: var(--accent);
   }
 
-  .entry .author {
-    margin: 0;
+  > .author {
+    margin: 0.25rem 0 0;
     font-size: 0.85rem;
     color: var(--text-muted);
-  }
-
-  textarea {
-    width: 100%;
-    padding: 0;
-    border: none;
-    background: transparent;
-    color: var(--text);
-    font-family: Georgia, 'Times New Roman', serif;
-    font-size: 1.15rem;
-    line-height: 1.75;
-    resize: none;
-    overflow: hidden;
-    min-height: 5.5rem;
-
-    &::placeholder {
-      color: var(--text-muted);
-      font-style: italic;
-    }
-
-    &:focus-visible {
-      outline: none;
-      border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-    }
-  }
-
-  .byline {
-    min-height: 1.2rem;
     text-align: right;
-    font-size: 0.75rem;
-    color: var(--text-muted);
+    font-style: italic;
   }
 
-  .entry {
-    margin-top: 1.25rem;
-    padding-top: 1.25rem;
-    border-top: 1px solid var(--border);
-
-    .prose {
-      margin: 0;
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 1.1rem;
-      line-height: 1.75;
-      white-space: pre-wrap;
-    }
-
-    .author {
-      margin: 0.5rem 0 0;
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      text-align: right;
-      font-style: italic;
-    }
-  }
-}
-
-// Captioned photos woven into the story as figures — the bloggy layer. A
-// group of photos that share a caption sit side by side under it.
-.story-flow {
-  max-width: 38rem;
-  margin: 0 auto;
-  padding: 1rem 1.5rem 0;
-
+  // Captioned photos nestled between the paragraphs.
   .story-group {
-    margin: 0 0 1.75rem;
+    margin: 1.25rem 0 1.75rem;
 
     .story-images {
       display: grid;
@@ -254,7 +195,7 @@
       }
     }
 
-    // Two or three shots of the same beat tile together, evenly.
+    // Two or three shots of the same beat tile together.
     &.multi .story-images {
       grid-template-columns: repeat(2, 1fr);
 
@@ -262,7 +203,6 @@
         max-height: 16rem;
       }
 
-      // An odd first photo spans both columns as the establishing shot.
       button:first-child:nth-last-child(odd) {
         grid-column: 1 / -1;
 
@@ -282,8 +222,29 @@
       text-align: center;
     }
   }
+
+  // Other household members' entries, set apart below the woven story.
+  .entry {
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+
+    .prose {
+      font-size: 1.1rem;
+    }
+
+    .author {
+      margin: 0.5rem 0 0;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-align: right;
+      font-style: italic;
+    }
+  }
 }
 
+// Captioned photos woven into the story as figures — the bloggy layer. A
+// group of photos that share a caption sit side by side under it.
 // The leftover, uncaptioned photos: a fanned polaroid stack that plays the
 // whole memory when tapped.
 .more-photos {

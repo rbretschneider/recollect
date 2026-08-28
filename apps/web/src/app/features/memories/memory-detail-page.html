@@ -127,40 +127,37 @@
         </div>
       </section>
     } @else {
-      <!-- Read mode: a blog post. Journal prose, then captioned photos woven in
-           as figures in memory order, then the rest as a tappable stack. -->
-      @if (hasJournalContent) {
-        <section class="story" aria-label="Journal">
+      <!-- Read mode: a blog post. The journal is the spine; captioned photos
+           nestle into the gaps between its paragraphs, and the rest wait at the
+           end as a tappable stack. -->
+      @if (storyFlow().length > 0 || othersJournalEntries().length > 0) {
+        <article class="story-post" aria-label="Journal">
+          @for (item of storyFlow(); track $index) {
+            @if (item.kind === 'text') {
+              <p class="prose">{{ item.text }}</p>
+            } @else {
+              <figure class="story-group" [class.multi]="item.assetIds.length > 1">
+                <div class="story-images">
+                  @for (assetId of item.assetIds; track assetId) {
+                    <button type="button" aria-label="Open photo" (click)="openViewer(assetId)">
+                      <img [src]="thumbUrl(assetId, 1440)" alt="" loading="lazy" />
+                    </button>
+                  }
+                </div>
+                <figcaption>{{ item.caption }}</figcaption>
+              </figure>
+            }
+          }
           @if (journalDraft().trim().length > 0) {
-            <article class="entry">
-              <p class="prose">{{ journalDraft() }}</p>
-              <p class="author">— {{ myName }}</p>
-            </article>
+            <p class="author">— {{ myName }}</p>
           }
           @for (entry of othersJournalEntries(); track entry.id) {
-            <article class="entry">
+            <div class="entry">
               <p class="prose">{{ entry.bodyMd }}</p>
               <p class="author">— {{ entry.authorName }}</p>
-            </article>
+            </div>
           }
-        </section>
-      }
-
-      @if (storyGroups().length > 0) {
-        <section class="story-flow" aria-label="Moments">
-          @for (group of storyGroups(); track group.caption + group.assetIds[0]) {
-            <figure class="story-group" [class.multi]="group.assetIds.length > 1">
-              <div class="story-images">
-                @for (assetId of group.assetIds; track assetId) {
-                  <button type="button" aria-label="Open photo" (click)="openViewer(assetId)">
-                    <img [src]="thumbUrl(assetId, 1440)" alt="" loading="lazy" />
-                  </button>
-                }
-              </div>
-              <figcaption>{{ group.caption }}</figcaption>
-            </figure>
-          }
-        </section>
+        </article>
       }
 
       @if (looseAssetIds().length > 0) {

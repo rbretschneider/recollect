@@ -160,6 +160,55 @@ export class MemoryDetailPage implements OnInit {
   /** Up to four fanned previews for the end-of-story stack. */
   readonly loosePreview = computed<string[]>(() => this.looseAssetIds().slice(0, 4));
 
+  /** My journal entry split into paragraphs (blank-line separated). */
+  readonly journalParagraphs = computed<string[]>(() => {
+    const text = this.journalDraft().trim();
+    return text ? text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean) : [];
+  });
+
+  /**
+   * The read-mode story woven together: journal paragraphs with captioned photo
+   * groups nestled into the gaps between them. How many nestle inline is set by
+   * the prose itself — at most one per paragraph, spread evenly — so a longer
+   * entry pulls more photos into the text and a short one keeps just a couple.
+   * Groups that don't fit inline follow after the prose; uncaptioned photos go
+   * to the end stack. With no prose, every group simply renders as a figure.
+   */
+  readonly storyFlow = computed<
+    Array<{ kind: 'text'; text: string } | { kind: 'figure'; caption: string; assetIds: string[] }>
+  >(() => {
+    const paras = this.journalParagraphs();
+    const groups = this.storyGroups();
+    const flow: Array<
+      { kind: 'text'; text: string } | { kind: 'figure'; caption: string; assetIds: string[] }
+    > = [];
+    if (paras.length === 0) {
+      for (const group of groups) {
+        flow.push({ kind: 'figure', ...group });
+      }
+      return flow;
+    }
+    // Fancy math: nestle up to one figure per paragraph, placed at evenly spaced
+    // gaps. Figure i lands after paragraph floor((i+1)·P / (inline+1)).
+    const inlineCount = Math.min(groups.length, paras.length);
+    const afterPara = new Map<number, number>();
+    for (let i = 0; i < inlineCount; i++) {
+      afterPara.set(Math.floor(((i + 1) * paras.length) / (inlineCount + 1)), i);
+    }
+    paras.forEach((text, index) => {
+      flow.push({ kind: 'text', text });
+      const groupIndex = afterPara.get(index);
+      if (groupIndex !== undefined) {
+        flow.push({ kind: 'figure', ...groups[groupIndex] });
+      }
+    });
+    // Any captioned groups beyond the prose's capacity trail after it.
+    for (let i = inlineCount; i < groups.length; i++) {
+      flow.push({ kind: 'figure', ...groups[i] });
+    }
+    return flow;
+  });
+
   // --- Edit-mode captioning: select any number of photos, caption them once ---
 
   /** Photos currently selected for a shared caption. */
