@@ -136,9 +136,22 @@
 
 // The journal reads and writes like a story, not a form.
 .story {
-  padding: 1.5rem 1.5rem 0.5rem;
+  padding: 1.25rem 1.5rem 0;
   max-width: 38rem;
   margin: 0 auto;
+
+  // Read mode is prose, sitting tight against the quotes below it.
+  .entry .prose {
+    margin: 0 0 0.25rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+
+  .entry .author {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
 
   textarea {
     width: 100%;

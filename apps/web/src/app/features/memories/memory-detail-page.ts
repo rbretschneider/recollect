@@ -117,6 +117,15 @@ export class MemoryDetailPage implements OnInit {
     return this.detail()?.journal.filter((entry) => entry.authorUserId !== userId) ?? [];
   });
 
+  /** Whether the journal section has anything to show in read mode. */
+  get hasJournalContent(): boolean {
+    return this.journalDraft().trim().length > 0 || this.othersJournalEntries().length > 0;
+  }
+
+  get myName(): string {
+    return this.auth.user()?.displayName ?? 'Me';
+  }
+
   get canWrite(): boolean {
     const permission = this.auth.user()?.permission;
     return permission === 'write' || permission === 'delete';

@@ -55,34 +55,44 @@
       </section>
     }
 
-    <section class="story" aria-label="Journal">
-      @if (canWrite) {
-        <div class="mine">
-          <textarea
-            #editor
-            id="journal-editor"
-            rows="3"
-            placeholder="Write the story of this day — who was there, what happened, what you want to remember…"
-            [value]="journalDraft()"
-            (input)="onJournalInput($any($event.target).value); autoGrow($any($event.target))"
-          ></textarea>
-          <div class="byline">
-            @if (saveState() === 'saving') {
-              <span>Saving…</span>
-            } @else if (saveState() === 'saved') {
-              <span>Saved ✓</span>
-            }
+    <!-- Reading is the default: the journal is prose, never an input. The
+         pencil brings the textarea back. An empty journal takes no space. -->
+    @if (editMode.isEditing() || hasJournalContent) {
+      <section class="story" aria-label="Journal">
+        @if (editMode.isEditing()) {
+          <div class="mine">
+            <textarea
+              #editor
+              id="journal-editor"
+              rows="3"
+              placeholder="Write the story of this day — who was there, what happened, what you want to remember…"
+              [value]="journalDraft()"
+              (input)="onJournalInput($any($event.target).value); autoGrow($any($event.target))"
+            ></textarea>
+            <div class="byline">
+              @if (saveState() === 'saving') {
+                <span>Saving…</span>
+              } @else if (saveState() === 'saved') {
+                <span>Saved ✓</span>
+              }
+            </div>
           </div>
-        </div>
-      }
-      @for (entry of othersJournalEntries(); track entry.id) {
-        <article class="entry">
-          <p class="prose">{{ entry.bodyMd }}</p>
-          <p class="author">— {{ entry.authorName }}</p>
-        </article>
-      }
-    </section>
+        } @else if (journalDraft().trim().length > 0) {
+          <article class="entry">
+            <p class="prose">{{ journalDraft() }}</p>
+            <p class="author">— {{ myName }}</p>
+          </article>
+        }
+        @for (entry of othersJournalEntries(); track entry.id) {
+          <article class="entry">
+            <p class="prose">{{ entry.bodyMd }}</p>
+            <p class="author">— {{ entry.authorName }}</p>
+          </article>
+        }
+      </section>
+    }
 
+    @if (editMode.isEditing() || memory.quotes.length > 0) {
     <section class="quotes" aria-label="Quotes of the day">
       @for (quote of memory.quotes; track quote.id) {
         <blockquote class="quote">
@@ -107,7 +117,7 @@
           </footer>
         </blockquote>
       }
-      @if (canWrite) {
+      @if (editMode.isEditing()) {
         <form class="quote-form" (ngSubmit)="addQuote()">
           <input
             name="quoteText"
@@ -141,6 +151,7 @@
         </form>
       }
     </section>
+    }
 
     <section class="filmstrip-section" aria-label="Photos in this memory">
       <h2>{{ memory.assetIds.length }} {{ memory.assetIds.length === 1 ? 'photo' : 'photos' }}</h2>
