@@ -220,41 +220,137 @@
   }
 }
 
-// Captioned photos as full-width story figures — the journalistic layer.
-.moments {
+// Captioned photos woven into the story as figures — the bloggy layer. A
+// group of photos that share a caption sit side by side under it.
+.story-flow {
   max-width: 38rem;
   margin: 0 auto;
   padding: 1rem 1.5rem 0;
 
-  .moment {
-    margin: 0 0 1.5rem;
+  .story-group {
+    margin: 0 0 1.75rem;
 
-    button {
-      display: block;
-      width: 100%;
-      padding: 0;
-      border: none;
-      border-radius: 0.9rem;
-      overflow: hidden;
-      background: var(--surface);
-      cursor: pointer;
+    .story-images {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.4rem;
 
-      img {
+      button {
         display: block;
         width: 100%;
-        max-height: 30rem;
-        object-fit: cover;
+        padding: 0;
+        border: none;
+        border-radius: 0.9rem;
+        overflow: hidden;
+        background: var(--surface);
+        cursor: pointer;
+
+        img {
+          display: block;
+          width: 100%;
+          max-height: 30rem;
+          object-fit: cover;
+        }
+      }
+    }
+
+    // Two or three shots of the same beat tile together, evenly.
+    &.multi .story-images {
+      grid-template-columns: repeat(2, 1fr);
+
+      button img {
+        max-height: 16rem;
+      }
+
+      // An odd first photo spans both columns as the establishing shot.
+      button:first-child:nth-last-child(odd) {
+        grid-column: 1 / -1;
+
+        img {
+          max-height: 24rem;
+        }
       }
     }
 
     figcaption {
-      margin-top: 0.5rem;
+      margin-top: 0.6rem;
       font-family: Georgia, 'Times New Roman', serif;
       font-style: italic;
-      font-size: 0.95rem;
+      font-size: 1rem;
       line-height: 1.5;
       color: var(--text-muted);
       text-align: center;
+    }
+  }
+}
+
+// The leftover, uncaptioned photos: a fanned polaroid stack that plays the
+// whole memory when tapped.
+.more-photos {
+  max-width: 38rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 0;
+
+  .stack {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    width: 100%;
+    padding: 0.5rem;
+    border: none;
+    background: none;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .fan {
+    position: relative;
+    flex-shrink: 0;
+    width: 8rem;
+    height: 7rem;
+  }
+
+  .polaroid {
+    position: absolute;
+    inset: 0.25rem auto auto 0.5rem;
+    width: 6.4rem;
+    padding: 0.3rem 0.3rem 1rem;
+    background: #f4f1ea;
+    border-radius: 2px;
+    box-shadow: 0 6px 16px rgb(0 0 0 / 45%);
+    transition: rotate 0.25s ease, translate 0.25s ease;
+
+    img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      background: #ddd;
+    }
+
+    &[data-card='0'] { rotate: -5deg; z-index: 4; }
+    &[data-card='1'] { rotate: 4deg; translate: 8px 3px; z-index: 3; }
+    &[data-card='2'] { rotate: -9deg; translate: -6px 6px; z-index: 2; }
+    &[data-card='3'] { rotate: 8deg; translate: 4px 8px; z-index: 1; }
+  }
+
+  .stack:hover .polaroid[data-card='0'] {
+    rotate: -9deg;
+    translate: -3px -5px;
+  }
+
+  .stack-label {
+    display: grid;
+    gap: 0.15rem;
+    text-align: left;
+
+    strong {
+      font-size: 1rem;
+    }
+
+    .sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
     }
   }
 }
@@ -441,86 +537,208 @@
   }
 }
 
-// The photos live INSIDE the story as a swipeable strip — a memory is a
-// composed page, not an infinite grid (that's what albums are for).
-.filmstrip-section {
+// Edit mode: the journal is unmistakably a field — framed, filled, labelled —
+// so there's no doubt it's waiting for you to type.
+.journal-edit {
   max-width: 38rem;
   margin: 0 auto;
-  padding: 1rem 1.5rem 0;
+  padding: 1.25rem 1.5rem 0;
+
+  label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+
+  textarea {
+    width: 100%;
+    padding: 0.85rem 0.95rem;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    background: var(--surface);
+    color: var(--text);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.1rem;
+    line-height: 1.7;
+    resize: none;
+    overflow: hidden;
+    min-height: 6.5rem;
+
+    &::placeholder {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    &:focus-visible {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+    }
+  }
+
+  .byline {
+    min-height: 1.2rem;
+    margin-top: 0.35rem;
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+
+    .muted {
+      opacity: 0.8;
+    }
+  }
+}
+
+// Edit mode: every photo shown in full (no scroll strip), tap to select, then
+// caption the selection together.
+.caption-editor {
+  max-width: 38rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 0;
 
   h2 {
     font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--text-muted);
-    margin: 0 0 0.5rem;
+    margin: 0 0 0.35rem;
   }
 
-  .filmstrip {
-    display: flex;
-    gap: 0.4rem;
-    overflow-x: auto;
-    scroll-snap-type: x proximity;
-    border-radius: 0.75rem;
-    // Momentum scrolling without the strip stealing vertical swipes.
-    overscroll-behavior-x: contain;
+  .hint {
+    margin: 0 0 0.85rem;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--text-muted);
+  }
 
-    // A photo and its scrapbook caption travel together.
-    .frame-wrap {
-      flex-shrink: 0;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 0.3rem;
-      max-width: 20rem;
-      scroll-snap-align: start;
+  .caption-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+    gap: 0.5rem;
+  }
 
-      figcaption {
-        font-family: Georgia, 'Times New Roman', serif;
-        font-style: italic;
-        font-size: 0.9rem;
-        line-height: 1.4;
-        color: var(--text-muted);
-        padding: 0 0.15rem 0.25rem;
-        white-space: normal;
-      }
+  .cap-tile {
+    position: relative;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 0.7rem;
+    overflow: hidden;
+    background: var(--surface);
+    cursor: pointer;
+    aspect-ratio: 1;
 
-      .caption-input {
-        min-height: 38px;
-        padding: 0 0.6rem;
-        border: 1px solid var(--border);
-        border-radius: 0.5rem;
-        background: var(--surface);
-        color: var(--text);
-        font-size: 0.85rem;
-        transition: border-color 0.3s ease;
-
-        // The save-confirmation flash (three-signal standard).
-        &.just-saved {
-          border-color: var(--accent);
-        }
-      }
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: opacity 0.15s ease;
     }
 
-    .frame {
-      flex-shrink: 0;
-      height: 13rem;
-      padding: 0;
-      border: none;
-      background: var(--surface);
-      border-radius: 0.5rem;
-      overflow: hidden;
-      cursor: pointer;
-      scroll-snap-align: start;
+    // A captioned photo carries a soft accent edge so you can see at a glance
+    // which shots already have words.
+    &.captioned {
+      border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    }
+
+    &.selected {
+      border-color: var(--accent);
 
       img {
-        display: block;
-        height: 100%;
-        width: auto;
-        max-width: 20rem;
-        object-fit: cover;
+        opacity: 0.72;
       }
     }
+
+    .tick {
+      position: absolute;
+      top: 0.35rem;
+      right: 0.35rem;
+      width: 22px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--accent);
+      color: var(--accent-contrast);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .tile-caption {
+      position: absolute;
+      inset: auto 0 0;
+      padding: 1.25rem 0.4rem 0.4rem;
+      background: linear-gradient(transparent, rgb(0 0 0 / 80%));
+      color: white;
+      font-size: 0.72rem;
+      line-height: 1.25;
+      text-align: left;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  }
+}
+
+// The floating bar that appears once photos are picked — write one caption for
+// all of them. Portals visually above the page like the app's other action bars.
+.caption-apply-bar {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 0.85rem calc(0.7rem + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  border-top: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+
+  .count {
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    min-height: 40px;
+    padding: 0 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 0.9rem;
+  }
+
+  .ghost,
+  .primary {
+    flex-shrink: 0;
+    min-height: 40px;
+    padding: 0 0.9rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .ghost {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+  }
+
+  .primary {
+    border: none;
+    background: var(--accent);
+    color: var(--accent-contrast);
   }
 }
 

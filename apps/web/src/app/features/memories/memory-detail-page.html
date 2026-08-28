@@ -74,94 +74,113 @@
       </section>
     }
 
-    <!-- Reading is the default: the journal is prose, never an input. The
-         pencil brings the textarea back. An empty journal takes no space. -->
-    @if (editMode.isEditing() || hasJournalContent) {
-      <section class="story" aria-label="Journal">
-        @if (editMode.isEditing()) {
-          <div class="mine">
-            <textarea
-              #editor
-              id="journal-editor"
-              rows="3"
-              placeholder="Write the story of this day — who was there, what happened, what you want to remember…"
-              [value]="journalDraft()"
-              (input)="onJournalInput($any($event.target).value); autoGrow($any($event.target))"
-            ></textarea>
-            <div class="byline">
-              @if (saveState() === 'saving') {
-                <span>Saving…</span>
-              } @else if (saveState() === 'saved') {
-                <span>Saved ✓</span>
+    @if (editMode.isEditing()) {
+      <!-- Edit mode: an unmistakable journal field, then a full grid where you
+           pick any photos and caption them together. -->
+      <section class="journal-edit" aria-label="Journal">
+        <label for="journal-editor">Your journal entry</label>
+        <textarea
+          #editor
+          id="journal-editor"
+          rows="4"
+          placeholder="Write the story of this day — who was there, what happened, what you want to remember…"
+          [value]="journalDraft()"
+          (input)="onJournalInput($any($event.target).value); autoGrow($any($event.target))"
+        ></textarea>
+        <div class="byline">
+          @if (saveState() === 'saving') {
+            <span>Saving…</span>
+          } @else if (saveState() === 'saved') {
+            <span>Saved ✓</span>
+          } @else {
+            <span class="muted">Autosaves as you type</span>
+          }
+        </div>
+      </section>
+
+      <section class="caption-editor" aria-label="Caption photos">
+        <h2>Caption the photos</h2>
+        <p class="hint">
+          Tap the photos that go together, then write one caption for them — like
+          “the rocks were sweet” across three climbing shots. Skip the ones that
+          speak for themselves.
+        </p>
+        <div class="caption-grid">
+          @for (assetId of memory.assetIds; track assetId) {
+            <button
+              type="button"
+              class="cap-tile"
+              [class.selected]="captionSelection().has(assetId)"
+              [class.captioned]="!!memory.captions[assetId]"
+              [attr.aria-pressed]="captionSelection().has(assetId)"
+              (click)="toggleCaptionSelect(assetId)"
+            >
+              <img [src]="thumbUrl(assetId, 720)" alt="" loading="lazy" />
+              @if (captionSelection().has(assetId)) {
+                <span class="tick" aria-hidden="true">✓</span>
               }
-            </div>
-          </div>
-        } @else if (journalDraft().trim().length > 0) {
-          <article class="entry">
-            <p class="prose">{{ journalDraft() }}</p>
-            <p class="author">— {{ myName }}</p>
-          </article>
-        }
-        @for (entry of othersJournalEntries(); track entry.id) {
-          <article class="entry">
-            <p class="prose">{{ entry.bodyMd }}</p>
-            <p class="author">— {{ entry.authorName }}</p>
-          </article>
-        }
-      </section>
-    }
-
-    <!-- Captioned photos step out of the strip and into the story as
-         full-width figures — the journalistic layer (read mode only). -->
-    @if (!editMode.isEditing() && storyMoments().length > 0) {
-      <section class="moments" aria-label="Moments">
-        @for (moment of storyMoments(); track moment.assetId) {
-          <figure class="moment">
-            <button
-              type="button"
-              aria-label="Open photo"
-              (click)="openViewer(moment.assetId)"
-            >
-              <img [src]="thumbUrl(moment.assetId, 1440)" alt="" loading="lazy" />
+              @if (memory.captions[assetId]; as caption) {
+                <span class="tile-caption">{{ caption }}</span>
+              }
             </button>
-            <figcaption>{{ moment.caption }}</figcaption>
-          </figure>
-        }
+          }
+        </div>
       </section>
-    }
+    } @else {
+      <!-- Read mode: a blog post. Journal prose, then captioned photos woven in
+           as figures in memory order, then the rest as a tappable stack. -->
+      @if (hasJournalContent) {
+        <section class="story" aria-label="Journal">
+          @if (journalDraft().trim().length > 0) {
+            <article class="entry">
+              <p class="prose">{{ journalDraft() }}</p>
+              <p class="author">— {{ myName }}</p>
+            </article>
+          }
+          @for (entry of othersJournalEntries(); track entry.id) {
+            <article class="entry">
+              <p class="prose">{{ entry.bodyMd }}</p>
+              <p class="author">— {{ entry.authorName }}</p>
+            </article>
+          }
+        </section>
+      }
 
-    <!-- Scrapbook order: the story, then the photos (with their captions),
-         then the little things people said, underneath. -->
-    <section class="filmstrip-section" aria-label="Photos in this memory">
-      <h2>{{ memory.assetIds.length }} {{ memory.assetIds.length === 1 ? 'photo' : 'photos' }}</h2>
-      <div class="filmstrip">
-        @for (assetId of memory.assetIds; track assetId) {
-          <figure class="frame-wrap">
-            <button
-              type="button"
-              class="frame"
-              aria-label="Open photo"
-              (click)="openViewer(assetId)"
-            >
-              <img [src]="stripThumbUrl(assetId)" alt="" loading="lazy" />
-            </button>
-            @if (editMode.isEditing()) {
-              <input
-                class="caption-input"
-                [class.just-saved]="captionJustSaved() === assetId"
-                [name]="'caption-' + assetId"
-                [value]="memory.captions[assetId] ?? ''"
-                placeholder="Caption this moment…"
-                maxlength="500"
-                (change)="saveCaption(assetId, $any($event.target).value)"
-              />
-            } @else if (memory.captions[assetId]; as caption) {
-              <figcaption>{{ caption }}</figcaption>
-            }
-          </figure>
-        }
-      </div>
-    </section>
+      @if (storyGroups().length > 0) {
+        <section class="story-flow" aria-label="Moments">
+          @for (group of storyGroups(); track group.caption + group.assetIds[0]) {
+            <figure class="story-group" [class.multi]="group.assetIds.length > 1">
+              <div class="story-images">
+                @for (assetId of group.assetIds; track assetId) {
+                  <button type="button" aria-label="Open photo" (click)="openViewer(assetId)">
+                    <img [src]="thumbUrl(assetId, 1440)" alt="" loading="lazy" />
+                  </button>
+                }
+              </div>
+              <figcaption>{{ group.caption }}</figcaption>
+            </figure>
+          }
+        </section>
+      }
+
+      @if (looseAssetIds().length > 0) {
+        <section class="more-photos" aria-label="More photos">
+          <button type="button" class="stack" (click)="openSlideshow()">
+            <span class="fan">
+              @for (assetId of loosePreview(); track assetId; let i = $index) {
+                <span class="polaroid" [attr.data-card]="i">
+                  <img [src]="thumbUrl(assetId, 720)" alt="" loading="lazy" />
+                </span>
+              }
+            </span>
+            <span class="stack-label">
+              <strong>{{ looseAssetIds().length }} more {{ looseAssetIds().length === 1 ? 'photo' : 'photos' }}</strong>
+              <span class="sub">tap to play the whole memory ▶</span>
+            </span>
+          </button>
+        </section>
+      }
+    }
 
     @if (editMode.isEditing() || memory.quotes.length > 0) {
     <section class="quotes" aria-label="Quotes of the day">
@@ -242,6 +261,23 @@
       </section>
     }
   </main>
+
+  <!-- Floating bar: appears the moment photos are selected for a shared caption. -->
+  @if (editMode.isEditing() && captionSelection().size > 0) {
+    <div class="caption-apply-bar" role="group" aria-label="Caption selected photos">
+      <span class="count">{{ captionSelection().size }} selected</span>
+      <input
+        name="groupCaption"
+        [(ngModel)]="captionGroupDraft"
+        placeholder="Write their caption…"
+        maxlength="500"
+        autocomplete="off"
+        (keydown.enter)="applyGroupCaption()"
+      />
+      <button type="button" class="ghost" (click)="clearCaptionSelection()">Cancel</button>
+      <button type="button" class="primary" (click)="applyGroupCaption()">Apply</button>
+    </div>
+  }
 } @else {
   <app-page-loading label="Loading memory…" />
 }

@@ -120,40 +120,99 @@ export class MemoryDetailPage implements OnInit {
     return this.detail()?.journal.filter((entry) => entry.authorUserId !== userId) ?? [];
   });
 
-  /** Which caption just saved, for the flash of confirmation. */
-  readonly captionJustSaved = signal<string | null>(null);
-
-  /** Captioned photos, in album order — the story's inline figures. */
-  readonly storyMoments = computed<Array<{ assetId: string; caption: string }>>(() => {
+  /**
+   * The read-mode story: captioned photos in memory order, with adjacent shots
+   * that share a caption merged into one group (select three climbing photos,
+   * write "the rocks were sweet" once, and they read as a single captioned
+   * beat). Uncaptioned photos fall through to the end stack.
+   */
+  readonly storyGroups = computed<Array<{ caption: string; assetIds: string[] }>>(() => {
     const detail = this.detail();
     if (!detail) {
       return [];
     }
-    return detail.assetIds
-      .filter((id) => detail.captions[id])
-      .map((assetId) => ({ assetId, caption: detail.captions[assetId] }));
+    // Group every photo that shares a caption, wherever they sit in the memory,
+    // and place the group at its first photo — so selecting three climbing
+    // shots for "the rocks were sweet" reads as one beat even if they're not
+    // strictly adjacent.
+    const byCaption = new Map<string, string[]>();
+    for (const id of detail.assetIds) {
+      const caption = detail.captions[id];
+      if (!caption) {
+        continue;
+      }
+      const existing = byCaption.get(caption);
+      if (existing) {
+        existing.push(id);
+      } else {
+        byCaption.set(caption, [id]);
+      }
+    }
+    return [...byCaption.entries()].map(([caption, assetIds]) => ({ caption, assetIds }));
   });
 
-  /** Saves one photo's scrapbook caption as soon as the field settles. */
-  async saveCaption(assetId: string, value: string): Promise<void> {
+  /** Photos with no caption — shown at the end as a tappable polaroid stack. */
+  readonly looseAssetIds = computed<string[]>(() => {
     const detail = this.detail();
-    if (!detail) {
+    return detail ? detail.assetIds.filter((id) => !detail.captions[id]) : [];
+  });
+
+  /** Up to four fanned previews for the end-of-story stack. */
+  readonly loosePreview = computed<string[]>(() => this.looseAssetIds().slice(0, 4));
+
+  // --- Edit-mode captioning: select any number of photos, caption them once ---
+
+  /** Photos currently selected for a shared caption. */
+  readonly captionSelection = signal<ReadonlySet<string>>(new Set());
+  /** The caption being written for the current selection. */
+  captionGroupDraft = '';
+
+  /** Tap a photo to add/remove it from the caption selection. */
+  toggleCaptionSelect(assetId: string): void {
+    const detail = this.detail();
+    this.captionSelection.update((current) => {
+      const next = new Set(current);
+      if (next.has(assetId)) {
+        next.delete(assetId);
+      } else {
+        next.add(assetId);
+      }
+      return next;
+    });
+    // Prefill with the selection's shared caption (empty when they differ), so
+    // reopening a group lets you edit its text instead of retyping.
+    if (detail) {
+      const caps = new Set([...this.captionSelection()].map((id) => detail.captions[id] ?? ''));
+      this.captionGroupDraft = caps.size === 1 ? [...caps][0] : '';
+    }
+  }
+
+  /** Writes the drafted caption onto every selected photo (blank clears them). */
+  async applyGroupCaption(): Promise<void> {
+    const detail = this.detail();
+    const ids = [...this.captionSelection()];
+    if (!detail || ids.length === 0) {
       return;
     }
-    await this.api.setCaption(detail.id, assetId, value);
-    this.captionJustSaved.set(assetId);
-    setTimeout(() => {
-      if (this.captionJustSaved() === assetId) {
-        this.captionJustSaved.set(null);
-      }
-    }, 1500);
+    const text = this.captionGroupDraft.trim();
+    await Promise.all(ids.map((id) => this.api.setCaption(detail.id, id, text)));
     const captions = { ...detail.captions };
-    if (value.trim().length > 0) {
-      captions[assetId] = value.trim();
-    } else {
-      delete captions[assetId];
+    for (const id of ids) {
+      if (text.length > 0) {
+        captions[id] = text;
+      } else {
+        delete captions[id];
+      }
     }
     this.detail.set({ ...detail, captions });
+    this.captionSelection.set(new Set());
+    this.captionGroupDraft = '';
+  }
+
+  /** Clears the current caption selection without changing anything. */
+  clearCaptionSelection(): void {
+    this.captionSelection.set(new Set());
+    this.captionGroupDraft = '';
   }
 
   /** Whether the journal section has anything to show in read mode. */
@@ -257,11 +316,6 @@ export class MemoryDetailPage implements OnInit {
     }
     await this.api.deleteMemory(detail.id);
     await this.router.navigateByUrl('/memories');
-  }
-
-  /** The filmstrip runs at a fixed height; 720 keeps frames sharp. */
-  stripThumbUrl(assetId: string): string {
-    return assetThumbUrl(assetId, 720);
   }
 
   async addQuote(): Promise<void> {
