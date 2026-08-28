@@ -2,8 +2,8 @@ import { IsBoolean, IsIn, IsInt, IsOptional, IsUUID, Max, Min } from 'class-vali
 
 /** Body for creating a public share link. */
 export class CreateShareRequestDto {
-  @IsIn(['memory', 'album'])
-  targetType!: 'memory' | 'album';
+  @IsIn(['memory', 'album', 'asset'])
+  targetType!: 'memory' | 'album' | 'asset';
 
   @IsUUID()
   targetId!: string;

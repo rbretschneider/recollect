@@ -226,10 +226,43 @@
   <div class="action-bar" role="toolbar" aria-label="Selection actions">
     <span>{{ selectedIds().size }} selected</span>
     <button type="button" (click)="startAlbumPick()">Add to album</button>
+    <button type="button" (click)="isNamingCreation.set('album')">New album</button>
+    <button type="button" (click)="isNamingCreation.set('memory')">New memory</button>
     @if (canDelete) {
       <button type="button" class="danger" (click)="deleteSelected()">Move to Trash</button>
     }
   </div>
+}
+
+@if (isNamingCreation(); as kind) {
+  <app-sheet
+    [sheetTitle]="kind === 'album' ? 'New album from selection' : 'New memory from selection'"
+    (closed)="isNamingCreation.set(null)"
+  >
+    <form class="create-from-selection" (ngSubmit)="createFromSelection()">
+      <p class="hint">
+        {{ selectedIds().size }} {{ selectedIds().size === 1 ? 'photo' : 'photos' }} →
+        {{ kind === 'album' ? 'a new album.' : 'a new memory, ready to write.' }}
+      </p>
+      <input
+        name="creationTitle"
+        [(ngModel)]="creationTitleDraft"
+        [placeholder]="kind === 'album' ? 'Album name' : 'Name the moment'"
+        maxlength="200"
+        autocomplete="off"
+      />
+      <div class="actions">
+        <button type="button" class="ghost" (click)="isNamingCreation.set(null)">Cancel</button>
+        <button
+          type="submit"
+          class="primary"
+          [disabled]="isCreating() || !creationTitleDraft.trim()"
+        >
+          {{ isCreating() ? 'Creating…' : (kind === 'album' ? 'Create album' : 'Create memory') }}
+        </button>
+      </div>
+    </form>
+  </app-sheet>
 }
 
 @if (isPickingAlbum()) {

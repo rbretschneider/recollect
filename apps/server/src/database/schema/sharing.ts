@@ -35,6 +35,9 @@ export const shareLink = pgTable(
   },
   (table) => [
     index('share_link_target_idx').on(table.targetType, table.targetId),
-    check('share_link_target_type_check', sql`${table.targetType} in ('memory', 'album')`),
+    check(
+      'share_link_target_type_check',
+      sql`${table.targetType} in ('memory', 'album', 'asset')`,
+    ),
   ],
 );

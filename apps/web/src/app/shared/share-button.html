@@ -11,10 +11,10 @@
 }
 
 @if (isOpen()) {
-  <app-sheet [sheetTitle]="'Share this ' + targetType()" (closed)="close()">
+  <app-sheet [sheetTitle]="'Share this ' + targetLabel" (closed)="close()">
     <div class="share-content">
     <p class="hint">
-      This {{ targetType() }} is private. Creating a link makes it viewable
+      This {{ targetLabel }} is private. Creating a link makes it viewable
       (read-only) by anyone who has the URL, until it expires or you turn it off.
     </p>
 

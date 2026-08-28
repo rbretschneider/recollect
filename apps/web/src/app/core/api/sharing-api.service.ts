@@ -9,7 +9,7 @@ export class SharingApiService {
   private readonly http = inject(HttpClient);
 
   createLink(
-    targetType: 'memory' | 'album',
+    targetType: 'memory' | 'album' | 'asset',
     targetId: string,
     includeJournal: boolean,
     expiresInHours: number | null,
@@ -24,7 +24,7 @@ export class SharingApiService {
     );
   }
 
-  listFor(targetType: 'memory' | 'album', targetId: string): Promise<{ links: ShareLinkView[] }> {
+  listFor(targetType: 'memory' | 'album' | 'asset', targetId: string): Promise<{ links: ShareLinkView[] }> {
     return firstValueFrom(
       this.http.get<{ links: ShareLinkView[] }>(`/api/v1/sharing/${targetType}/${targetId}`),
     );

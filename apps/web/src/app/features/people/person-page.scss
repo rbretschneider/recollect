@@ -1,7 +1,7 @@
 :host {
   display: block;
   min-height: 100dvh;
-  padding-bottom: 4.5rem;
+  padding-bottom: 1.5rem;
 }
 
 .topbar {
@@ -245,7 +245,7 @@
   // screens tall, and an action bar parked under it may as well not exist.
   .face-actions {
     position: fixed;
-    inset: auto 0 calc(4.25rem + env(safe-area-inset-bottom)) 0;
+    inset: auto 0 calc(1rem + env(safe-area-inset-bottom)) 0;
     z-index: 10;
     margin: 0 auto;
     width: fit-content;

@@ -10,11 +10,11 @@ import { v7 as uuidv7 } from 'uuid';
 import { AlbumsService } from '../albums/albums.service';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
-import { album, memory, shareLink } from '../database/schema';
+import { album, asset, memory, shareLink } from '../database/schema';
 import { MemoriesService } from '../memories/memories.service';
 
 /** What a share link points at. */
-export type ShareTargetType = 'memory' | 'album';
+export type ShareTargetType = 'memory' | 'album' | 'asset';
 
 /** An active share link as shown to its owner. */
 export interface ShareLinkView {
@@ -104,6 +104,30 @@ export class SharingService {
       .set({ viewCount: sql`${shareLink.viewCount} + 1` })
       .where(eq(shareLink.id, link.id))
       .catch(() => undefined);
+    if (link.targetType === 'asset') {
+      const [row] = await this.db
+        .select({ capturedAt: asset.capturedAt })
+        .from(asset)
+        .where(eq(asset.id, link.targetId))
+        .limit(1);
+      if (!row) {
+        throw new NotFoundException('This link is no longer available.');
+      }
+      return {
+        targetType: 'asset',
+        title: row.capturedAt.toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        }),
+        description: null,
+        startAt: row.capturedAt.toISOString(),
+        endAt: row.capturedAt.toISOString(),
+        assetIds: [link.targetId],
+        journal: [],
+        quotes: [],
+      };
+    }
     if (link.targetType === 'memory') {
       const detail = await this.memories.getDetail(link.targetId);
       return {
@@ -151,7 +175,9 @@ export class SharingService {
       where sl.token = ${token}
         and sl.revoked_at is null
         and (sl.expires_at is null or sl.expires_at > now())
-        and (ma.asset_id is not null or aa.asset_id is not null)
+        and (ma.asset_id is not null
+             or aa.asset_id is not null
+             or (sl.target_type = 'asset' and sl.target_id = ${assetId}))
       limit 1
     `);
     if (result.rows.length === 0) {
@@ -171,6 +197,9 @@ export class SharingService {
       link = await this.requireActiveLink(token);
     } catch {
       return null;
+    }
+    if (link.targetType === 'asset') {
+      return { title: 'A shared photo', coverAssetId: link.targetId };
     }
     if (link.targetType === 'memory') {
       const [row] = await this.db
@@ -229,6 +258,17 @@ export class SharingService {
   ): Promise<string[]> {
     if (targetType === 'memory') {
       return (await this.memories.getDetail(targetId)).assetIds;
+    }
+    if (targetType === 'asset') {
+      const [row] = await this.db
+        .select({ id: asset.id })
+        .from(asset)
+        .where(and(eq(asset.id, targetId), eq(asset.status, 'active')))
+        .limit(1);
+      if (!row) {
+        throw new NotFoundException('That photo does not exist.');
+      }
+      return [row.id];
     }
     return (await this.albums.getDetail(targetId)).assetIds;
   }

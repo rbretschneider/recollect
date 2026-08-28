@@ -30,12 +30,17 @@ export class ShareButton {
   private readonly api = inject(SharingApiService);
   private readonly confirms = inject(ConfirmService);
 
-  readonly targetType = input.required<'memory' | 'album'>();
+  readonly targetType = input.required<'memory' | 'album' | 'asset'>();
   readonly targetId = input.required<string>();
   /** For memories: whether the shared page includes journal text. */
   readonly includeJournal = input<boolean>(false);
   /** 'overlay': circular chrome for photo heroes; 'icon': bordered icon for action rows. */
   readonly variant = input<'button' | 'overlay' | 'icon'>('button');
+
+  /** Human word for the sheet copy — "asset" is engineer-speak. */
+  get targetLabel(): string {
+    return this.targetType() === 'asset' ? 'photo' : this.targetType();
+  }
 
   readonly isOpen = signal(false);
   readonly links = signal<ShareLinkView[]>([]);

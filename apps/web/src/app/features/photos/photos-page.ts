@@ -15,8 +15,10 @@ import { LibraryStatus, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { TrashApiService } from '../../core/api/trash-api.service';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
+import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { formatDuration } from '../../core/format-duration';
 import { AlbumPicker } from '../../shared/album-picker';
+import { Sheet } from '../../shared/sheet';
 import { ActivitySpinner } from '../../shared/activity-spinner';
 import { AccountBadge } from '../../shared/account-badge';
 import { Brand } from '../../shared/brand';
@@ -24,7 +26,8 @@ import { ConfirmService } from '../../shared/confirm.service';
 import { Icon } from '../../shared/icon';
 import { LongPressDirective } from '../../shared/long-press.directive';
 import { AssetViewer } from '../viewer/asset-viewer';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 
 /** One day's worth of photos in the grid. */
 interface DayGroup {
@@ -60,12 +63,13 @@ const STATUS_POLL_MS = 4000;
     ActivitySpinner,
     AlbumPicker,
     AssetViewer,
-
     AccountBadge,
     Brand,
+    FormsModule,
     Icon,
     LongPressDirective,
     RouterLink,
+    Sheet,
   ],
   templateUrl: './photos-page.html',
   styleUrl: './photos-page.scss',
@@ -75,6 +79,8 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
   private readonly libraryApi = inject(LibraryApiService);
   private readonly trashApi = inject(TrashApiService);
   private readonly albumsApi = inject(AlbumsApiService);
+  private readonly memoriesApi = inject(MemoriesApiService);
+  private readonly router = inject(Router);
   private readonly auth = inject(AuthStateService);
   private readonly confirms = inject(ConfirmService);
   private readonly destroyRef = inject(DestroyRef);
@@ -171,6 +177,35 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
     this.cancelSelecting();
     if (ids.length > 0) {
       await this.albumsApi.addAssets(albumId, ids);
+    }
+  }
+
+  /** Which "new from selection" sheet is open, if any. */
+  readonly isNamingCreation = signal<'album' | 'memory' | null>(null);
+  readonly isCreating = signal(false);
+  creationTitleDraft = '';
+
+  /** Turns the current selection into a brand-new album or memory. */
+  async createFromSelection(): Promise<void> {
+    const kind = this.isNamingCreation();
+    const title = this.creationTitleDraft.trim();
+    const ids = [...this.selectedIds()];
+    if (!kind || title.length === 0 || ids.length === 0 || this.isCreating()) {
+      return;
+    }
+    this.isCreating.set(true);
+    try {
+      if (kind === 'album') {
+        const { albumId } = await this.albumsApi.create(title, ids);
+        await this.router.navigate(['/albums', albumId]);
+      } else {
+        const { memoryId } = await this.memoriesApi.createMemory(title, ids);
+        await this.router.navigate(['/memories', memoryId], { queryParams: { new: 1 } });
+      }
+    } finally {
+      this.isCreating.set(false);
+      this.isNamingCreation.set(null);
+      this.creationTitleDraft = '';
     }
   }
 

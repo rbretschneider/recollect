@@ -14,6 +14,7 @@ import { inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { ShareButton } from '../../shared/share-button';
 import { PhotosApiService } from '../../core/api/photos-api.service';
 import { TrashApiService } from '../../core/api/trash-api.service';
 import { AuthStateService } from '../../core/auth/auth-state.service';
@@ -40,7 +41,7 @@ const VIDEO_CONTROLS_STRIP_PX = 72;
  */
 @Component({
   selector: 'app-asset-viewer',
-  imports: [Icon, RouterLink],
+  imports: [Icon, RouterLink, ShareButton],
   templateUrl: './asset-viewer.html',
   styleUrl: './asset-viewer.scss',
 })
@@ -475,6 +476,11 @@ export class AssetViewer implements OnInit, OnDestroy {
 
   get canDelete(): boolean {
     return this.allowInfo() && this.auth.user()?.permission === 'delete';
+  }
+
+  /** Creating share links needs the write grant (matches the server). */
+  get canShare(): boolean {
+    return this.allowInfo() && this.canWrite;
   }
 
   async toggleFavorite(): Promise<void> {

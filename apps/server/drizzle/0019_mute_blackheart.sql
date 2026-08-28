@@ -1,0 +1,2 @@
+ALTER TABLE "share_link" DROP CONSTRAINT "share_link_target_type_check";--> statement-breakpoint
+ALTER TABLE "share_link" ADD CONSTRAINT "share_link_target_type_check" CHECK ("share_link"."target_type" in ('memory', 'album', 'asset'));

@@ -13,6 +13,11 @@
         <app-icon [name]="isCurrentFavorite() ? 'heart-filled' : 'heart'" />
       </button>
     }
+    @if (canShare) {
+      @if (current(); as sharedAsset) {
+        <app-share-button variant="overlay" targetType="asset" [targetId]="sharedAsset.id" />
+      }
+    }
     @if (allowInfo()) {
       <button type="button" class="icon" aria-label="Download" (click)="downloadCurrent()">
         <app-icon name="download" />
