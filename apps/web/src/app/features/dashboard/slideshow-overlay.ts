@@ -1,5 +1,6 @@
-import { Component, computed, effect, input, OnDestroy, output, signal } from '@angular/core';
+import { Component, computed, DestroyRef, effect, HostListener, inject, input, OnDestroy, output, signal } from '@angular/core';
 import { Icon } from '../../shared/icon';
+import { closeOnBrowserBack } from '../../shared/close-on-back';
 
 /** One slide. */
 export interface SlideItem {
@@ -111,6 +112,27 @@ export class SlideshowOverlay implements OnDestroy {
     // Kick the music off the open tap — but never gate anything on it.
     if (this.musicOn()) {
       this.startMusic();
+    }
+    // Android/browser Back closes the show, never the page underneath.
+    closeOnBrowserBack(inject(DestroyRef), () => this.close());
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onKeydown(event: KeyboardEvent): void {
+    switch (event.key) {
+      case 'Escape':
+        this.close();
+        break;
+      case 'ArrowRight':
+        this.next();
+        break;
+      case 'ArrowLeft':
+        this.previous();
+        break;
+      case ' ':
+        event.preventDefault();
+        this.togglePause();
+        break;
     }
   }
 
