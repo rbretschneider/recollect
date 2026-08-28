@@ -26,11 +26,18 @@ ENV NODE_ENV=production \
     APP_DATA_DIR=/app/data \
     WEB_DIST_DIR=/app/web/browser \
     MIGRATIONS_DIR=/app/drizzle
+# The workspace layout is preserved so Node's module resolution matches what
+# `npm ci` installed: some prod deps (the archiver tree) are nested under the
+# server workspace to keep their versions isolated from root, so main.js must
+# run from apps/server/dist to see apps/server/node_modules first, then the
+# hoisted root node_modules. Flattening these into one dir would give root-level
+# consumers the wrong versions.
 COPY --from=build /repo/node_modules ./node_modules
-COPY --from=build /repo/apps/server/dist ./dist
+COPY --from=build /repo/apps/server/node_modules ./apps/server/node_modules
+COPY --from=build /repo/apps/server/dist ./apps/server/dist
 COPY --from=build /repo/apps/server/drizzle ./drizzle
 COPY --from=build /repo/apps/web/dist/web ./web
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
   CMD curl -sf http://localhost:8080/api/v1/health || exit 1
-CMD ["node", "dist/main.js"]
+CMD ["node", "apps/server/dist/main.js"]
