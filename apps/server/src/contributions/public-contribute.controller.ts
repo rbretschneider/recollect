@@ -16,9 +16,8 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
-import { AssetsService } from '../assets/assets.service';
+import { AssetMediaStreamer } from '../assets/asset-media-streamer';
 import { Public } from '../auth/decorators/public.decorator';
-import { isThumbnailSize } from '../media/thumbnail-store';
 import { ContributionUploadGuard } from './contribution-upload.guard';
 import { ContributeView, ContributionsService } from './contributions.service';
 
@@ -38,7 +37,7 @@ interface StagedUploadFile {
 export class PublicContributeController {
   constructor(
     private readonly contributions: ContributionsService,
-    private readonly assets: AssetsService,
+    private readonly media: AssetMediaStreamer,
   ) {}
 
   @Public()
@@ -77,13 +76,8 @@ export class PublicContributeController {
     @Param('size', ParseIntPipe) size: number,
     @Res() res: Response,
   ): Promise<void> {
-    if (!isThumbnailSize(size)) {
-      throw new BadRequestException('Unsupported thumbnail size.');
-    }
     await this.contributions.assertPoolAsset(token, assetId);
-    const path = await this.assets.getThumbnailPath(assetId, size);
-    res.type('image/webp');
-    res.sendFile(path);
+    await this.media.streamThumbnail(res, assetId, size);
   }
 
   @Public()
@@ -94,9 +88,7 @@ export class PublicContributeController {
     @Res() res: Response,
   ): Promise<void> {
     await this.contributions.assertPoolAsset(token, assetId);
-    const file = await this.assets.getOriginalFile(assetId);
-    res.type(file.mime);
-    res.sendFile(file.path);
+    await this.media.streamOriginal(res, assetId);
   }
 
   @Public()
@@ -107,12 +99,6 @@ export class PublicContributeController {
     @Res() res: Response,
   ): Promise<void> {
     await this.contributions.assertPoolAsset(token, assetId);
-    const resolution = await this.assets.getPlayback(assetId);
-    if (resolution.kind === 'preparing') {
-      res.status(202).json({ status: 'preparing' });
-      return;
-    }
-    res.type(resolution.mime);
-    res.sendFile(resolution.path);
+    await this.media.streamPlayback(res, assetId);
   }
 }

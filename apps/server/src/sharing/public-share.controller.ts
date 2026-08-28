@@ -1,17 +1,7 @@
-import {
-  BadRequestException,
-  Controller,
-  Get,
-  Header,
-  Param,
-  ParseIntPipe,
-  ParseUUIDPipe,
-  Res,
-} from '@nestjs/common';
+import { Controller, Get, Header, Param, ParseIntPipe, ParseUUIDPipe, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { AssetsService } from '../assets/assets.service';
+import { AssetMediaStreamer } from '../assets/asset-media-streamer';
 import { Public } from '../auth/decorators/public.decorator';
-import { isThumbnailSize } from '../media/thumbnail-store';
 import { SharedView, SharingService } from './sharing.service';
 
 /**
@@ -22,7 +12,7 @@ import { SharedView, SharingService } from './sharing.service';
 export class PublicShareController {
   constructor(
     private readonly sharing: SharingService,
-    private readonly assets: AssetsService,
+    private readonly media: AssetMediaStreamer,
   ) {}
 
   @Public()
@@ -40,13 +30,8 @@ export class PublicShareController {
     @Param('size', ParseIntPipe) size: number,
     @Res() res: Response,
   ): Promise<void> {
-    if (!isThumbnailSize(size)) {
-      throw new BadRequestException('Unsupported thumbnail size.');
-    }
     await this.sharing.assertAssetShared(token, assetId);
-    const path = await this.assets.getThumbnailPath(assetId, size);
-    res.type('image/webp');
-    res.sendFile(path);
+    await this.media.streamThumbnail(res, assetId, size);
   }
 
   @Public()
@@ -57,9 +42,7 @@ export class PublicShareController {
     @Res() res: Response,
   ): Promise<void> {
     await this.sharing.assertAssetShared(token, assetId);
-    const file = await this.assets.getOriginalFile(assetId);
-    res.type(file.mime);
-    res.sendFile(file.path);
+    await this.media.streamOriginal(res, assetId);
   }
 
   @Public()
@@ -70,12 +53,6 @@ export class PublicShareController {
     @Res() res: Response,
   ): Promise<void> {
     await this.sharing.assertAssetShared(token, assetId);
-    const resolution = await this.assets.getPlayback(assetId);
-    if (resolution.kind === 'preparing') {
-      res.status(202).json({ status: 'preparing' });
-      return;
-    }
-    res.type(resolution.mime);
-    res.sendFile(resolution.path);
+    await this.media.streamPlayback(res, assetId);
   }
 }

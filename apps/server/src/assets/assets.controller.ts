@@ -20,7 +20,7 @@ import { RequireGrant } from '../auth/decorators/require-grant.decorator';
 import type { UserProfile } from '../users/user.types';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { REPROCESS_ASSET_JOB } from '../library/handlers/reprocess-asset.handler';
-import { isThumbnailSize } from '../media/thumbnail-store';
+import { AssetMediaStreamer } from './asset-media-streamer';
 import { AssetsService, TimelinePage } from './assets.service';
 import type { AssetDetail, TimelineAsset } from './assets.service';
 import { AssetIdsRequestDto } from './dto/asset-ids-request.dto';
@@ -31,6 +31,7 @@ import { Body } from '@nestjs/common';
 export class AssetsController {
   constructor(
     private readonly assets: AssetsService,
+    private readonly media: AssetMediaStreamer,
     private readonly queue: JobQueueService,
   ) {}
 
@@ -111,13 +112,7 @@ export class AssetsController {
   @Get(':id/original')
   @Header('Cache-Control', 'private, max-age=31536000, immutable')
   async original(@Param('id', ParseUUIDPipe) id: string, @Res() res: Response): Promise<void> {
-    const file = await this.assets.getOriginalFile(id);
-    res.type(file.mime);
-    res.sendFile(file.path, (error) => {
-      if (error && !res.headersSent) {
-        res.status(HttpStatus.NOT_FOUND).json({ message: 'The original file is not available.' });
-      }
-    });
+    await this.media.streamOriginal(res, id);
   }
 
   /**
@@ -126,17 +121,7 @@ export class AssetsController {
    */
   @Get(':id/playback')
   async playback(@Param('id', ParseUUIDPipe) id: string, @Res() res: Response): Promise<void> {
-    const resolution = await this.assets.getPlayback(id);
-    if (resolution.kind === 'file') {
-      // Asset content is hash-identified; a playable rendition never changes.
-      res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
-    }
-    if (resolution.kind === 'preparing') {
-      res.status(HttpStatus.ACCEPTED).json({ status: 'preparing' });
-      return;
-    }
-    res.type(resolution.mime);
-    res.sendFile(resolution.path);
+    await this.media.streamPlayback(res, id);
   }
 
   @Get(':id/thumb/:size')
@@ -146,11 +131,6 @@ export class AssetsController {
     @Param('size', ParseIntPipe) size: number,
     @Res() res: Response,
   ): Promise<void> {
-    if (!isThumbnailSize(size)) {
-      throw new BadRequestException('Unsupported thumbnail size.');
-    }
-    const path = await this.assets.getThumbnailPath(id, size);
-    res.type('image/webp');
-    res.sendFile(path);
+    await this.media.streamThumbnail(res, id, size);
   }
 }
