@@ -1,29 +1,24 @@
-import { Component, ElementRef, HostListener, inject, OnInit, output, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
-import { ActivityService } from '../core/activity.service';
-import { LibraryApiService } from '../core/api/library-api.service';
-import { LibraryFailure, LibraryStatus } from '../core/api/api-models';
+import { Component, ElementRef, HostListener, inject, OnInit, output } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AuthStateService } from '../core/auth/auth-state.service';
 import { PwaInstallService } from '../core/pwa-install.service';
-import { ActivitySpinner } from './activity-spinner';
 import { OverlayFocus } from './overlay-focus.directive';
 
 /**
- * The app side panel: account, library management, and destinations that don't
- * earn a bottom-nav slot (Trash, and future Faces/Places/Settings).
+ * The app side panel: account and the destinations. Kept deliberately short so
+ * the whole list — and the install button anchoring the footer — stays on
+ * screen; library stats and controls live on the Library page, not here.
  */
 @Component({
   selector: 'app-drawer',
-  imports: [ActivitySpinner, RouterLink, OverlayFocus],
+  imports: [RouterLink, OverlayFocus],
   templateUrl: './app-drawer.html',
   styleUrl: './app-drawer.scss',
 })
 export class AppDrawer implements OnInit {
   private readonly auth = inject(AuthStateService);
-  private readonly libraryApi = inject(LibraryApiService);
-  private readonly router = inject(Router);
-  protected readonly activity = inject(ActivityService);
   protected readonly pwa = inject(PwaInstallService);
+  private readonly host = inject(ElementRef<HTMLElement>);
 
   readonly closed = output<void>();
 
@@ -31,10 +26,6 @@ export class AppDrawer implements OnInit {
   onEscape(): void {
     this.closed.emit();
   }
-
-  readonly status = signal<LibraryStatus | null>(null);
-  readonly isRescanBusy = signal(false);
-  readonly failures = signal<LibraryFailure[] | null>(null);
 
   get userName(): string {
     return this.auth.user()?.displayName ?? '';
@@ -70,43 +61,9 @@ export class AppDrawer implements OnInit {
     return this.auth.user()?.isAdmin ?? false;
   }
 
-  private readonly host = inject(ElementRef<HTMLElement>);
-
   ngOnInit(): void {
     // Portal to <body> (same as app-sheet): hosted inside a topbar, the
     // backdrop-filter/z-index context breaks the fixed panel and scrim.
     document.body.appendChild(this.host.nativeElement);
-    void this.loadStatus();
-  }
-
-  /** Loads (or hides) the plain-language list behind the failed count. */
-  async toggleFailures(): Promise<void> {
-    if (this.failures() !== null) {
-      this.failures.set(null);
-      return;
-    }
-    const { failures } = await this.libraryApi.listFailures();
-    this.failures.set(failures);
-  }
-
-  async rescan(): Promise<void> {
-    this.isRescanBusy.set(true);
-    try {
-      const { roots } = await this.libraryApi.listRoots();
-      for (const root of roots) {
-        await this.libraryApi.rescan(root.id);
-      }
-      await this.loadStatus();
-    } finally {
-      this.isRescanBusy.set(false);
-    }
-  }
-
-  private async loadStatus(): Promise<void> {
-    try {
-      this.status.set(await this.libraryApi.getStatus());
-    } catch {
-      // The drawer stays useful without stats.
-    }
   }
 }

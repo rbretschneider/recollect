@@ -67,9 +67,14 @@
 }
 
 .items {
+  // Take the middle space and scroll internally, so the footer install button
+  // is always reachable no matter how many destinations or how short the phone.
+  flex: 1 1 auto;
+  overflow-y: auto;
   display: grid;
   gap: 0.15rem;
   padding: 0.75rem 0;
+  align-content: start;
 
   a,
   button {
@@ -113,89 +118,10 @@
   }
 }
 
-.library {
-  padding: 0.75rem 0.6rem;
-  border-top: 1px solid var(--border);
-
-  h3 {
-    margin: 0 0 0.25rem;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-  }
-
-  p {
-    margin: 0 0 0.6rem;
-    font-size: 0.85rem;
-    color: var(--text-muted);
-  }
-
-  .warn {
-    color: var(--danger);
-  }
-
-  .warn-link {
-    border: none;
-    background: none;
-    color: var(--danger);
-    font-size: 0.85rem;
-    padding: 0;
-    min-height: 32px;
-    cursor: pointer;
-    text-decoration: underline;
-  }
-
-  .failures {
-    list-style: none;
-    margin: 0 0 0.6rem;
-    padding: 0.5rem;
-    max-height: 10rem;
-    overflow-y: auto;
-    background: var(--surface-raised);
-    border: 1px solid var(--border);
-    border-radius: 0.5rem;
-    display: grid;
-    gap: 0.5rem;
-
-    li {
-      display: grid;
-      font-size: 0.75rem;
-
-      strong {
-        color: var(--text);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      span {
-        color: var(--text-muted);
-        word-break: break-word;
-      }
-    }
-  }
-}
-
 footer {
   margin-top: auto;
   padding-top: 0.75rem;
   border-top: 1px solid var(--border);
-}
-
-.outline {
-  min-height: 40px;
-  padding: 0 0.9rem;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  background: none;
-  color: var(--text);
-  font-size: 0.9rem;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.6;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

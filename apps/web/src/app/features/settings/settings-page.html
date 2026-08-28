@@ -99,11 +99,21 @@
   }
 
   @if (isAdmin) {
-    <section aria-label="Library">
+    <section aria-label="System">
+      <div class="section-head">
+        <h2>System</h2>
+      </div>
       <a class="card row link-card" routerLink="/library">
         <div class="info">
           <h3>Library</h3>
-          <p class="muted">Folders, indexing state, scans — moved to its own page.</p>
+          <p class="muted">Folders, indexing state, scans.</p>
+        </div>
+        <span class="chevron" aria-hidden="true">›</span>
+      </a>
+      <a class="card row link-card" routerLink="/logs">
+        <div class="info">
+          <h3>Activity log</h3>
+          <p class="muted">The live server log — handy when something isn’t indexing.</p>
         </div>
         <span class="chevron" aria-hidden="true">›</span>
       </a>

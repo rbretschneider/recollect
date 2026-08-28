@@ -22,80 +22,30 @@
     <a routerLink="/albums" (click)="closed.emit()">
       <span class="icon" aria-hidden="true">📔</span> Albums
     </a>
-    <a routerLink="/search" (click)="closed.emit()">
-      <span class="icon" aria-hidden="true">🔎</span> Search
-    </a>
-    <hr />
-    @if (isAdmin) {
-      <a routerLink="/library" (click)="closed.emit()">
-        <span class="icon" aria-hidden="true">🗂️</span> Library
-      </a>
-    }
-    <a routerLink="/folders" (click)="closed.emit()">
-      <span class="icon" aria-hidden="true">📁</span> Folders
-    </a>
     <a routerLink="/people" (click)="closed.emit()">
       <span class="icon" aria-hidden="true">🙂</span> People
     </a>
     <a routerLink="/places" (click)="closed.emit()">
       <span class="icon" aria-hidden="true">📍</span> Places
     </a>
-    @if (isAdmin) {
-      <a routerLink="/settings" (click)="closed.emit()">
-        <span class="icon" aria-hidden="true">⚙️</span> Settings
-      </a>
-    }
+    <a routerLink="/folders" (click)="closed.emit()">
+      <span class="icon" aria-hidden="true">📁</span> Folders
+    </a>
     @if (canDelete) {
       <a routerLink="/trash" (click)="closed.emit()">
         <span class="icon" aria-hidden="true">🗑</span> Trash
       </a>
     }
     @if (isAdmin) {
-      <a routerLink="/logs" (click)="closed.emit()">
-        <span class="icon" aria-hidden="true">📜</span> Logs
+      <hr />
+      <a routerLink="/library" (click)="closed.emit()">
+        <span class="icon" aria-hidden="true">🗂️</span> Library
+      </a>
+      <a routerLink="/settings" (click)="closed.emit()">
+        <span class="icon" aria-hidden="true">⚙️</span> Settings
       </a>
     }
   </nav>
-
-  @if (isAdmin) {
-    <section class="library">
-      <h3>Library <app-activity-spinner /></h3>
-      @if (activity.status() ?? status(); as stats) {
-        <p aria-live="polite">
-          {{ stats.totalAssets.toLocaleString() }} items indexed
-          @if (activity.isWorking()) {
-            · {{ activity.progressLabel() }} processing
-          }
-        </p>
-        @if (stats.failedStages > 0) {
-          <button type="button" class="warn-link" (click)="toggleFailures()">
-            {{ stats.failedStages }} failed — {{ failures() === null ? 'show why' : 'hide' }}
-          </button>
-        }
-        @if (failures(); as failureList) {
-          <ul class="failures">
-            @for (failure of failureList; track failure.name + failure.reason) {
-              <li>
-                <strong>{{ failure.name }}</strong>
-                <span>{{ failure.reason }}</span>
-              </li>
-            }
-            @if (failureList.length === 0) {
-              <li><span>Nothing failed on the current pass.</span></li>
-            }
-          </ul>
-        }
-      }
-      <button
-        type="button"
-        class="outline"
-        [disabled]="isRescanBusy() || activity.isWorking()"
-        (click)="rescan()"
-      >
-        {{ activity.isWorking() ? 'Scan in progress…' : isRescanBusy() ? 'Starting…' : 'Rescan library' }}
-      </button>
-    </section>
-  }
 
   <footer>
     @if (pwa.canPrompt()) {
