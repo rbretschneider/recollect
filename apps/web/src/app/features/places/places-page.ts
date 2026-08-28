@@ -2,7 +2,7 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PlacesApiService, PlaceView } from '../../core/api/places-api.service';
 import { TimelineAsset } from '../../core/api/api-models';
-import { AvatarMenu } from '../../shared/avatar-menu';
+import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
 import { PageLoading } from '../../shared/page-loading';
@@ -15,7 +15,7 @@ import { AssetViewer } from '../viewer/asset-viewer';
  */
 @Component({
   selector: 'app-places-page',
-  imports: [AvatarMenu, BackButton, AssetViewer, BottomNav, PageLoading, SafeResourcePipe],
+  imports: [MenuButton, BackButton, AssetViewer, BottomNav, PageLoading, SafeResourcePipe],
   templateUrl: './places-page.html',
   styleUrl: './places-page.scss',
 })

@@ -7,10 +7,13 @@ import helmet from 'helmet';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { existsSync } from 'fs';
+import { readFile } from 'fs/promises';
 import { join, resolve } from 'path';
 import { Pool } from 'pg';
 import { AppModule } from './app.module';
 import { APP_CONFIG, AppConfig, loadAppConfig } from './config/app-config';
+import { ContributionsService } from './contributions/contributions.service';
+import { SharingService } from './sharing/sharing.service';
 import { RotatingFileLogger } from './logging/rotating-file-logger';
 
 /** Loads the nearest .env (cwd, then repo root) without overriding real env vars. */
@@ -38,7 +41,40 @@ async function runMigrations(config: AppConfig): Promise<void> {
   }
 }
 
-/** Serves the built PWA with an SPA fallback when WEB_DIST_DIR is configured. */
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
+/** The og:/twitter: block that makes a pasted link unfurl in chats and socials. */
+function unfurlTags(title: string, description: string, imageUrl: string | null): string {
+  const safeTitle = escapeHtml(title);
+  const tags = [
+    `<meta property="og:site_name" content="Recollect">`,
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:title" content="${safeTitle}">`,
+    `<meta property="og:description" content="${escapeHtml(description)}">`,
+  ];
+  if (imageUrl) {
+    tags.push(
+      `<meta property="og:image" content="${escapeHtml(imageUrl)}">`,
+      `<meta name="twitter:card" content="summary_large_image">`,
+    );
+  } else {
+    tags.push(`<meta name="twitter:card" content="summary">`);
+  }
+  tags.push(`<meta name="twitter:title" content="${safeTitle}">`);
+  return tags.join('');
+}
+
+/**
+ * Serves the built PWA with an SPA fallback when WEB_DIST_DIR is configured.
+ * Public share (/s/) and contribute (/c/) pages get server-injected og: tags —
+ * link-preview bots don't run the app, so the metadata must be in the HTML.
+ */
 function serveWebApp(app: NestExpressApplication, config: AppConfig): void {
   if (!config.webDistDir || !existsSync(config.webDistDir)) {
     return;
@@ -54,10 +90,14 @@ function serveWebApp(app: NestExpressApplication, config: AppConfig): void {
       );
     },
   });
+  // Resolved lazily so a failed lookup degrades to the plain shell, never a 500.
+  const sharing = app.get(SharingService, { strict: false });
+  const contributions = app.get(ContributionsService, { strict: false });
+  const indexPath = join(config.webDistDir, 'index.html');
   app.use(
     (
-      req: { path: string },
-      res: { sendFile: (p: string) => void; setHeader: (k: string, v: string) => void },
+      req: import('express').Request,
+      res: import('express').Response,
       next: () => void,
     ) => {
       if (req.path.startsWith('/api/')) {
@@ -66,7 +106,48 @@ function serveWebApp(app: NestExpressApplication, config: AppConfig): void {
       }
       // The app shell must revalidate so deploys reach users immediately.
       res.setHeader('Cache-Control', 'no-cache');
-      res.sendFile(join(config.webDistDir, 'index.html'));
+      const shareToken = /^\/s\/([A-Za-z0-9_-]{16,})$/.exec(req.path)?.[1];
+      const contributeToken = /^\/c\/([A-Za-z0-9_-]{16,})$/.exec(req.path)?.[1];
+      if (!shareToken && !contributeToken) {
+        res.sendFile(indexPath);
+        return;
+      }
+      void (async () => {
+        const origin = `${req.protocol}://${req.get('host') ?? ''}`;
+        let tags: string | null = null;
+        try {
+          if (shareToken) {
+            const meta = await sharing.getShareMeta(shareToken);
+            if (meta) {
+              tags = unfurlTags(
+                meta.title,
+                'Shared from our family photo home.',
+                meta.coverAssetId
+                  ? `${origin}/api/v1/share/${shareToken}/assets/${meta.coverAssetId}/thumb/720`
+                  : null,
+              );
+            }
+          } else if (contributeToken) {
+            const view = await contributions.getContributeView(contributeToken);
+            const cover = view.poolAssetIds[0] ?? null;
+            tags = unfurlTags(
+              `Add your photos to “${view.albumTitle}”`,
+              'Tap to add your photos and videos — no account needed.',
+              cover
+                ? `${origin}/api/v1/contribute/${contributeToken}/assets/${cover}/thumb/720`
+                : null,
+            );
+          }
+        } catch {
+          tags = null; // Dead/expired link: plain shell, the app shows its own message.
+        }
+        if (!tags) {
+          res.sendFile(indexPath);
+          return;
+        }
+        const html = await readFile(indexPath, 'utf8');
+        res.type('html').send(html.replace('</head>', `${tags}</head>`));
+      })();
     },
   );
 }

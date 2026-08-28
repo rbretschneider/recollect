@@ -10,20 +10,22 @@
   }
 }
 
+// Slides in from the LEFT — it opens off the brand at the top-left, so the
+// panel appears where the finger already is.
 .drawer {
   position: fixed;
-  inset: 0 0 0 auto;
+  inset: 0 auto 0 0;
   z-index: 29;
   width: min(20rem, 85vw);
   display: flex;
   flex-direction: column;
   background: var(--surface);
-  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
   padding: 1.25rem 1rem calc(1rem + env(safe-area-inset-bottom));
   transition: translate 0.22s ease;
 
   @starting-style {
-    translate: 100% 0;
+    translate: -100% 0;
   }
 }
 

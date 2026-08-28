@@ -2,6 +2,10 @@
   <button type="button" class="share-overlay" aria-label="Share" (click)="open()">
     <app-icon name="share" [size]="19" />
   </button>
+} @else if (variant() === 'icon') {
+  <button type="button" class="share-icon" aria-label="Share" title="Share" (click)="open()">
+    <app-icon name="share" [size]="18" />
+  </button>
 } @else {
   <button type="button" class="share" (click)="open()">Share</button>
 }

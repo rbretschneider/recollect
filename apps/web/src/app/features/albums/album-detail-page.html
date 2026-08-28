@@ -8,15 +8,21 @@
   <main class="album">
     @if (canWrite) {
       <section class="manage" aria-label="Album actions">
-        <app-share-button targetType="album" [targetId]="album.id" />
-        <app-guest-link-button [albumId]="album.id" />
-        <button type="button" class="action" (click)="isDownloadSheetOpen.set(true)">
-          Download
+        <app-share-button variant="icon" targetType="album" [targetId]="album.id" />
+        <button
+          type="button"
+          class="icon-action"
+          aria-label="Download"
+          title="Download"
+          (click)="isDownloadSheetOpen.set(true)"
+        >
+          <app-icon name="download" [size]="18" />
         </button>
+        <app-edit-toggle />
+        <app-guest-link-button [albumId]="album.id" />
         <button type="button" class="action" (click)="startMemoryFromAlbum()">
           Make a memory
         </button>
-        <app-edit-toggle />
         @if (editMode.isEditing()) {
           <button type="button" class="danger-link" (click)="deleteAlbum()">Delete album</button>
         }

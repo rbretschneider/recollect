@@ -83,7 +83,9 @@ export class AlbumDetailPage implements OnInit {
 
   async openViewer(assetId: string): Promise<void> {
     const detail = this.detail();
-    if (!detail) {
+    // While editing, tiles are for removing — opening the viewer would fight
+    // the ✕ overlays and accidental-tap removals.
+    if (!detail || this.editMode.isEditing()) {
       return;
     }
     if (this.viewerAssets().length === 0) {
@@ -183,7 +185,7 @@ export class AlbumDetailPage implements OnInit {
     this.isCreatingMemory.set(true);
     try {
       const { memoryId } = await this.memoriesApi.createMemory(title, ids);
-      await this.router.navigate(['/memories', memoryId]);
+      await this.router.navigate(['/memories', memoryId], { queryParams: { new: 1 } });
     } finally {
       this.isCreatingMemory.set(false);
     }

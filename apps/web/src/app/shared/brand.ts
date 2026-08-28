@@ -1,17 +1,20 @@
-import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, signal } from '@angular/core';
+import { AppDrawer } from './app-drawer';
 
-/** The app icon + wordmark; tapping it returns to the default Photos view. */
+/** The app icon + wordmark; tapping it opens the side panel from the left. */
 @Component({
   selector: 'app-brand',
-  imports: [RouterLink],
+  imports: [AppDrawer],
   template: `
     <h1>
-      <a routerLink="/" aria-label="Recollect — back to photos">
+      <button type="button" aria-label="Open menu" (click)="isDrawerOpen.set(true)">
         <img src="icons/icon.svg" alt="" width="26" height="26" />
         <span>Recollect</span>
-      </a>
+      </button>
     </h1>
+    @if (isDrawerOpen()) {
+      <app-drawer (closed)="isDrawerOpen.set(false)" />
+    }
   `,
   styles: `
     h1 {
@@ -20,12 +23,17 @@ import { RouterLink } from '@angular/router';
       letter-spacing: -0.02em;
     }
 
-    a {
+    button {
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
+      padding: 0;
+      border: none;
+      background: none;
       color: inherit;
-      text-decoration: none;
+      font: inherit;
+      letter-spacing: inherit;
+      cursor: pointer;
       min-height: 40px;
       border-radius: 0.5rem;
       transition: opacity 0.15s ease;
@@ -48,4 +56,6 @@ import { RouterLink } from '@angular/router';
     }
   `,
 })
-export class Brand {}
+export class Brand {
+  readonly isDrawerOpen = signal(false);
+}

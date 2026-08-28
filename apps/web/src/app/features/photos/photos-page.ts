@@ -17,7 +17,6 @@ import { TrashApiService } from '../../core/api/trash-api.service';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
 import { formatDuration } from '../../core/format-duration';
 import { AlbumPicker } from '../../shared/album-picker';
-import { AvatarMenu } from '../../shared/avatar-menu';
 import { ActivitySpinner } from '../../shared/activity-spinner';
 import { Brand } from '../../shared/brand';
 import { ConfirmService } from '../../shared/confirm.service';
@@ -60,7 +59,6 @@ const STATUS_POLL_MS = 4000;
   imports: [
     ActivitySpinner,
     AlbumPicker,
-    AvatarMenu,
     AssetViewer,
     BottomNav,
     Brand,

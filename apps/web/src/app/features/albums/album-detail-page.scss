@@ -64,6 +64,18 @@
     cursor: pointer;
   }
 
+  .icon-action {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 40px;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
+
   .danger-link {
     border: none;
     background: none;

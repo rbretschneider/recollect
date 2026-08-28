@@ -40,6 +40,11 @@ export class EditModeService {
     this.isEditingRaw.update((value) => !value);
   }
 
+  /** Starts editing directly — a just-created memory opens ready to write. */
+  enter(): void {
+    this.isEditingRaw.set(true);
+  }
+
   exit(): void {
     this.isEditingRaw.set(false);
   }

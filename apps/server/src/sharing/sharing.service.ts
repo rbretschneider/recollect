@@ -10,7 +10,7 @@ import { v7 as uuidv7 } from 'uuid';
 import { AlbumsService } from '../albums/albums.service';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
-import { shareLink } from '../database/schema';
+import { album, memory, shareLink } from '../database/schema';
 import { MemoriesService } from '../memories/memories.service';
 
 /** What a share link points at. */
@@ -157,6 +157,58 @@ export class SharingService {
     if (result.rows.length === 0) {
       throw new ForbiddenException('That photo is not part of this share.');
     }
+  }
+
+  /**
+   * Lightweight lookup for social unfurls (og: tags): title + a cover to
+   * render, no view counted — link previews are bots, not people.
+   */
+  async getShareMeta(
+    token: string,
+  ): Promise<{ title: string; coverAssetId: string | null } | null> {
+    let link: typeof shareLink.$inferSelect;
+    try {
+      link = await this.requireActiveLink(token);
+    } catch {
+      return null;
+    }
+    if (link.targetType === 'memory') {
+      const [row] = await this.db
+        .select({ title: memory.title, coverAssetId: memory.coverAssetId })
+        .from(memory)
+        .where(eq(memory.id, link.targetId))
+        .limit(1);
+      if (!row) {
+        return null;
+      }
+      return {
+        title: row.title,
+        coverAssetId: row.coverAssetId ?? (await this.firstSharedAsset(link)),
+      };
+    }
+    const [row] = await this.db
+      .select({ title: album.title, coverAssetId: album.coverAssetId })
+      .from(album)
+      .where(eq(album.id, link.targetId))
+      .limit(1);
+    if (!row) {
+      return null;
+    }
+    return {
+      title: row.title,
+      coverAssetId: row.coverAssetId ?? (await this.firstSharedAsset(link)),
+    };
+  }
+
+  private async firstSharedAsset(
+    link: typeof shareLink.$inferSelect,
+  ): Promise<string | null> {
+    const table = link.targetType === 'memory' ? sql`memory_asset` : sql`album_asset`;
+    const column = link.targetType === 'memory' ? sql`memory_id` : sql`album_id`;
+    const result = await this.db.execute<{ asset_id: string }>(
+      sql`select asset_id from ${table} where ${column} = ${link.targetId} order by sort_order limit 1`,
+    );
+    return result.rows[0]?.asset_id ?? null;
   }
 
   private async requireActiveLink(token: string): Promise<typeof shareLink.$inferSelect> {

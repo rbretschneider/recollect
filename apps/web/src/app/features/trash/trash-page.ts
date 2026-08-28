@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TrashApiService, TrashItem } from '../../core/api/trash-api.service';
-import { AvatarMenu } from '../../shared/avatar-menu';
+import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
 import { PageLoading } from '../../shared/page-loading';
@@ -9,7 +9,7 @@ import { PageLoading } from '../../shared/page-loading';
 /** The Trash view: what's held, when it purges, and restore (S5.2/S5.3). */
 @Component({
   selector: 'app-trash-page',
-  imports: [AvatarMenu, PageLoading, BackButton, BottomNav, RouterLink],
+  imports: [MenuButton, PageLoading, BackButton, BottomNav, RouterLink],
   templateUrl: './trash-page.html',
   styleUrl: './trash-page.scss',
 })

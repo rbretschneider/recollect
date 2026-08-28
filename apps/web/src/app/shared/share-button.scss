@@ -22,6 +22,19 @@
   cursor: pointer;
 }
 
+// Bordered icon button matching the edit pencil in action rows.
+.share-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
 
 // A bottom drawer, never an inline flex item — the topbar keeps its layout.
 .share-content {

@@ -34,11 +34,13 @@
     z-index: 2;
   }
 
-  .hero-share {
+  .hero-actions {
     position: absolute;
     top: 0.75rem;
     right: 0.75rem;
     z-index: 2;
+    display: flex;
+    gap: 0.5rem;
   }
 
   .hero-text {

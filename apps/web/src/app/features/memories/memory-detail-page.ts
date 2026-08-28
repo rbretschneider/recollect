@@ -124,6 +124,10 @@ export class MemoryDetailPage implements OnInit {
 
   ngOnInit(): void {
     this.destroyRef.onDestroy(() => this.flushJournalSave());
+    // A memory just created from a selection or album opens ready to write.
+    if (this.route.snapshot.queryParamMap.get('new') === '1') {
+      this.editMode.enter();
+    }
     void this.load();
   }
 

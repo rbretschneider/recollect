@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { LibraryApiService, ScanScheduleView } from '../../core/api/library-api.service';
 import { LibraryFailure, LibraryRootView, LibraryStatus } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
-import { AvatarMenu } from '../../shared/avatar-menu';
+import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
 import { ConfirmService } from '../../shared/confirm.service';
@@ -35,7 +35,7 @@ const JOB_LABELS: Record<string, string> = {
  */
 @Component({
   selector: 'app-library-page',
-  imports: [AvatarMenu, BackButton, BottomNav, FolderPicker, FormsModule, PageLoading, Sheet],
+  imports: [MenuButton, BackButton, BottomNav, FolderPicker, FormsModule, PageLoading, Sheet],
   templateUrl: './library-page.html',
   styleUrl: './library-page.scss',
 })

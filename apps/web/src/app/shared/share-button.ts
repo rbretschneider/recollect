@@ -34,8 +34,8 @@ export class ShareButton {
   readonly targetId = input.required<string>();
   /** For memories: whether the shared page includes journal text. */
   readonly includeJournal = input<boolean>(false);
-  /** 'overlay' renders a circular icon button for photo chrome (memory hero). */
-  readonly variant = input<'button' | 'overlay'>('button');
+  /** 'overlay': circular chrome for photo heroes; 'icon': bordered icon for action rows. */
+  readonly variant = input<'button' | 'overlay' | 'icon'>('button');
 
   readonly isOpen = signal(false);
   readonly links = signal<ShareLinkView[]>([]);

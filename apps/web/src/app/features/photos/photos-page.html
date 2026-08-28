@@ -1,6 +1,5 @@
 <header class="topbar" [class.selecting]="isSelecting()">
   @if (isSelecting()) {
-    <button type="button" class="topbar-action" (click)="cancelSelecting()">Cancel</button>
     <span class="select-title" aria-live="polite">
       @if (selectedIds().size === 0) {
         Select photos to add to an album{{ canDelete ? ' or delete' : '' }}
@@ -8,6 +7,9 @@
         {{ selectedIds().size }} selected
       }
     </span>
+    <span class="spacer"></span>
+    <!-- Same spot the Select button was: a misclick is undone in place. -->
+    <button type="button" class="topbar-action" (click)="cancelSelecting()">Cancel</button>
   } @else {
     <app-brand />
     <app-activity-spinner />
@@ -51,7 +53,6 @@
     @if (canWrite) {
       <button type="button" class="topbar-action" (click)="startSelecting()">Select</button>
     }
-    <app-avatar-menu />
   }
 </header>
 

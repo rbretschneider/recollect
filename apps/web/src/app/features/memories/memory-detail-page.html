@@ -6,13 +6,15 @@
       }
       <app-back class="overlay" to="/memories" label="Back to memories" />
       @if (canWrite) {
-        <app-share-button
-          class="hero-share"
-          variant="overlay"
-          targetType="memory"
-          [targetId]="memory.id"
-          [includeJournal]="true"
-        />
+        <div class="hero-actions">
+          <app-edit-toggle variant="overlay" />
+          <app-share-button
+            variant="overlay"
+            targetType="memory"
+            [targetId]="memory.id"
+            [includeJournal]="true"
+          />
+        </div>
       }
       <div class="hero-text">
         @if (isEditingTitle()) {
@@ -168,14 +170,11 @@
       </section>
     }
 
-    <section class="manage">
-      @if (canWrite) {
-        <app-edit-toggle />
-      }
-      @if (editMode.isEditing()) {
+    @if (editMode.isEditing()) {
+      <section class="manage">
         <button type="button" class="danger-link" (click)="deleteMemory()">Delete memory</button>
-      }
-    </section>
+      </section>
+    }
   </main>
 } @else {
   <app-page-loading label="Loading memory…" />
