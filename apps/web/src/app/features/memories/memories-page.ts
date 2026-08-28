@@ -1,4 +1,5 @@
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { formatDateSpan } from '../../core/format-date';
 import { RouterLink } from '@angular/router';
 import { LibraryApiService } from '../../core/api/library-api.service';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
@@ -44,16 +45,7 @@ export class MemoriesPage implements OnInit {
   }
 
   formatSpan(memory: MemorySummary): string {
-    const start = new Date(memory.startAt);
-    const end = new Date(memory.endAt);
-    const format = new Intl.DateTimeFormat(undefined, {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    });
-    return start.toDateString() === end.toDateString()
-      ? format.format(start)
-      : `${format.format(start)} – ${format.format(end)}`;
+    return formatDateSpan(memory.startAt, memory.endAt);
   }
 
   yearOf(memory: MemorySummary): number {

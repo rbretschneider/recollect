@@ -4,21 +4,13 @@
   padding-bottom: 1.5rem; // room for the bottom nav
 }
 
+// Base bar (sticky, blur, h1, spacer) is global (styles.scss); photos adds
+// selection-mode styling and its own control sizing on top.
 .topbar {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--border);
   transition: background-color 0.2s ease, border-color 0.2s ease;
-  min-width: 0; // Flex children may shrink; the bar never widens the page.
 
-  // Selection mode is a different place; the bar says so.
+  // Selection mode is a different place; the bar says so. The accent tint sits
+  // over the global blur backdrop.
   &.selecting {
     background: color-mix(in srgb, var(--accent) 22%, var(--bg));
     border-bottom-color: color-mix(in srgb, var(--accent) 45%, var(--border));
@@ -38,13 +30,7 @@
   }
 
   h1 {
-    margin: 0;
-    font-size: 1.15rem;
     letter-spacing: -0.02em;
-  }
-
-  .spacer {
-    flex: 1;
   }
 
   // The controls keep their size; only the spacer (and brand text) give way.

@@ -25,21 +25,7 @@ import { Icon } from './icon';
       <app-account-badge />
     </header>
   `,
-  styles: `
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 2;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.75rem 1rem;
-      background: color-mix(in srgb, var(--bg) 88%, transparent);
-      backdrop-filter: blur(8px);
-      border-bottom: 1px solid var(--border);
-      min-width: 0;
-    }
-
-  `,
+  // .topbar is styled globally (styles.scss) so every page header — this bar
+  // and each subpage's — shares one definition and the sheet-safe blur fix.
 })
 export class AppTopbar {}

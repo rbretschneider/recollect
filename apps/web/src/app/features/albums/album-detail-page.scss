@@ -4,40 +4,11 @@
   padding-bottom: 1.5rem;
 }
 
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border);
-
-  // The blur lives on a pseudo-element: backdrop-filter on the bar itself
-  // would become the containing block for the share sheet's fixed drawer.
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background: color-mix(in srgb, var(--bg) 88%, transparent);
-    backdrop-filter: blur(8px);
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 1.15rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .spacer {
-    flex: 1;
-  }
-
-
+// Long album titles ellipsize; the rest of the bar is global (styles.scss).
+.topbar h1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .album {

@@ -8,11 +8,11 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { formatDateSpan } from '../../core/format-date';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
-import { HttpClient } from '@angular/common/http';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
+import { PhotosApiService } from '../../core/api/photos-api.service';
 import { PeopleApiService, PersonSummary } from '../../core/api/people-api.service';
 import { MemoryDetail, MemoryQuote, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
@@ -50,7 +50,7 @@ const JOURNAL_AUTOSAVE_MS = 1500;
 export class MemoryDetailPage implements OnInit {
   private readonly api = inject(MemoriesApiService);
   private readonly peopleApi = inject(PeopleApiService);
-  private readonly http = inject(HttpClient);
+  private readonly photosApi = inject(PhotosApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStateService);
@@ -191,16 +191,7 @@ export class MemoryDetailPage implements OnInit {
   }
 
   formatSpan(detail: MemoryDetail): string {
-    const start = new Date(detail.startAt);
-    const end = new Date(detail.endAt);
-    const format = new Intl.DateTimeFormat(undefined, {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    });
-    return start.toDateString() === end.toDateString()
-      ? format.format(start)
-      : `${format.format(start)} – ${format.format(end)}`;
+    return formatDateSpan(detail.startAt, detail.endAt);
   }
 
   startEditingTitle(): void {
@@ -377,10 +368,7 @@ export class MemoryDetailPage implements OnInit {
 
   /** The viewer needs TimelineAsset shapes; one batch request loads them all. */
   private async loadViewerAssets(assetIds: string[]): Promise<void> {
-    const { items } = await firstValueFrom(
-      this.http.post<{ items: TimelineAsset[] }>('/api/v1/assets/items', { assetIds }),
-    );
-    this.viewerAssets.set(items);
+    this.viewerAssets.set(await this.photosApi.items(assetIds));
   }
 
   /** The whole memory as a music-backed slideshow (real media types). */

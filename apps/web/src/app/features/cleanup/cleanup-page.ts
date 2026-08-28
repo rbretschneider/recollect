@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { formatBytes } from '../../core/format-date';
 import {
   CleanupApiService,
   CleanupSuggestions,
@@ -44,13 +45,7 @@ export class CleanupPage implements OnInit {
   }
 
   formatSize(bytes: number): string {
-    if (bytes >= 1024 ** 3) {
-      return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
-    }
-    if (bytes >= 1024 ** 2) {
-      return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
-    }
-    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+    return formatBytes(bytes);
   }
 
   formatBitrate(bitsPerSecond: number | null): string {

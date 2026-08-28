@@ -1,7 +1,8 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { formatDateSpan } from '../../core/format-date';
 import { ActivatedRoute } from '@angular/router';
 import { SharingApiService } from '../../core/api/sharing-api.service';
-import { SharedView, TimelineAsset } from '../../core/api/api-models';
+import { SharedView, TimelineAsset, toViewerAsset } from '../../core/api/api-models';
 import { SlideItem, SlideshowOverlay } from '../dashboard/slideshow-overlay';
 import { AssetViewer } from '../viewer/asset-viewer';
 
@@ -42,33 +43,13 @@ export class SharedViewPage implements OnInit {
       return [];
     }
     const typeById = new Map((view.mediaItems ?? []).map((item) => [item.id, item.mediaType]));
-    return view.assetIds.map((id) => ({
-      id,
-      mediaType: typeById.get(id) ?? ('image' as const),
-      capturedAt: view.startAt ?? new Date(0).toISOString(),
-      capturedDay: (view.startAt ?? '').slice(0, 10),
-      width: null,
-      height: null,
-      durationMs: null,
-      hasThumbnail: true,
-      isFavorite: false,
-    }));
+    return view.assetIds.map((id) =>
+      toViewerAsset(id, typeById.get(id) ?? 'image', view.startAt ?? new Date(0).toISOString()),
+    );
   });
 
   formatSpan(view: SharedView): string {
-    if (!view.startAt || !view.endAt) {
-      return '';
-    }
-    const start = new Date(view.startAt);
-    const end = new Date(view.endAt);
-    const format = new Intl.DateTimeFormat(undefined, {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    });
-    return start.toDateString() === end.toDateString()
-      ? format.format(start)
-      : `${format.format(start)} – ${format.format(end)}`;
+    return formatDateSpan(view.startAt, view.endAt);
   }
 
   openViewer(index: number): void {

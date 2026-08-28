@@ -3,7 +3,7 @@ import { HttpEventType } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ContributeView, ContributionsApiService } from '../../core/api/contributions-api.service';
-import { TimelineAsset } from '../../core/api/api-models';
+import { TimelineAsset, toViewerAsset } from '../../core/api/api-models';
 import { Icon } from '../../shared/icon';
 import { PageLoading } from '../../shared/page-loading';
 import { AssetViewer } from '../viewer/asset-viewer';
@@ -77,17 +77,7 @@ export class ContributePage implements OnInit {
   }
 
   readonly viewerAssets = computed<TimelineAsset[]>(() =>
-    (this.view()?.poolItems ?? []).map((item) => ({
-      id: item.id,
-      mediaType: item.mediaType,
-      capturedAt: new Date(0).toISOString(),
-      capturedDay: '',
-      width: null,
-      height: null,
-      durationMs: null,
-      hasThumbnail: true,
-      isFavorite: false,
-    })),
+    (this.view()?.poolItems ?? []).map((item) => toViewerAsset(item.id, item.mediaType)),
   );
 
   openViewer(index: number): void {

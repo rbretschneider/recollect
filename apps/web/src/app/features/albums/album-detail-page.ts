@@ -1,9 +1,8 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
+import { PhotosApiService } from '../../core/api/photos-api.service';
 import {
   ContributionsApiService,
   GuestUploadView,
@@ -51,7 +50,7 @@ export class AlbumDetailPage implements OnInit {
   private readonly contributionsApi = inject(ContributionsApiService);
   private readonly sharingApi = inject(SharingApiService);
   private readonly memoriesApi = inject(MemoriesApiService);
-  private readonly http = inject(HttpClient);
+  private readonly photosApi = inject(PhotosApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStateService);
@@ -293,9 +292,6 @@ export class AlbumDetailPage implements OnInit {
 
   private async loadViewerAssets(assetIds: string[]): Promise<void> {
     // One batch request; the old per-asset loop cost N round trips.
-    const { items } = await firstValueFrom(
-      this.http.post<{ items: TimelineAsset[] }>('/api/v1/assets/items', { assetIds }),
-    );
-    this.viewerAssets.set(items);
+    this.viewerAssets.set(await this.photosApi.items(assetIds));
   }
 }

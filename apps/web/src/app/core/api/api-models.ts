@@ -40,6 +40,30 @@ export interface TimelineAsset {
   place?: string | null;
 }
 
+/**
+ * Builds the minimal {@link TimelineAsset} the asset viewer needs from just an
+ * id and media type. Pages that synthesize viewer lists (people, search, share,
+ * contribute) use this instead of hand-writing the same placeholder literal, so
+ * a new required field is added in exactly one place.
+ */
+export function toViewerAsset(
+  id: string,
+  mediaType: 'image' | 'video' = 'image',
+  capturedAt = '',
+): TimelineAsset {
+  return {
+    id,
+    mediaType,
+    capturedAt,
+    capturedDay: capturedAt.slice(0, 10),
+    width: null,
+    height: null,
+    durationMs: null,
+    hasThumbnail: true,
+    isFavorite: false,
+  };
+}
+
 /** Mirrors the server's TimelinePage. */
 export interface TimelinePage {
   items: TimelineAsset[];

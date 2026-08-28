@@ -2,7 +2,7 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PeopleApiService, PersonFace, PersonSummary } from '../../core/api/people-api.service';
-import { TimelineAsset } from '../../core/api/api-models';
+import { TimelineAsset, toViewerAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { EditModeService } from '../../core/edit-mode.service';
 import { ConfirmService } from '../../shared/confirm.service';
@@ -223,17 +223,7 @@ export class PersonPage implements OnInit {
   /** computed: the viewer needs a STABLE array — a method here would rebuild
    *  it every change detection and permanently reset the viewer's spinner. */
   readonly viewerAssets = computed<TimelineAsset[]>(() =>
-    this.assetIds().map((id) => ({
-      id,
-      mediaType: 'image' as const,
-      capturedAt: new Date(0).toISOString(),
-      capturedDay: '',
-      width: null,
-      height: null,
-      durationMs: null,
-      hasThumbnail: true,
-      isFavorite: false,
-    })),
+    this.assetIds().map((id) => toViewerAsset(id)),
   );
 
   private async load(): Promise<void> {

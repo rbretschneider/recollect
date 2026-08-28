@@ -40,6 +40,40 @@
   }
 }
 
+// Every page header — the app topbar and each subpage bar — shares this one
+// definition. The blur sits on a ::before pseudo-element, NEVER on the bar
+// itself: backdrop-filter on a positioned box makes it the containing block for
+// fixed descendants, which would trap drawers and sheets inside the header.
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+
+  .spacer {
+    flex: 1;
+  }
+}
+
 // The topbar's tap-to-search pill — shared by every top-level page header.
 .search-pill {
   flex: 1;

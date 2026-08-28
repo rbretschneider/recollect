@@ -5,7 +5,7 @@ import {
   SearchAssetHit,
   SearchResults,
 } from '../../core/api/search-api.service';
-import { TimelineAsset } from '../../core/api/api-models';
+import { TimelineAsset, toViewerAsset } from '../../core/api/api-models';
 import { AppTopbar } from '../../shared/app-topbar';
 import { AssetViewer } from '../viewer/asset-viewer';
 
@@ -133,17 +133,7 @@ export class SearchPage implements AfterViewInit {
   readonly viewerAssets = computed<TimelineAsset[]>(() => {
     const r = this.results();
     const hits = this.viewerSource() === 'semantic' ? (r?.semantic ?? []) : (r?.assets ?? []);
-    return hits.map((hit: SearchAssetHit) => ({
-      id: hit.id,
-      mediaType: hit.mediaType,
-      capturedAt: hit.capturedAt,
-      capturedDay: hit.capturedAt.slice(0, 10),
-      width: null,
-      height: null,
-      durationMs: null,
-      hasThumbnail: true,
-      isFavorite: false,
-    }));
+    return hits.map((hit: SearchAssetHit) => toViewerAsset(hit.id, hit.mediaType, hit.capturedAt));
   });
 
   private async run(query: string): Promise<void> {
