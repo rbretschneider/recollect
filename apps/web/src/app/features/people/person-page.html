@@ -1,10 +1,12 @@
 <header class="topbar">
+  <app-menu-button />
   <app-back to="/people" label="Back to people" />
   <h1>{{ title() }}</h1>
   <span class="spacer"></span>
   @if (saveState() === 'saved') {
     <span class="saved">Saved ✓</span>
   }
+  <app-account-badge />
 </header>
 
 <main class="person">

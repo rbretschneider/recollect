@@ -1,4 +1,5 @@
 <header class="topbar">
+  <app-menu-button />
   @if (selectedLabel()) {
     <app-back to="/places" label="Back to all places" />
     <h1>{{ selectedPlace()?.town ?? 'Place' }}</h1>
@@ -27,7 +28,6 @@
       </button>
     </div>
   }
-  <app-menu-button />
   <app-account-badge />
 </header>
 

@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { InboxSuggestion } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
+import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
 import { PageLoading } from '../../shared/page-loading';
@@ -15,7 +16,7 @@ import { SuggestionCard, SuggestionOutcome } from './suggestion-card';
  */
 @Component({
   selector: 'app-inbox-review-page',
-  imports: [PageLoading, BackButton, BottomNav, RouterLink, SuggestionCard],
+  imports: [MenuButton, PageLoading, BackButton, BottomNav, RouterLink, SuggestionCard],
   templateUrl: './inbox-review-page.html',
   styleUrl: './inbox-review-page.scss',
 })

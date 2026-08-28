@@ -6,6 +6,8 @@ import { TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { EditModeService } from '../../core/edit-mode.service';
 import { ConfirmService } from '../../shared/confirm.service';
+import { AccountBadge } from '../../shared/account-badge';
+import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
 import { PageLoading } from '../../shared/page-loading';
@@ -17,7 +19,7 @@ import { AssetViewer } from '../viewer/asset-viewer';
  *  cluster — split wrong faces out, ignore junk, merge duplicates, hide. */
 @Component({
   selector: 'app-person-page',
-  imports: [PageLoading, BackButton, AssetViewer, BottomNav, EditToggle, FormsModule, RouterLink],
+  imports: [AccountBadge, MenuButton, PageLoading, BackButton, AssetViewer, BottomNav, EditToggle, FormsModule, RouterLink],
   templateUrl: './person-page.html',
   styleUrl: './person-page.scss',
 })

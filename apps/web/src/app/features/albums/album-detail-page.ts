@@ -12,6 +12,8 @@ import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { AlbumDetail, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { EditModeService } from '../../core/edit-mode.service';
+import { AccountBadge } from '../../shared/account-badge';
+import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
 import { PageLoading } from '../../shared/page-loading';
@@ -27,6 +29,8 @@ import { AssetViewer } from '../viewer/asset-viewer';
 @Component({
   selector: 'app-album-detail-page',
   imports: [
+    AccountBadge,
+    MenuButton,
     PageLoading,
     BackButton,
     AssetViewer,
