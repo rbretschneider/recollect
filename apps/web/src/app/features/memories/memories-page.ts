@@ -7,11 +7,12 @@ import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { LibraryStatus, MemorySummary } from '../../core/api/api-models';
 import { AppTopbar } from '../../shared/app-topbar';
 import { PageLoading } from '../../shared/page-loading';
+import { LoadError } from '../../shared/load-error';
 
 /** The Memories tab: the timeline of confirmed memories; suggestions live on their own review page. */
 @Component({
   selector: 'app-memories-page',
-  imports: [PageLoading, AppTopbar, RouterLink],
+  imports: [PageLoading, AppTopbar, RouterLink, LoadError],
   templateUrl: './memories-page.html',
   styleUrl: './memories-page.scss',
 })
@@ -24,6 +25,7 @@ export class MemoriesPage implements OnInit {
   readonly memories = signal<MemorySummary[]>([]);
   readonly suggestionCount = signal(0);
   readonly isLoaded = signal(false);
+  readonly loadFailed = signal(false);
   readonly status = signal<LibraryStatus | null>(null);
 
   readonly pendingCount = computed(() => {
@@ -58,11 +60,16 @@ export class MemoriesPage implements OnInit {
     return index === 0 || this.yearOf(list[index]) !== this.yearOf(list[index - 1]);
   }
 
-  private async reload(): Promise<void> {
-    const [inbox, memories] = await Promise.all([this.api.listInbox(), this.api.listMemories()]);
-    this.suggestionCount.set(inbox.suggestions.length);
-    this.memories.set(memories.memories);
-    this.isLoaded.set(true);
+  protected async reload(): Promise<void> {
+    this.loadFailed.set(false);
+    try {
+      const [inbox, memories] = await Promise.all([this.api.listInbox(), this.api.listMemories()]);
+      this.suggestionCount.set(inbox.suggestions.length);
+      this.memories.set(memories.memories);
+      this.isLoaded.set(true);
+    } catch {
+      this.loadFailed.set(true);
+    }
   }
 
   private async pollWhileIndexing(): Promise<void> {

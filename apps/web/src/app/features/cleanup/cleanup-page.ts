@@ -15,6 +15,8 @@ import { BackButton } from '../../shared/back-button';
 import { ConfirmService } from '../../shared/confirm.service';
 import { MenuButton } from '../../shared/menu-button';
 import { PageLoading } from '../../shared/page-loading';
+import { LoadError } from '../../shared/load-error';
+import { ToastService } from '../../shared/toast.service';
 
 /**
  * The cleanup advisor: reclaim NAS space. Junk flags go to Trash (normal
@@ -23,7 +25,7 @@ import { PageLoading } from '../../shared/page-loading';
  */
 @Component({
   selector: 'app-cleanup-page',
-  imports: [AccountBadge, BackButton, FormsModule, MenuButton, PageLoading, Sheet],
+  imports: [AccountBadge, BackButton, FormsModule, MenuButton, PageLoading, Sheet, LoadError],
   templateUrl: './cleanup-page.html',
   styleUrl: './cleanup-page.scss',
 })
@@ -31,9 +33,13 @@ export class CleanupPage implements OnInit {
   private readonly api = inject(CleanupApiService);
   private readonly trashApi = inject(TrashApiService);
   private readonly confirms = inject(ConfirmService);
+  private readonly toasts = inject(ToastService);
 
   readonly data = signal<CleanupSuggestions | null>(null);
+  readonly loadFailed = signal(false);
   readonly isBusy = signal(false);
+  /** True while a convert request is in flight, so Convert can't double-fire. */
+  readonly isConverting = signal(false);
   /** Asset ids whose conversion was queued this visit (instant feedback). */
   readonly queuedConversions = signal<ReadonlySet<string>>(new Set());
 
@@ -73,8 +79,16 @@ export class CleanupPage implements OnInit {
     if (!confirmed) {
       return;
     }
-    await this.trashApi.trashAssets([item.assetId]);
-    this.removeJunk(item.assetId);
+    try {
+      await this.trashApi.trashAssets([item.assetId]);
+      this.removeJunk(item.assetId);
+      this.toasts.success(`Moved “${item.fileName}” to Trash`);
+    } catch {
+      this.toasts.error("Couldn't move that to Trash.", {
+        label: 'Retry',
+        run: () => void this.trashJunk(item),
+      });
+    }
   }
 
   async trashAllJunk(): Promise<void> {
@@ -101,15 +115,31 @@ export class CleanupPage implements OnInit {
   }
 
   async dismissJunk(item: JunkSuggestion): Promise<void> {
-    await this.api.dismiss([item.assetId]);
-    this.removeJunk(item.assetId);
+    // Await the dismissal BEFORE dropping the row, so a failed call leaves the
+    // suggestion in place rather than flashing a false "kept".
+    try {
+      await this.api.dismiss([item.assetId]);
+      this.removeJunk(item.assetId);
+    } catch {
+      this.toasts.error("Couldn't dismiss that suggestion.", {
+        label: 'Retry',
+        run: () => void this.dismissJunk(item),
+      });
+    }
   }
 
   async dismissHog(item: SpaceHogSuggestion): Promise<void> {
-    await this.api.dismiss([item.assetId]);
-    const data = this.data();
-    if (data) {
-      this.data.set({ ...data, hogs: data.hogs.filter((hog) => hog.assetId !== item.assetId) });
+    try {
+      await this.api.dismiss([item.assetId]);
+      const data = this.data();
+      if (data) {
+        this.data.set({ ...data, hogs: data.hogs.filter((hog) => hog.assetId !== item.assetId) });
+      }
+    } catch {
+      this.toasts.error("Couldn't dismiss that suggestion.", {
+        label: 'Retry',
+        run: () => void this.dismissHog(item),
+      });
     }
   }
 
@@ -124,12 +154,22 @@ export class CleanupPage implements OnInit {
 
   async confirmConvert(): Promise<void> {
     const item = this.convertTarget();
-    if (!item) {
+    if (!item || this.isConverting()) {
       return;
     }
-    await this.api.convert(item.assetId, this.convertCodec);
-    this.queuedConversions.update((set) => new Set([...set, item.assetId]));
-    this.convertTarget.set(null);
+    this.isConverting.set(true);
+    try {
+      // Await the queue call before showing "Converting…" or closing the sheet,
+      // so a double-tap can't queue duplicate conversions and a failure is seen.
+      await this.api.convert(item.assetId, this.convertCodec);
+      this.queuedConversions.update((set) => new Set([...set, item.assetId]));
+      this.convertTarget.set(null);
+      this.toasts.success(`Converting “${item.fileName}”`);
+    } catch {
+      this.toasts.error("Couldn't start that conversion.");
+    } finally {
+      this.isConverting.set(false);
+    }
   }
 
   /** Originals slated for deletion after conversion (the visible undo). */
@@ -159,12 +199,17 @@ export class CleanupPage implements OnInit {
     }
   }
 
-  private async load(): Promise<void> {
-    const [suggestions, converted] = await Promise.all([
-      this.api.suggestions(),
-      this.api.listConverted().catch(() => ({ originals: [] })),
-    ]);
-    this.data.set(suggestions);
-    this.convertedOriginals.set(converted.originals);
+  protected async load(): Promise<void> {
+    this.loadFailed.set(false);
+    try {
+      const [suggestions, converted] = await Promise.all([
+        this.api.suggestions(),
+        this.api.listConverted().catch(() => ({ originals: [] })),
+      ]);
+      this.data.set(suggestions);
+      this.convertedOriginals.set(converted.originals);
+    } catch {
+      this.loadFailed.set(true);
+    }
   }
 }

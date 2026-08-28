@@ -114,6 +114,8 @@
       }
     </div>
   </main>
+} @else if (loadFailed()) {
+  <app-load-error message="Couldn't load this album." (retry)="load()" />
 } @else {
   <app-page-loading label="Loading album…" />
 }

@@ -6,13 +6,17 @@
   @if (queue().length > 0) {
     <span class="remaining">{{ queue().length }} left</span>
     @if (canWrite) {
-      <button type="button" class="dismiss-all" (click)="dismissAll()">Dismiss all</button>
+      <button type="button" class="dismiss-all" [disabled]="isDismissingAll()" (click)="dismissAll()">
+        Dismiss all
+      </button>
     }
   }
 </header>
 
 <main class="review">
-  @if (!isLoaded()) {
+  @if (loadFailed()) {
+    <app-load-error message="Couldn’t load your suggestions." (retry)="load()" />
+  } @else if (!isLoaded()) {
     <app-page-loading label="Loading suggestions…" />
   }
   @if (queue().length > 0) {

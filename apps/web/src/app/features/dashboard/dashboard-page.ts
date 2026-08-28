@@ -9,6 +9,8 @@ import { InboxSuggestion, MemorySummary, TimelineAsset, toViewerAsset } from '..
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { AppTopbar } from '../../shared/app-topbar';
 import { PageLoading } from '../../shared/page-loading';
+import { LoadError } from '../../shared/load-error';
+import { ToastService } from '../../shared/toast.service';
 import { Icon } from '../../shared/icon';
 import { AssetViewer } from '../viewer/asset-viewer';
 import { SlideshowOverlay, SlideItem } from './slideshow-overlay';
@@ -24,7 +26,7 @@ interface OnThisDayYear {
  */
 @Component({
   selector: 'app-dashboard-page',
-  imports: [AppTopbar, AssetViewer, PageLoading, RouterLink, SlideshowOverlay, Icon],
+  imports: [AppTopbar, AssetViewer, PageLoading, LoadError, RouterLink, SlideshowOverlay, Icon],
   templateUrl: './dashboard-page.html',
   styleUrl: './dashboard-page.scss',
 })
@@ -34,13 +36,20 @@ export class DashboardPage implements OnInit {
   private readonly albumsApi = inject(AlbumsApiService);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStateService);
+  private readonly toasts = inject(ToastService);
 
   readonly onThisDay = signal<OnThisDayYear[]>([]);
   readonly suggestions = signal<InboxSuggestion[]>([]);
   readonly recentMemories = signal<MemorySummary[]>([]);
   /** The newest photos to land in the library, by when they were added. */
   readonly recentlyAdded = signal<Array<{ id: string; mediaType: 'image' | 'video' }>>([]);
-  readonly isLoaded = signal(false);
+  /** The photo content is the primary content — its spinner clears the moment
+   * the two photo endpoints answer, without waiting on memories/suggestions. */
+  readonly photosPending = signal(true);
+  /** True once all four sections have settled, so the empty state can't flash. */
+  readonly allLoaded = signal(false);
+  /** Every section errored — show a retry rather than a misleading "empty". */
+  readonly loadFailed = signal(false);
 
   /** Viewer over a strip (a year's photos, or the recently-added row). */
   readonly viewerAssets = signal<TimelineAsset[]>([]);
@@ -119,6 +128,11 @@ export class DashboardPage implements OnInit {
         group.items.map((item) => item.id),
       );
       await this.router.navigate(['/albums', albumId]);
+    } catch {
+      this.toasts.error('Couldn’t create that album.', {
+        label: 'Retry',
+        run: () => void this.saveAsAlbum(group),
+      });
     } finally {
       this.savingAlbumYear.set(null);
     }
@@ -132,30 +146,75 @@ export class DashboardPage implements OnInit {
     this.viewerAssets.update((assets) => assets.filter((asset) => asset.id !== assetId));
   }
 
-  private async load(): Promise<void> {
+  protected load(): void {
     const now = new Date();
     const day = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const [otd, recent, inbox, memories] = await Promise.all([
-      firstValueFrom(
-        this.http.get<{ years: OnThisDayYear[] }>(`/api/v1/dashboard/on-this-day?day=${day}`),
-      ).catch(() => ({ years: [] })),
-      firstValueFrom(
-        this.http.get<{ items: Array<{ id: string; mediaType: 'image' | 'video' }> }>(
-          `/api/v1/dashboard/recently-added?limit=8`,
-        ),
-      ).catch(() => ({ items: [] })),
-      this.memoriesApi.listInbox().catch(() => ({ suggestions: [] })),
-      this.memoriesApi.listMemories().catch(() => ({ memories: [] })),
-    ]);
     // Fibonacci anniversaries only: 1, 2, 3, 5, 8, 13, 21, 34 years ago —
     // "today" isn't a memory yet, and year 4 is just year 4.
     const fibonacci = new Set([1, 2, 3, 5, 8, 13, 21, 34, 55]);
-    this.onThisDay.set(
-      otd.years.filter((group) => fibonacci.has(now.getFullYear() - group.year)),
-    );
-    this.recentlyAdded.set(recent.items);
-    this.suggestions.set(inbox.suggestions.slice(0, 4));
-    this.recentMemories.set(memories.memories.slice(0, 4));
-    this.isLoaded.set(true);
+
+    this.photosPending.set(true);
+    this.allLoaded.set(false);
+    this.loadFailed.set(false);
+
+    // Prime directive: fire each section independently and paint it the moment
+    // it answers — the fast photo endpoints never wait on the slower memory
+    // queries. Section flags settle as each resolves; nothing is awaited on the
+    // critical path.
+    let remaining = 4;
+    let errors = 0;
+    let photoParts = 2;
+    const settle = (failed: boolean): void => {
+      if (failed) {
+        errors += 1;
+      }
+      if (--remaining === 0) {
+        this.allLoaded.set(true);
+        this.loadFailed.set(errors === 4);
+      }
+    };
+    const photoSettled = (): void => {
+      if (--photoParts === 0) {
+        this.photosPending.set(false);
+      }
+    };
+
+    void firstValueFrom(
+      this.http.get<{ years: OnThisDayYear[] }>(`/api/v1/dashboard/on-this-day?day=${day}`),
+    )
+      .then((otd) => {
+        this.onThisDay.set(otd.years.filter((g) => fibonacci.has(now.getFullYear() - g.year)));
+        settle(false);
+      })
+      .catch(() => settle(true))
+      .finally(photoSettled);
+
+    void firstValueFrom(
+      this.http.get<{ items: Array<{ id: string; mediaType: 'image' | 'video' }> }>(
+        `/api/v1/dashboard/recently-added?limit=4`,
+      ),
+    )
+      .then((recent) => {
+        this.recentlyAdded.set(recent.items);
+        settle(false);
+      })
+      .catch(() => settle(true))
+      .finally(photoSettled);
+
+    void this.memoriesApi
+      .listInbox()
+      .then((inbox) => {
+        this.suggestions.set(inbox.suggestions.slice(0, 4));
+        settle(false);
+      })
+      .catch(() => settle(true));
+
+    void this.memoriesApi
+      .listMemories()
+      .then((memories) => {
+        this.recentMemories.set(memories.memories.slice(0, 4));
+        settle(false);
+      })
+      .catch(() => settle(true));
   }
 }

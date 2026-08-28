@@ -3,14 +3,15 @@ import { NavigationEnd, NavigationError, Router, RouterOutlet } from '@angular/r
 import { AppUpdateService } from './core/app-update.service';
 import { ConfirmDrawer } from './shared/confirm-drawer';
 import { PwaInstall } from './shared/pwa-install';
+import { ToastHost } from './shared/toast-host';
 
 /** sessionStorage flag preventing a reload loop when recovery itself fails. */
 const RELOAD_GUARD_KEY = 'rc-chunk-reload';
 
 @Component({
-  imports: [ConfirmDrawer, PwaInstall, RouterOutlet],
+  imports: [ConfirmDrawer, PwaInstall, RouterOutlet, ToastHost],
   selector: 'app-root',
-  template: '<router-outlet /><app-confirm-drawer /><app-pwa-install />',
+  template: '<router-outlet /><app-confirm-drawer /><app-pwa-install /><app-toast-host />',
 })
 export class App {
   private readonly router = inject(Router);

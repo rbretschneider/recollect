@@ -25,7 +25,9 @@
 </header>
 
 <main class="folders">
-  @if (!isLoaded() && !listing()) {
+  @if (loadFailed()) {
+    <app-load-error message="Couldn't load your folders." (retry)="reload()" />
+  } @else if (!isLoaded() && !listing()) {
     <app-page-loading label="Loading folders…" />
   }
   @if (crumbs().length > 0) {
@@ -55,6 +57,13 @@
         </button>
       }
     </div>
+  }
+
+  @if (isLoaded() && !loadFailed() && !listing() && roots().length === 0) {
+    <section class="empty">
+      <h2>No folders yet</h2>
+      <p>Once your photo library is indexed, its on-disk folders show up here.</p>
+    </section>
   }
 
   @if (listing(); as level) {

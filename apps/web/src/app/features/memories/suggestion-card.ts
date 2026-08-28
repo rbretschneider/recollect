@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { InboxSuggestion } from '../../core/api/api-models';
 import { AssetPicker } from '../../shared/asset-picker';
+import { ToastService } from '../../shared/toast.service';
 
 /** What happened to a suggestion, so the grid can drop the card. */
 export type SuggestionOutcome = 'created' | 'dismissed' | 'later';
@@ -21,6 +22,7 @@ export type SuggestionOutcome = 'created' | 'dismissed' | 'later';
 })
 export class SuggestionCard implements OnInit {
   private readonly api = inject(MemoriesApiService);
+  private readonly toasts = inject(ToastService);
 
   readonly suggestion = input.required<InboxSuggestion>();
   readonly canWrite = input<boolean>(false);
@@ -120,7 +122,13 @@ export class SuggestionCard implements OnInit {
     this.isBusy.set(true);
     try {
       await this.api.acceptSuggestion(this.suggestion().id, title, isEdited ? finalIds : undefined);
+      // Only drop the card once the memory really exists.
       this.decided.emit('created');
+    } catch {
+      this.toasts.error("Couldn’t create this memory.", {
+        label: 'Retry',
+        run: () => void this.create(),
+      });
     } finally {
       this.isBusy.set(false);
     }
@@ -133,7 +141,13 @@ export class SuggestionCard implements OnInit {
     this.isBusy.set(true);
     try {
       await this.api.dismissSuggestion(this.suggestion().id);
+      // Only drop the card once the dismissal is persisted.
       this.decided.emit('dismissed');
+    } catch {
+      this.toasts.error("Couldn’t dismiss this suggestion.", {
+        label: 'Retry',
+        run: () => void this.dismiss(),
+      });
     } finally {
       this.isBusy.set(false);
     }

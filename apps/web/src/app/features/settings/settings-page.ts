@@ -15,6 +15,7 @@ import { AccountBadge } from '../../shared/account-badge';
 import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
 import { Sheet } from '../../shared/sheet';
+import { ToastService } from '../../shared/toast.service';
 
 /** Admin settings: cameras and household members. The library has its own page. */
 @Component({
@@ -32,6 +33,7 @@ export class SettingsPage implements OnInit {
   private readonly authApi = inject(AuthApiService);
   private readonly confirms = inject(ConfirmService);
   private readonly router = inject(Router);
+  private readonly toasts = inject(ToastService);
 
   readonly users = signal<UserProfile[]>([]);
   /** The member whose password is being reset (drives the sheet). */
@@ -44,6 +46,7 @@ export class SettingsPage implements OnInit {
   /** Per-device owner-name drafts, keyed by deviceKey(). */
   deviceDrafts: Record<string, string> = {};
   readonly isAddingUser = signal(false);
+  readonly isCreatingUser = signal(false);
   readonly error = signal<string | null>(null);
 
   newUser: CreateUserInput = this.emptyUser();
@@ -60,6 +63,11 @@ export class SettingsPage implements OnInit {
   readonly inviteNote = signal<string | null>(null);
 
   async createUser(): Promise<void> {
+    // Guard against a double-submit queuing two accounts for the same person.
+    if (this.isCreatingUser()) {
+      return;
+    }
+    this.isCreatingUser.set(true);
     this.error.set(null);
     try {
       const created = (await this.usersApi.create(this.newUser)) as {
@@ -76,7 +84,11 @@ export class SettingsPage implements OnInit {
       this.isAddingUser.set(false);
       await this.reload();
     } catch (error) {
-      this.error.set(this.messageFrom(error, 'Could not create that account.'));
+      // The create form lives in a sheet that covers the page-level banner, so
+      // surface failures through a toast (its host renders above sheets).
+      this.toasts.error(this.messageFrom(error, 'Could not create that account.'));
+    } finally {
+      this.isCreatingUser.set(false);
     }
   }
 
@@ -191,7 +203,9 @@ export class SettingsPage implements OnInit {
       this.editingMember.set(null);
       await this.reload();
     } catch (error) {
-      this.error.set(this.messageFrom(error, 'Could not save those changes.'));
+      // Edit runs inside a sheet; route the failure to a toast so it isn't
+      // hidden behind the open sheet.
+      this.toasts.error(this.messageFrom(error, 'Could not save those changes.'));
     } finally {
       this.isSavingMember.set(false);
     }
@@ -232,8 +246,12 @@ export class SettingsPage implements OnInit {
       await this.authApi.resetMemberPassword(target.id, this.resetPasswordDraft);
       this.resettingUser.set(null);
       this.resetPasswordDraft = '';
+      // A silent close read as "did nothing"; confirm the reset landed.
+      this.toasts.success(`Password reset for ${target.displayName}`);
     } catch (error) {
-      this.error.set(this.messageFrom(error, 'Could not reset that password.'));
+      // Reset runs inside a sheet; a page-level banner would be hidden behind
+      // it, so report through a toast instead.
+      this.toasts.error(this.messageFrom(error, 'Could not reset that password.'));
     }
   }
 

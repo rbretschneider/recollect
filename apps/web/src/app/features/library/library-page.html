@@ -7,7 +7,9 @@
 </header>
 
 <main class="library">
-  @if (!isLoaded()) {
+  @if (loadFailed()) {
+    <app-load-error message="Couldn’t load the library." (retry)="reload()" />
+  } @else if (!isLoaded()) {
     <app-page-loading label="Loading library…" />
   }
 

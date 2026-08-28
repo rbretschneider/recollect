@@ -13,6 +13,7 @@ import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
 import { Icon } from '../../shared/icon';
 import { PageLoading } from '../../shared/page-loading';
+import { LoadError } from '../../shared/load-error';
 import { AssetViewer } from '../viewer/asset-viewer';
 
 /** A breadcrumb segment in the folder path. */
@@ -37,7 +38,7 @@ function loadFolderView(): 'cards' | 'list' {
  */
 @Component({
   selector: 'app-folders-page',
-  imports: [AccountBadge, MenuButton, PageLoading, BackButton, AssetViewer, Icon, RouterLink],
+  imports: [AccountBadge, MenuButton, PageLoading, BackButton, AssetViewer, Icon, RouterLink, LoadError],
   templateUrl: './folders-page.html',
   styleUrl: './folders-page.scss',
 })
@@ -50,6 +51,7 @@ export class FoldersPage implements OnInit {
   readonly listing = signal<FolderListing | null>(null);
   readonly viewerIndex = signal<number | null>(null);
   readonly isLoaded = signal(false);
+  readonly loadFailed = signal(false);
   /** Card grid or full-name list; per-device preference. */
   readonly folderView = signal<'cards' | 'list'>(loadFolderView());
 
@@ -114,23 +116,34 @@ export class FoldersPage implements OnInit {
     return (this.listing()?.assets ?? []).map((asset) => this.toTimelineAsset(asset));
   }
 
-  private async load(rootId: string | null, path: string): Promise<void> {
-    if (rootId) {
-      this.listing.set(await this.api.browse(rootId, path));
-    } else {
-      const { roots } = await this.api.listRoots();
-      // One root: skip the pointless top level and jump straight in.
-      if (roots.length === 1) {
-        void this.router.navigate([], {
-          queryParams: { root: roots[0].rootId, path: '' },
-          replaceUrl: true,
-        });
-        return;
+  /** Re-run the load for the current URL — wired to the load-error retry. */
+  protected reload(): void {
+    const params = this.route.snapshot.queryParamMap;
+    void this.load(params.get('root'), params.get('path') ?? '');
+  }
+
+  protected async load(rootId: string | null, path: string): Promise<void> {
+    this.loadFailed.set(false);
+    try {
+      if (rootId) {
+        this.listing.set(await this.api.browse(rootId, path));
+      } else {
+        const { roots } = await this.api.listRoots();
+        // One root: skip the pointless top level and jump straight in.
+        if (roots.length === 1) {
+          void this.router.navigate([], {
+            queryParams: { root: roots[0].rootId, path: '' },
+            replaceUrl: true,
+          });
+          return;
+        }
+        this.roots.set(roots);
+        this.listing.set(null);
       }
-      this.roots.set(roots);
-      this.listing.set(null);
+      this.isLoaded.set(true);
+    } catch {
+      this.loadFailed.set(true);
     }
-    this.isLoaded.set(true);
   }
 
   private toTimelineAsset(asset: FolderAsset): TimelineAsset {

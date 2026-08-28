@@ -1,7 +1,9 @@
 <app-topbar />
 
 <main class="people">
-  @if (!isLoaded()) {
+  @if (loadFailed()) {
+    <app-load-error message="Couldn't load people." (retry)="load()" />
+  } @else if (!isLoaded()) {
     <app-page-loading label="Loading people…" />
   }
   @if (isLoaded() && people().length === 0) {

@@ -112,6 +112,8 @@
         </div>
       </section>
     }
+  } @else if (loadFailed()) {
+    <app-load-error message="Couldn’t load the cleanup advisor." (retry)="load()" />
   } @else {
     <app-page-loading label="Sizing things up…" />
   }
@@ -146,8 +148,8 @@
       </label>
       <div class="actions">
         <button type="button" class="ghost" (click)="convertTarget.set(null)">Cancel</button>
-        <button type="button" class="primary" (click)="confirmConvert()">
-          Convert to {{ convertCodec === 'hevc' ? 'HEVC' : 'H.264' }}
+        <button type="button" class="primary" [disabled]="isConverting()" (click)="confirmConvert()">
+          {{ isConverting() ? 'Starting…' : 'Convert to ' + (convertCodec === 'hevc' ? 'HEVC' : 'H.264') }}
         </button>
       </div>
     </div>

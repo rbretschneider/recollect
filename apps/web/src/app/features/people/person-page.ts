@@ -11,6 +11,8 @@ import { AccountBadge } from '../../shared/account-badge';
 import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
 import { PageLoading } from '../../shared/page-loading';
+import { LoadError } from '../../shared/load-error';
+import { ToastService } from '../../shared/toast.service';
 import { EditToggle } from '../../shared/edit-toggle';
 
 import { AssetViewer } from '../viewer/asset-viewer';
@@ -19,7 +21,7 @@ import { AssetViewer } from '../viewer/asset-viewer';
  *  cluster — split wrong faces out, ignore junk, merge duplicates, hide. */
 @Component({
   selector: 'app-person-page',
-  imports: [AccountBadge, MenuButton, PageLoading, BackButton, AssetViewer, EditToggle, FormsModule, RouterLink],
+  imports: [AccountBadge, MenuButton, PageLoading, BackButton, AssetViewer, EditToggle, FormsModule, RouterLink, LoadError],
   templateUrl: './person-page.html',
   styleUrl: './person-page.scss',
 })
@@ -29,10 +31,12 @@ export class PersonPage implements OnInit {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStateService);
   private readonly confirms = inject(ConfirmService);
+  private readonly toasts = inject(ToastService);
   protected readonly editMode = inject(EditModeService);
 
   readonly person = signal<PersonSummary | null>(null);
   readonly isLoaded = signal(false);
+  readonly loadFailed = signal(false);
   readonly everyone = signal<PersonSummary[]>([]);
   readonly faces = signal<PersonFace[]>([]);
   readonly assetIds = signal<string[]>([]);
@@ -89,11 +93,20 @@ export class PersonPage implements OnInit {
   async saveName(): Promise<void> {
     const person = this.person();
     const name = this.nameDraft.trim();
-    if (!person || name.length === 0 || name === person.name) {
+    if (!person || name.length === 0 || name === person.name || this.isBusy()) {
       return;
     }
     const wasUnnamed = person.name === null;
-    await this.api.rename(person.id, name);
+    this.isBusy.set(true);
+    try {
+      await this.api.rename(person.id, name);
+    } catch {
+      // Don't flash "Saved ✓" — keep the name editable so they can retry.
+      this.toasts.error("Couldn't save the name.", { label: 'Retry', run: () => void this.saveName() });
+      return;
+    } finally {
+      this.isBusy.set(false);
+    }
     this.person.set({ ...person, name });
     this.nameQuery.set('');
     this.saveState.set('saved');
@@ -145,6 +158,8 @@ export class PersonPage implements OnInit {
       await this.api.setCoverFace(person.id, faceId);
       this.selectedFaceIds.set(new Set());
       await this.load();
+    } catch {
+      this.toasts.error("Couldn't set the avatar.");
     } finally {
       this.isBusy.set(false);
     }
@@ -162,6 +177,8 @@ export class PersonPage implements OnInit {
       await this.api.removeFaces(person.id, faceIds);
       this.selectedFaceIds.set(new Set());
       await this.load();
+    } catch {
+      this.toasts.error("Couldn't remove those faces.");
     } finally {
       this.isBusy.set(false);
     }
@@ -186,6 +203,8 @@ export class PersonPage implements OnInit {
     try {
       await this.api.mergeInto(person.id, target.id);
       await this.router.navigate(['/people', target.id]);
+    } catch {
+      this.toasts.error("Couldn't merge these people.");
     } finally {
       this.isBusy.set(false);
     }
@@ -204,8 +223,12 @@ export class PersonPage implements OnInit {
     if (!confirmed) {
       return;
     }
-    await this.api.hide(person.id);
-    await this.router.navigateByUrl('/people');
+    try {
+      await this.api.hide(person.id);
+      await this.router.navigateByUrl('/people');
+    } catch {
+      this.toasts.error("Couldn't hide this person.");
+    }
   }
 
   openViewer(index: number): void {
@@ -227,23 +250,28 @@ export class PersonPage implements OnInit {
     this.assetIds().map((id) => toViewerAsset(id)),
   );
 
-  private async load(): Promise<void> {
+  protected async load(): Promise<void> {
     const personId = this.route.snapshot.paramMap.get('id');
     if (!personId) {
       return;
     }
+    this.loadFailed.set(false);
     this.selectedFaceIds.set(new Set());
-    const [{ people }, { assetIds }, { faces }] = await Promise.all([
-      this.api.list(),
-      this.api.getAssets(personId),
-      this.api.getFaces(personId),
-    ]);
-    const person = people.find((candidate) => candidate.id === personId) ?? null;
-    this.person.set(person);
-    this.everyone.set(people);
-    this.nameDraft = person?.name ?? '';
-    this.assetIds.set(assetIds);
-    this.faces.set(faces);
-    this.isLoaded.set(true);
+    try {
+      const [{ people }, { assetIds }, { faces }] = await Promise.all([
+        this.api.list(),
+        this.api.getAssets(personId),
+        this.api.getFaces(personId),
+      ]);
+      const person = people.find((candidate) => candidate.id === personId) ?? null;
+      this.person.set(person);
+      this.everyone.set(people);
+      this.nameDraft = person?.name ?? '';
+      this.assetIds.set(assetIds);
+      this.faces.set(faces);
+      this.isLoaded.set(true);
+    } catch {
+      this.loadFailed.set(true);
+    }
   }
 }

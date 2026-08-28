@@ -10,6 +10,8 @@ import { BackButton } from '../../shared/back-button';
 import { ConfirmService } from '../../shared/confirm.service';
 import { FolderPicker } from '../../shared/folder-picker';
 import { PageLoading } from '../../shared/page-loading';
+import { LoadError } from '../../shared/load-error';
+import { ToastService } from '../../shared/toast.service';
 import { Sheet } from '../../shared/sheet';
 
 const STATUS_POLL_MS = 2500;
@@ -36,7 +38,7 @@ const JOB_LABELS: Record<string, string> = {
  */
 @Component({
   selector: 'app-library-page',
-  imports: [AccountBadge, MenuButton, BackButton, FolderPicker, FormsModule, PageLoading, RouterLink, Sheet],
+  imports: [AccountBadge, MenuButton, BackButton, FolderPicker, FormsModule, PageLoading, LoadError, RouterLink, Sheet],
   templateUrl: './library-page.html',
   styleUrl: './library-page.scss',
 })
@@ -45,11 +47,13 @@ export class LibraryPage implements OnInit {
   private readonly auth = inject(AuthStateService);
   private readonly confirms = inject(ConfirmService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly toasts = inject(ToastService);
 
   readonly roots = signal<LibraryRootView[]>([]);
   readonly status = signal<LibraryStatus | null>(null);
   readonly failures = signal<LibraryFailure[] | null>(null);
   readonly isLoaded = signal(false);
+  readonly loadFailed = signal(false);
   readonly isAddingFolder = signal(false);
   readonly justQueuedRootId = signal<string | null>(null);
   readonly isCancelling = signal(false);
@@ -121,8 +125,17 @@ export class LibraryPage implements OnInit {
 
   async scanNow(root: LibraryRootView): Promise<void> {
     this.justQueuedRootId.set(root.id);
-    await this.api.rescan(root.id);
-    await this.pollStatus();
+    try {
+      await this.api.rescan(root.id);
+      await this.pollStatus();
+    } catch {
+      // Don't strand the row on "Scanning…" when the queue call never landed.
+      this.justQueuedRootId.set(null);
+      this.toasts.error(`Couldn't start a scan of “${root.name}”.`, {
+        label: 'Retry',
+        run: () => void this.scanNow(root),
+      });
+    }
   }
 
   /** Cancels queued indexing work; running files finish, rescan redoes the rest. */
@@ -148,10 +161,21 @@ export class LibraryPage implements OnInit {
 
   /** Saves on every control change (three-signal: the Saved ✓ chip flashes). */
   async saveSchedule(): Promise<void> {
-    const view = await this.api.setSchedule({ ...this.scheduleDraft });
-    this.scheduleView.set(view);
-    this.scheduleJustSaved.set(true);
-    setTimeout(() => this.scheduleJustSaved.set(false), 2000);
+    try {
+      // Confirm the save landed before flashing "Saved ✓".
+      const view = await this.api.setSchedule({ ...this.scheduleDraft });
+      this.scheduleView.set(view);
+      this.scheduleJustSaved.set(true);
+      setTimeout(() => this.scheduleJustSaved.set(false), 2000);
+    } catch {
+      // Roll the controls back to the last saved schedule so the UI doesn't
+      // claim a change that didn't take.
+      const saved = this.scheduleView()?.schedule;
+      if (saved) {
+        this.scheduleDraft = { ...saved };
+      }
+      this.toasts.error("Couldn't save the scan schedule.");
+    }
   }
 
   formatNextRun(iso: string): string {
@@ -165,8 +189,15 @@ export class LibraryPage implements OnInit {
   }
 
   async toggleEnabled(root: LibraryRootView): Promise<void> {
-    const { root: updated } = await this.api.setRootEnabled(root.id, !root.enabled);
-    this.roots.update((list) => list.map((entry) => (entry.id === updated.id ? updated : entry)));
+    try {
+      const { root: updated } = await this.api.setRootEnabled(root.id, !root.enabled);
+      this.roots.update((list) => list.map((entry) => (entry.id === updated.id ? updated : entry)));
+    } catch {
+      this.toasts.error(
+        `Couldn't ${root.enabled ? 'pause' : 'resume'} “${root.name}”.`,
+        { label: 'Retry', run: () => void this.toggleEnabled(root) },
+      );
+    }
   }
 
   /** Unregisters a folder. Files on disk are never touched. */
@@ -180,8 +211,18 @@ export class LibraryPage implements OnInit {
     if (!confirmed) {
       return;
     }
-    await this.api.removeRoot(root.id);
-    this.roots.update((list) => list.filter((entry) => entry.id !== root.id));
+    try {
+      // Await removal before dropping the card, so a failed call keeps the
+      // folder visible instead of pretending it's gone.
+      await this.api.removeRoot(root.id);
+      this.roots.update((list) => list.filter((entry) => entry.id !== root.id));
+      this.toasts.success(`Removed “${root.name}”`);
+    } catch {
+      this.toasts.error(`Couldn't remove “${root.name}”.`, {
+        label: 'Retry',
+        run: () => void this.removeRoot(root),
+      });
+    }
   }
 
   async toggleFailures(): Promise<void> {
@@ -213,15 +254,20 @@ export class LibraryPage implements OnInit {
     }).format(new Date(root.lastScanCompletedAt))}`;
   }
 
-  private async reload(): Promise<void> {
-    const [{ roots }] = await Promise.all([this.api.listRoots(), this.pollStatus()]);
-    this.roots.set(roots);
-    if (this.isAdmin) {
-      const view = await this.api.getSchedule();
-      this.scheduleView.set(view);
-      this.scheduleDraft = { ...view.schedule };
+  protected async reload(): Promise<void> {
+    this.loadFailed.set(false);
+    try {
+      const [{ roots }] = await Promise.all([this.api.listRoots(), this.pollStatus()]);
+      this.roots.set(roots);
+      if (this.isAdmin) {
+        const view = await this.api.getSchedule();
+        this.scheduleView.set(view);
+        this.scheduleDraft = { ...view.schedule };
+      }
+      this.isLoaded.set(true);
+    } catch {
+      this.loadFailed.set(true);
     }
-    this.isLoaded.set(true);
   }
 
   private async pollStatus(): Promise<void> {

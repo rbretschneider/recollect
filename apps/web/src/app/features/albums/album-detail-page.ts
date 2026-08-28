@@ -17,6 +17,8 @@ import { AccountBadge } from '../../shared/account-badge';
 import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
 import { PageLoading } from '../../shared/page-loading';
+import { LoadError } from '../../shared/load-error';
+import { ToastService } from '../../shared/toast.service';
 import { ConfirmService } from '../../shared/confirm.service';
 import { EditToggle } from '../../shared/edit-toggle';
 import { GuestLinkButton } from '../../shared/guest-link-button';
@@ -39,6 +41,7 @@ import { AssetViewer } from '../viewer/asset-viewer';
     FormsModule,
     GuestLinkButton,
     Icon,
+    LoadError,
     RouterLink,
     ShareButton,
     Sheet,
@@ -56,9 +59,11 @@ export class AlbumDetailPage implements OnInit {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStateService);
   private readonly confirms = inject(ConfirmService);
+  private readonly toasts = inject(ToastService);
   protected readonly editMode = inject(EditModeService);
 
   readonly detail = signal<AlbumDetail | null>(null);
+  readonly loadFailed = signal(false);
   readonly viewerAssets = signal<TimelineAsset[]>([]);
   readonly viewerIndex = signal<number | null>(null);
   readonly isDownloadSheetOpen = signal(false);
@@ -122,8 +127,12 @@ export class AlbumDetailPage implements OnInit {
     if (!detail) {
       return;
     }
-    await this.api.removeAsset(detail.id, assetId);
-    this.detail.set({ ...detail, assetIds: detail.assetIds.filter((id) => id !== assetId) });
+    try {
+      await this.api.removeAsset(detail.id, assetId);
+      this.detail.set({ ...detail, assetIds: detail.assetIds.filter((id) => id !== assetId) });
+    } catch {
+      this.toasts.error("Couldn't remove that photo from the album.");
+    }
   }
 
   downloadZip(): void {
@@ -193,6 +202,8 @@ export class AlbumDetailPage implements OnInit {
     try {
       const { memoryId } = await this.memoriesApi.createMemory(title, ids);
       await this.router.navigate(['/memories', memoryId], { queryParams: { new: 1 } });
+    } catch {
+      this.toasts.error("Couldn't create the memory.");
     } finally {
       this.isCreatingMemory.set(false);
     }
@@ -211,8 +222,12 @@ export class AlbumDetailPage implements OnInit {
     if (!confirmed) {
       return;
     }
-    await this.api.remove(detail.id);
-    await this.router.navigateByUrl('/albums');
+    try {
+      await this.api.remove(detail.id);
+      await this.router.navigateByUrl('/albums');
+    } catch {
+      this.toasts.error("Couldn't delete the album.");
+    }
   }
 
   previewUrl(uploadId: string): string {
@@ -224,6 +239,9 @@ export class AlbumDetailPage implements OnInit {
     try {
       await this.contributionsApi.approve(ids);
       await this.refreshAfterReview();
+      this.toasts.success(ids.length === 1 ? 'Photo approved.' : `${ids.length} photos approved.`);
+    } catch {
+      this.toasts.error("Couldn't approve those photos.");
     } finally {
       this.reviewBusy.set(false);
     }
@@ -234,6 +252,9 @@ export class AlbumDetailPage implements OnInit {
     try {
       await this.contributionsApi.reject(ids);
       await this.refreshAfterReview();
+      this.toasts.success(ids.length === 1 ? 'Photo rejected.' : `${ids.length} photos rejected.`);
+    } catch {
+      this.toasts.error("Couldn't reject those photos.");
     } finally {
       this.reviewBusy.set(false);
     }
@@ -259,11 +280,20 @@ export class AlbumDetailPage implements OnInit {
     this.viewerAssets.set([]);
   }
 
-  private async load(): Promise<void> {
+  protected async load(): Promise<void> {
     const albumId = this.route.snapshot.paramMap.get('id');
     if (!albumId) {
       return;
     }
+    this.loadFailed.set(false);
+    try {
+      await this.loadInner(albumId);
+    } catch {
+      this.loadFailed.set(true);
+    }
+  }
+
+  private async loadInner(albumId: string): Promise<void> {
     this.detail.set(await this.api.get(albumId));
     if (this.canWrite) {
       const [{ uploads }, shares, guests] = await Promise.all([

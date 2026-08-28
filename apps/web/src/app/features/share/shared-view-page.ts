@@ -6,11 +6,13 @@ import { SharedView, TimelineAsset, toViewerAsset } from '../../core/api/api-mod
 import { SlideItem, SlideshowOverlay } from '../dashboard/slideshow-overlay';
 import { AssetViewer } from '../viewer/asset-viewer';
 import { Icon } from '../../shared/icon';
+import { PageLoading } from '../../shared/page-loading';
+import { LoadError } from '../../shared/load-error';
 
 /** The public page behind a share link. No account, no navigation chrome. */
 @Component({
   selector: 'app-shared-view-page',
-  imports: [AssetViewer, SlideshowOverlay, Icon],
+  imports: [AssetViewer, SlideshowOverlay, Icon, PageLoading, LoadError],
   templateUrl: './shared-view-page.html',
   styleUrl: './shared-view-page.scss',
 })
@@ -19,7 +21,10 @@ export class SharedViewPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
 
   readonly view = signal<SharedView | null>(null);
+  /** The link is really gone — expired or revoked (404/410/403). */
   readonly isUnavailable = signal(false);
+  /** A transient load failure (network/server) that a retry might fix. */
+  readonly loadFailed = signal(false);
   readonly viewerIndex = signal<number | null>(null);
 
   token = '';
@@ -156,11 +161,21 @@ export class SharedViewPage implements OnInit {
     this.viewerIndex.set(null);
   }
 
-  private async load(): Promise<void> {
+  protected async load(): Promise<void> {
+    this.loadFailed.set(false);
+    this.isUnavailable.set(false);
     try {
       this.view.set(await this.api.getShared(this.token));
-    } catch {
-      this.isUnavailable.set(true);
+    } catch (error) {
+      const status = (error as { status?: number })?.status;
+      // A definitively-gone link (expired/revoked/forbidden) reads as
+      // "no longer available". Everything else — network drops, 5xx, timeouts —
+      // is a transient hiccup the viewer can retry, not a dead link.
+      if (status === 403 || status === 404 || status === 410) {
+        this.isUnavailable.set(true);
+      } else {
+        this.loadFailed.set(true);
+      }
     }
   }
 }

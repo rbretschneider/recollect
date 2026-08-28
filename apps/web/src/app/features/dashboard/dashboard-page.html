@@ -6,11 +6,13 @@
     <p>{{ todayLabel }}</p>
   </header>
 
-  @if (!isLoaded()) {
+  @if (photosPending()) {
     <app-page-loading label="Gathering your day…" />
   }
 
-  @if (isLoaded() && onThisDay().length === 0 && suggestions().length === 0 && recentMemories().length === 0 && recentlyAdded().length === 0) {
+  @if (loadFailed()) {
+    <app-load-error message="Couldn’t reach your library just now." (retry)="load()" />
+  } @else if (allLoaded() && onThisDay().length === 0 && suggestions().length === 0 && recentMemories().length === 0 && recentlyAdded().length === 0) {
     <section class="empty">
       <h2>Nothing here yet</h2>
       <p>As your library grows, this page fills with photos from past years and fresh memories.</p>

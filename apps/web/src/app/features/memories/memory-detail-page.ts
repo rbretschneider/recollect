@@ -22,6 +22,8 @@ import { AccountBadge } from '../../shared/account-badge';
 import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
 import { PageLoading } from '../../shared/page-loading';
+import { LoadError } from '../../shared/load-error';
+import { ToastService } from '../../shared/toast.service';
 import { ConfirmService } from '../../shared/confirm.service';
 import { EditToggle } from '../../shared/edit-toggle';
 import { Icon } from '../../shared/icon';
@@ -35,7 +37,7 @@ const JOURNAL_AUTOSAVE_MS = 1500;
 /** One Memory: hero, editable title, media grid, and the journal. */
 @Component({
   selector: 'app-memory-detail-page',
-  imports: [AccountBadge, MenuButton, PageLoading, BackButton,
+  imports: [AccountBadge, MenuButton, PageLoading, LoadError, BackButton,
     AssetViewer,
     SlideshowOverlay,
     EditToggle,
@@ -56,6 +58,7 @@ export class MemoryDetailPage implements OnInit {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStateService);
   private readonly confirms = inject(ConfirmService);
+  private readonly toasts = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly editMode = inject(EditModeService);
 
@@ -63,11 +66,12 @@ export class MemoryDetailPage implements OnInit {
   private readonly editor = viewChild<ElementRef<HTMLTextAreaElement>>('editor');
 
   readonly detail = signal<MemoryDetail | null>(null);
+  readonly loadFailed = signal(false);
   readonly viewerAssets = signal<TimelineAsset[]>([]);
   readonly viewerIndex = signal<number | null>(null);
   readonly isEditingTitle = signal(false);
   readonly journalDraft = signal('');
-  readonly saveState = signal<'idle' | 'saving' | 'saved'>('idle');
+  readonly saveState = signal<'idle' | 'saving' | 'saved' | 'error'>('idle');
   titleDraft = '';
   quoteTextDraft = '';
   quoteSaidByDraft = '';
@@ -435,23 +439,28 @@ export class MemoryDetailPage implements OnInit {
     this.viewerAssets.update((assets) => assets.filter((asset) => asset.id !== assetId));
   }
 
-  private async load(): Promise<void> {
+  protected async load(): Promise<void> {
     const memoryId = this.route.snapshot.paramMap.get('id');
     if (!memoryId) {
       return;
     }
-    const detail = await this.api.getMemory(memoryId);
-    this.detail.set(detail);
-    this.journalDraft.set(
-      detail.journal.find((entry) => entry.authorUserId === this.auth.user()?.id)?.bodyMd ?? '',
-    );
-    // Existing writing must be fully visible, not clipped at the min height.
-    setTimeout(() => {
-      const element = this.editor()?.nativeElement;
-      if (element) {
-        this.autoGrow(element);
-      }
-    });
+    this.loadFailed.set(false);
+    try {
+      const detail = await this.api.getMemory(memoryId);
+      this.detail.set(detail);
+      this.journalDraft.set(
+        detail.journal.find((entry) => entry.authorUserId === this.auth.user()?.id)?.bodyMd ?? '',
+      );
+      // Existing writing must be fully visible, not clipped at the min height.
+      setTimeout(() => {
+        const element = this.editor()?.nativeElement;
+        if (element) {
+          this.autoGrow(element);
+        }
+      });
+    } catch {
+      this.loadFailed.set(true);
+    }
   }
 
   private async saveJournal(): Promise<void> {
@@ -459,8 +468,14 @@ export class MemoryDetailPage implements OnInit {
     if (!detail) {
       return;
     }
-    await this.api.writeJournal(detail.id, this.journalDraft());
-    this.saveState.set('saved');
+    try {
+      await this.api.writeJournal(detail.id, this.journalDraft());
+      this.saveState.set('saved');
+    } catch {
+      // Never leave the byline stuck on "Saving…" over unsaved text.
+      this.saveState.set('error');
+      this.toasts.error('Couldn’t save your journal.', { label: 'Retry', run: () => void this.saveJournal() });
+    }
   }
 
   private flushJournalSave(): void {

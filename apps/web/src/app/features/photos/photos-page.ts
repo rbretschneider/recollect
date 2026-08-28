@@ -23,6 +23,7 @@ import { ActivitySpinner } from '../../shared/activity-spinner';
 import { AccountBadge } from '../../shared/account-badge';
 import { Brand } from '../../shared/brand';
 import { ConfirmService } from '../../shared/confirm.service';
+import { ToastService } from '../../shared/toast.service';
 import { Icon } from '../../shared/icon';
 import { LongPressDirective } from '../../shared/long-press.directive';
 import { AssetViewer } from '../viewer/asset-viewer';
@@ -83,6 +84,7 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStateService);
   private readonly confirms = inject(ConfirmService);
+  private readonly toasts = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
   private undoTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -393,9 +395,30 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
       return;
     }
     this.cancelSelecting();
+    await this.trashWithUndo(ids);
+  }
+
+  /**
+   * Moves photos to Trash with an optimistic removal for an instant response,
+   * restoring the true grid state and surfacing a retry if the call fails — so
+   * photos are never silently "gone from the grid but not actually trashed."
+   */
+  private async trashWithUndo(ids: string[]): Promise<void> {
+    const removed = this.items().filter((item) => ids.includes(item.id));
     this.items.update((list) => list.filter((item) => !ids.includes(item.id)));
-    await this.trashApi.trashAssets(ids);
-    this.showUndo(ids);
+    try {
+      await this.trashApi.trashAssets(ids);
+      this.showUndo(ids);
+    } catch {
+      // Re-insert in timeline order (capturedAt desc) so the grid is coherent.
+      this.items.update((list) =>
+        [...list, ...removed].sort((a, b) => (a.capturedAt < b.capturedAt ? 1 : -1)),
+      );
+      this.toasts.error(
+        `Couldn’t move ${ids.length === 1 ? 'that photo' : 'those photos'} to Trash.`,
+        { label: 'Retry', run: () => void this.trashWithUndo(ids) },
+      );
+    }
   }
 
   async undoDelete(): Promise<void> {
@@ -449,6 +472,12 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
       if (page.nextCursor === null) {
         this.isComplete.set(true);
       }
+    } catch {
+      // Don't dead-end the scroll silently — offer a retry.
+      this.toasts.error('Couldn’t load more photos.', {
+        label: 'Retry',
+        run: () => void this.loadMore(),
+      });
     } finally {
       this.isLoading.set(false);
     }

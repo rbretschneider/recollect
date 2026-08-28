@@ -12,7 +12,11 @@
 </header>
 
 <main class="places">
-  @if (!isLoaded()) {
+  @if (loadFailed()) {
+    @if (!selectedLabel()) {
+      <app-load-error message="Couldn't load places." (retry)="load()" />
+    }
+  } @else if (!isLoaded()) {
     <app-page-loading label="Loading places…" />
   }
 

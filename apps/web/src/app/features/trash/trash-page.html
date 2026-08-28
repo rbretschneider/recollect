@@ -7,7 +7,9 @@
 </header>
 
 <main class="trash">
-  @if (!isLoaded()) {
+  @if (loadFailed()) {
+    <app-load-error message="Couldn’t load Trash." (retry)="reload()" />
+  } @else if (!isLoaded()) {
     <app-page-loading label="Loading trash…" />
   }
   @if (isLoaded() && items().length === 0) {
@@ -24,7 +26,9 @@
         <h3>{{ item.fileName }}</h3>
         <p>Deletes forever in {{ daysUntilPurge(item) }} days</p>
       </div>
-      <button type="button" (click)="restore(item)">Restore</button>
+      <button type="button" [disabled]="restoringId() === item.assetId" (click)="restore(item)">
+        {{ restoringId() === item.assetId ? 'Restoring…' : 'Restore' }}
+      </button>
     </article>
   }
 </main>

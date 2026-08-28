@@ -554,6 +554,10 @@
     .muted {
       opacity: 0.8;
     }
+
+    .save-error {
+      color: var(--danger);
+    }
   }
 }
 

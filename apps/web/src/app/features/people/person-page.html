@@ -10,7 +10,9 @@
 </header>
 
 <main class="person">
-  @if (!isLoaded()) {
+  @if (loadFailed()) {
+    <app-load-error message="Couldn't load this person." (retry)="load()" />
+  } @else if (!isLoaded()) {
     <app-page-loading label="Loading photos…" />
   }
   @if (person(); as p) {
@@ -43,7 +45,7 @@
           placeholder="Type a name — “Grandma”, “Emma”…"
           autocomplete="off"
         />
-        <button type="submit">Save name</button>
+        <button type="submit" [disabled]="isBusy()">Save name</button>
         @if (person()?.name === null) {
           <app-edit-toggle />
         }

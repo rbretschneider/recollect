@@ -92,6 +92,8 @@
             <span>Saving…</span>
           } @else if (saveState() === 'saved') {
             <span>Saved ✓</span>
+          } @else if (saveState() === 'error') {
+            <span class="save-error">Not saved — check your connection</span>
           } @else {
             <span class="muted">Autosaves as you type</span>
           }
@@ -275,6 +277,8 @@
       <button type="button" class="primary" (click)="applyGroupCaption()">Apply</button>
     </div>
   }
+} @else if (loadFailed()) {
+  <app-load-error message="Couldn’t load this memory." (retry)="load()" />
 } @else {
   <app-page-loading label="Loading memory…" />
 }

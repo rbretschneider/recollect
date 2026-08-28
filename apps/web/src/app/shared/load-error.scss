@@ -1,0 +1,32 @@
+.load-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+
+  .msg {
+    margin: 0;
+    max-width: 28rem;
+    color: var(--text-muted);
+    font-size: var(--fs-base);
+    line-height: 1.5;
+  }
+
+  .retry {
+    min-height: 44px;
+    padding: 0 var(--space-5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2);
+    background: var(--surface-raised);
+    color: var(--text);
+    font-size: var(--fs-base);
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--surface);
+    }
+  }
+}

@@ -19,6 +19,8 @@ import { AccountBadge } from '../../shared/account-badge';
 import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
 import { PageLoading } from '../../shared/page-loading';
+import { LoadError } from '../../shared/load-error';
+import { ToastService } from '../../shared/toast.service';
 import { SafeResourcePipe } from '../../shared/safe-resource.pipe';
 import { AssetViewer } from '../viewer/asset-viewer';
 
@@ -31,7 +33,7 @@ const PLACES_VIEW_KEY = 'recollect.placesView';
  */
 @Component({
   selector: 'app-places-page',
-  imports: [AccountBadge, Icon, MenuButton, BackButton, AssetViewer, PageLoading, SafeResourcePipe],
+  imports: [AccountBadge, Icon, MenuButton, BackButton, AssetViewer, PageLoading, SafeResourcePipe, LoadError],
   templateUrl: './places-page.html',
   styleUrl: './places-page.scss',
 })
@@ -39,9 +41,11 @@ export class PlacesPage implements OnInit, OnDestroy {
   private readonly api = inject(PlacesApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly toasts = inject(ToastService);
 
   readonly places = signal<PlaceView[]>([]);
   readonly isLoaded = signal(false);
+  readonly loadFailed = signal(false);
   readonly selectedLabel = signal<string | null>(null);
   readonly placeAssets = signal<TimelineAsset[]>([]);
   readonly isLoadingPlace = signal(false);
@@ -169,10 +173,15 @@ export class PlacesPage implements OnInit, OnDestroy {
     this.placeAssets.update((assets) => assets.filter((asset) => asset.id !== assetId));
   }
 
-  private async load(): Promise<void> {
-    const { places } = await this.api.list();
-    this.places.set(places);
-    this.isLoaded.set(true);
+  protected async load(): Promise<void> {
+    this.loadFailed.set(false);
+    try {
+      const { places } = await this.api.list();
+      this.places.set(places);
+      this.isLoaded.set(true);
+    } catch {
+      this.loadFailed.set(true);
+    }
   }
 
   private async loadPlace(label: string): Promise<void> {
@@ -184,6 +193,12 @@ export class PlacesPage implements OnInit, OnDestroy {
       if (this.selectedLabel() === label) {
         this.placeAssets.set(items);
       }
+    } catch {
+      // A failed place fetch shouldn't vanish silently into an empty grid.
+      this.toasts.error("Couldn't load photos for this place.", {
+        label: 'Retry',
+        run: () => void this.loadPlace(label),
+      });
     } finally {
       this.isLoadingPlace.set(false);
     }

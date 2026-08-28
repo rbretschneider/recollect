@@ -1,7 +1,9 @@
 <app-topbar />
 
 <main class="memories">
-  @if (!isLoaded()) {
+  @if (loadFailed()) {
+    <app-load-error message="Couldn’t load your memories." (retry)="reload()" />
+  } @else if (!isLoaded()) {
     <app-page-loading label="Loading memories…" />
   }
   @if (suggestionCount() > 0) {

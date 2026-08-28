@@ -178,7 +178,9 @@
       </label>
       <div class="actions">
         <button type="button" class="ghost" (click)="isAddingUser.set(false)">Cancel</button>
-        <button type="submit" class="primary">Create account</button>
+        <button type="submit" class="primary" [disabled]="isCreatingUser()">
+          {{ isCreatingUser() ? 'Creating…' : 'Create account' }}
+        </button>
       </div>
     </form>
   </app-sheet>
