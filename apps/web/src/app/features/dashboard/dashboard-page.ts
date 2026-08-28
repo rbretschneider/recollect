@@ -8,6 +8,7 @@ import { InboxSuggestion, MemorySummary, TimelineAsset } from '../../core/api/ap
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { AppTopbar } from '../../shared/app-topbar';
 import { PageLoading } from '../../shared/page-loading';
+import { Icon } from '../../shared/icon';
 import { AssetViewer } from '../viewer/asset-viewer';
 import { SlideshowOverlay, SlideItem } from './slideshow-overlay';
 
@@ -22,7 +23,7 @@ interface OnThisDayYear {
  */
 @Component({
   selector: 'app-dashboard-page',
-  imports: [AppTopbar, AssetViewer, PageLoading, RouterLink, SlideshowOverlay],
+  imports: [AppTopbar, AssetViewer, PageLoading, RouterLink, SlideshowOverlay, Icon],
   templateUrl: './dashboard-page.html',
   styleUrl: './dashboard-page.scss',
 })
