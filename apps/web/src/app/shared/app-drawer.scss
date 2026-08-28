@@ -205,11 +205,22 @@ footer {
   }
 }
 
-.install-hint {
-  margin: 0;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  line-height: 1.4;
+// The big friendly install button anchoring the drawer.
+.install-cta {
+  width: 100%;
+  min-height: 50px;
+  border: none;
+  border-radius: 0.8rem;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+
+  &:active {
+    transform: scale(0.98);
+  }
 }
 
 .items hr {

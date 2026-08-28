@@ -2,14 +2,15 @@ import { Component, inject } from '@angular/core';
 import { NavigationEnd, NavigationError, Router, RouterOutlet } from '@angular/router';
 import { AppUpdateService } from './core/app-update.service';
 import { ConfirmDrawer } from './shared/confirm-drawer';
+import { PwaInstall } from './shared/pwa-install';
 
 /** sessionStorage flag preventing a reload loop when recovery itself fails. */
 const RELOAD_GUARD_KEY = 'rc-chunk-reload';
 
 @Component({
-  imports: [ConfirmDrawer, RouterOutlet],
+  imports: [ConfirmDrawer, PwaInstall, RouterOutlet],
   selector: 'app-root',
-  template: '<router-outlet /><app-confirm-drawer />',
+  template: '<router-outlet /><app-confirm-drawer /><app-pwa-install />',
 })
 export class App {
   private readonly router = inject(Router);

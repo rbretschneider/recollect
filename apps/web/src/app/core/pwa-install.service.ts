@@ -1,53 +1,33 @@
 import { Injectable, signal } from '@angular/core';
 
-/** Chrome's deferred install prompt (not in the standard lib types). */
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
-
 /**
- * Captures the browser's PWA install prompt so the drawer can offer a real
- * "Install app" button. Chrome/Edge/Android fire beforeinstallprompt; iOS
- * Safari never does (there it's Share → Add to Home Screen).
+ * Bridge to the `<pwa-install>` web component (wrapped by PwaInstall,
+ * mounted once at the app root). The wrapper registers its element here;
+ * any UI — the drawer's "Install app" button — calls prompt() to open the
+ * guided dialog: a native install prompt on Chromium/Android, an
+ * illustrated "Share → Add to Home Screen" walkthrough on iOS Safari.
  */
 @Injectable({ providedIn: 'root' })
 export class PwaInstallService {
-  private deferredPrompt: BeforeInstallPromptEvent | null = null;
+  private element: {
+    showDialog: (forced?: boolean) => void;
+    isUnderStandaloneMode?: boolean;
+  } | null = null;
 
-  /** True while the browser is offering installation and we've captured it. */
-  readonly canInstall = signal(false);
+  /** True when an install can be offered — false once already installed. */
+  readonly canPrompt = signal(false);
 
-  /** True when already running as an installed app. */
-  get isStandalone(): boolean {
-    return (
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (navigator as { standalone?: boolean }).standalone === true
-    );
+  register(el: { showDialog: (forced?: boolean) => void; isUnderStandaloneMode?: boolean }): void {
+    this.element = el;
+    this.canPrompt.set(!el.isUnderStandaloneMode);
   }
 
-  constructor() {
-    window.addEventListener('beforeinstallprompt', (event) => {
-      event.preventDefault();
-      this.deferredPrompt = event as BeforeInstallPromptEvent;
-      this.canInstall.set(true);
-    });
-    window.addEventListener('appinstalled', () => {
-      this.deferredPrompt = null;
-      this.canInstall.set(false);
-    });
+  /** Opens the install helper, even after a prior dismissal. */
+  prompt(): void {
+    this.element?.showDialog(true);
   }
 
-  async install(): Promise<void> {
-    const prompt = this.deferredPrompt;
-    if (!prompt) {
-      return;
-    }
-    await prompt.prompt();
-    const { outcome } = await prompt.userChoice;
-    if (outcome === 'accepted') {
-      this.deferredPrompt = null;
-      this.canInstall.set(false);
-    }
+  markInstalled(): void {
+    this.canPrompt.set(false);
   }
 }

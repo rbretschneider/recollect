@@ -98,12 +98,10 @@
   }
 
   <footer>
-    @if (pwa.canInstall()) {
-      <button type="button" class="outline" (click)="pwa.install()">Install app</button>
-    } @else if (!pwa.isStandalone) {
-      <p class="install-hint">
-        Install: your browser's menu → “Add to Home Screen”.
-      </p>
+    @if (pwa.canPrompt()) {
+      <button type="button" class="install-cta" (click)="pwa.prompt(); closed.emit()">
+        📲 Install the app
+      </button>
     }
   </footer>
 </aside>
