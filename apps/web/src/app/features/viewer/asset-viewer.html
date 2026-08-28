@@ -147,7 +147,13 @@
             @if (info.takenBy) {
               <div>
                 <dt>Taken by</dt>
-                <dd>{{ info.takenBy }}</dd>
+                <dd>
+                  @if (info.takenByPersonId) {
+                    <a [routerLink]="['/people', info.takenByPersonId]">{{ info.takenBy }}</a>
+                  } @else {
+                    {{ info.takenBy }}
+                  }
+                </dd>
               </div>
             }
             @if (info.cameraMake || info.cameraModel) {

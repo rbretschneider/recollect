@@ -78,6 +78,8 @@ export interface AssetDetail {
   lensModel: string | null;
   /** Who took it, per the camera→owner mapping in Settings. */
   takenBy: string | null;
+  /** The mapped person's id, so "Taken by" can link to their page. */
+  takenByPersonId: string | null;
   gpsLat: number | null;
   gpsLon: number | null;
   relPath: string | null;
@@ -262,7 +264,7 @@ export class AssetsService {
     const [owner] =
       row.cameraMake !== null || row.cameraModel !== null
         ? await this.db
-            .select({ ownerName: person.name })
+            .select({ ownerName: person.name, ownerPersonId: person.id })
             .from(deviceOwner)
             .innerJoin(person, eq(person.id, deviceOwner.personId))
             .where(
@@ -285,6 +287,7 @@ export class AssetsService {
       cameraModel: row.cameraModel,
       lensModel: row.lensModel,
       takenBy: owner?.ownerName ?? null,
+      takenByPersonId: owner?.ownerPersonId ?? null,
       gpsLat: row.gpsLat,
       gpsLon: row.gpsLon,
       relPath: file?.relPath ?? null,

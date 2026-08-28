@@ -8,6 +8,17 @@ export interface UserProfile {
   permission: Permission;
   isAdmin: boolean;
   mustChangePassword: boolean;
+  /** Their face-recognized identity ("this account IS this person"), if linked. */
+  personId: string | null;
+}
+
+/** Admin edits to an existing member; every field optional. */
+export interface UpdateUserInput {
+  displayName?: string;
+  permission?: Permission;
+  isAdmin?: boolean;
+  /** null unlinks; undefined leaves as-is. */
+  personId?: string | null;
 }
 
 /** Input for creating a household member account. */

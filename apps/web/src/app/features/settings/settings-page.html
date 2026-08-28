@@ -92,15 +92,20 @@
       </div>
 
       @for (user of users(); track user.id) {
-        <div class="card row">
+        <div class="card row" [class.disabled-member]="user.disabled">
           <div class="info">
-            <h3>{{ user.displayName }}</h3>
+            <h3>{{ user.displayName }} @if (user.disabled) { <span class="off-chip">Disabled</span> }</h3>
             <p>{{ user.email }}</p>
-            <p class="muted">{{ grantLabel(user) }}</p>
+            <p class="muted">
+              {{ grantLabel(user) }}
+              @if (personName(user.personId); as who) { · is {{ who }} }
+            </p>
           </div>
-          <button type="button" class="outline" (click)="startPasswordReset(user)">
-            Reset password
-          </button>
+          @if (user.disabled) {
+            <button type="button" class="outline" (click)="enableMember(user)">Enable</button>
+          } @else {
+            <button type="button" class="outline" (click)="startEditingMember(user)">Edit</button>
+          }
         </div>
       }
     </section>
@@ -137,6 +142,58 @@
       <div class="actions">
         <button type="button" class="ghost" (click)="isAddingUser.set(false)">Cancel</button>
         <button type="submit" class="primary">Create account</button>
+      </div>
+    </form>
+  </app-sheet>
+}
+
+@if (editingMember(); as target) {
+  <app-sheet [sheetTitle]="'Edit ' + target.displayName" (closed)="editingMember.set(null)">
+    <form class="member-form" (ngSubmit)="saveMemberEdits()">
+      <label>
+        Name
+        <input name="editName" [(ngModel)]="memberDraft.displayName" required />
+      </label>
+      <label>
+        Can they…
+        <select name="editPermission" [(ngModel)]="memberDraft.permission">
+          <option value="read">Look at photos (read only)</option>
+          <option value="write">Organize &amp; journal (read + write)</option>
+          <option value="delete">Everything, including delete</option>
+        </select>
+      </label>
+      <label class="check">
+        <input
+          name="editIsAdmin"
+          type="checkbox"
+          [(ngModel)]="memberDraft.isAdmin"
+          [disabled]="target.id === myId"
+        />
+        Admin (manage settings and members)
+      </label>
+      <label>
+        This account is…
+        <select name="editPerson" [(ngModel)]="memberDraft.personId">
+          <option [ngValue]="null">— not linked to a person —</option>
+          @for (candidate of namedPeople(); track candidate.id) {
+            <option [ngValue]="candidate.id">{{ candidate.name }}</option>
+          }
+        </select>
+        <span class="sub">Links the login to their face-recognized identity.</span>
+      </label>
+      <div class="actions">
+        <button type="button" class="ghost" (click)="editingMember.set(null)">Cancel</button>
+        <button type="button" class="outline" (click)="startPasswordReset(target); editingMember.set(null)">
+          Reset password
+        </button>
+        @if (target.id !== myId) {
+          <button type="button" class="outline danger" (click)="disableMember(target)">
+            Disable
+          </button>
+        }
+        <button type="submit" class="primary" [disabled]="isSavingMember()">
+          {{ isSavingMember() ? 'Saving…' : 'Save' }}
+        </button>
       </div>
     </form>
   </app-sheet>

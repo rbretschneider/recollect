@@ -6,7 +6,7 @@ import { Permission } from '../auth/permission';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
 import { userAccount } from '../database/schema';
-import { CreateUserInput, UserProfile } from './user.types';
+import { CreateUserInput, UpdateUserInput, UserProfile } from './user.types';
 
 /** Manages household member accounts. */
 @Injectable()
@@ -110,6 +110,38 @@ export class UsersService {
     return this.toProfile(row);
   }
 
+  /** Admin edit of an existing member (name, grants, person link). */
+  async update(userId: string, input: UpdateUserInput): Promise<UserProfile | null> {
+    const [row] = await this.db
+      .update(userAccount)
+      .set({
+        ...(input.displayName !== undefined ? { displayName: input.displayName } : {}),
+        ...(input.permission !== undefined ? { permission: input.permission } : {}),
+        ...(input.isAdmin !== undefined ? { isAdmin: input.isAdmin } : {}),
+        ...(input.personId !== undefined ? { personId: input.personId } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(userAccount.id, userId))
+      .returning();
+    this.invalidateProfile(userId);
+    return row ? this.toProfile(row) : null;
+  }
+
+  /** A disabled account can't sign in; its live sessions die within minutes. */
+  async setDisabled(userId: string, disabled: boolean): Promise<void> {
+    await this.db
+      .update(userAccount)
+      .set({ disabledAt: disabled ? new Date() : null, updatedAt: new Date() })
+      .where(eq(userAccount.id, userId));
+    this.invalidateProfile(userId);
+  }
+
+  /** Includes disabled accounts, flagged, for the admin members list. */
+  async listAll(): Promise<Array<UserProfile & { disabled: boolean }>> {
+    const rows = await this.db.select().from(userAccount).orderBy(userAccount.createdAt);
+    return rows.map((row) => ({ ...this.toProfile(row), disabled: row.disabledAt !== null }));
+  }
+
   private toProfile(row: typeof userAccount.$inferSelect): UserProfile {
     return {
       id: row.id,
@@ -118,6 +150,7 @@ export class UsersService {
       permission: row.permission as Permission,
       isAdmin: row.isAdmin,
       mustChangePassword: row.mustChangePassword,
+      personId: row.personId,
     };
   }
 }

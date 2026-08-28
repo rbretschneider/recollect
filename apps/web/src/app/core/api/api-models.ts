@@ -6,6 +6,9 @@ export interface UserProfile {
   permission: 'read' | 'write' | 'delete';
   isAdmin: boolean;
   mustChangePassword: boolean;
+  personId: string | null;
+  /** Present in the admin members list. */
+  disabled?: boolean;
 }
 
 /** Mirrors the server's TimelineAsset. */
@@ -67,6 +70,8 @@ export interface AssetDetail {
   lensModel: string | null;
   /** Who took it, per the camera→owner mapping in Settings. */
   takenBy: string | null;
+  /** The mapped person's id, so "Taken by" can link to their page. */
+  takenByPersonId: string | null;
   isFavorite: boolean;
   gpsLat: number | null;
   gpsLon: number | null;
@@ -179,7 +184,7 @@ export interface ShareLinkView {
 
 /** Mirrors the server's SharedView. */
 export interface SharedView {
-  targetType: 'memory' | 'album';
+  targetType: 'memory' | 'album' | 'asset';
   title: string;
   description: string | null;
   startAt: string | null;

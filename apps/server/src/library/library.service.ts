@@ -85,6 +85,42 @@ export class LibraryService {
     return this.toView(row);
   }
 
+  /**
+   * Unregisters a folder. Files on disk are NEVER touched; the root's file
+   * links cascade away and affected assets flip to missing (they come back
+   * whole if the folder is re-added and rescanned).
+   */
+  async removeRoot(rootId: string): Promise<{ affectedAssets: number }> {
+    const affected = await this.db
+      .select({ assetId: assetFile.assetId })
+      .from(assetFile)
+      .where(eq(assetFile.rootId, rootId));
+    const [deleted] = await this.db
+      .delete(libraryRoot)
+      .where(eq(libraryRoot.id, rootId))
+      .returning({ id: libraryRoot.id });
+    if (!deleted) {
+      throw new NotFoundException(`Library root ${rootId} does not exist.`);
+    }
+    const assetIds = [...new Set(affected.map((row) => row.assetId))];
+    if (assetIds.length > 0) {
+      // Set-based recompute: an asset stays active if ANY present file
+      // survives elsewhere; trashed beats missing.
+      await this.db.execute(sql`
+        update asset a set status = coalesce((
+          select case
+            when bool_or(f.state = 'present') then 'active'
+            when bool_or(f.state = 'trashed') then 'trashed'
+            else 'missing'
+          end
+          from asset_file f where f.asset_id = a.id
+        ), 'missing'), updated_at = now()
+        where a.id in ${sql.raw(`(${assetIds.map((id) => `'${id}'`).join(',')})`)}
+      `);
+    }
+    return { affectedAssets: assetIds.length };
+  }
+
   async enqueueScan(rootId: string): Promise<void> {
     const [row] = await this.db
       .select({ id: libraryRoot.id })

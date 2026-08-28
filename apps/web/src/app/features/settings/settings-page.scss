@@ -245,3 +245,28 @@ a.outline {
 .card.row .outline {
   flex-shrink: 0;
 }
+
+// Disabled members read as switched off, not gone.
+.card.row.disabled-member {
+  opacity: 0.65;
+}
+
+.off-chip {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 1rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 400;
+  vertical-align: middle;
+}
+
+.member-form .sub {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}

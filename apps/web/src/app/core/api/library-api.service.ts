@@ -53,6 +53,12 @@ export class LibraryApiService {
     return firstValueFrom(this.http.post<{ canceled: number }>('/api/v1/library/scan/cancel', {}));
   }
 
+  removeRoot(rootId: string): Promise<{ affectedAssets: number }> {
+    return firstValueFrom(
+      this.http.delete<{ affectedAssets: number }>(`/api/v1/library/roots/${rootId}`),
+    );
+  }
+
   setRootEnabled(rootId: string, enabled: boolean): Promise<{ root: LibraryRootView }> {
     return firstValueFrom(
       this.http.patch<{ root: LibraryRootView }>(`/api/v1/library/roots/${rootId}`, { enabled }),

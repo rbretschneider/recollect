@@ -106,6 +106,80 @@ export class SettingsPage implements OnInit {
     await this.router.navigateByUrl('/login');
   }
 
+  /** Member being edited (drives the edit sheet) and its working copy. */
+  readonly editingMember = signal<UserProfile | null>(null);
+  readonly isSavingMember = signal(false);
+  memberDraft: {
+    displayName: string;
+    permission: 'read' | 'write' | 'delete';
+    isAdmin: boolean;
+    personId: string | null;
+  } = { displayName: '', permission: 'write', isAdmin: false, personId: null };
+
+  get myId(): string {
+    return this.auth.user()?.id ?? '';
+  }
+
+  personName(personId: string | null | undefined): string | null {
+    if (!personId) {
+      return null;
+    }
+    return this.namedPeople().find((person) => person.id === personId)?.name ?? null;
+  }
+
+  startEditingMember(user: UserProfile): void {
+    this.memberDraft = {
+      displayName: user.displayName,
+      permission: user.permission,
+      isAdmin: user.isAdmin,
+      personId: user.personId,
+    };
+    this.editingMember.set(user);
+  }
+
+  async saveMemberEdits(): Promise<void> {
+    const target = this.editingMember();
+    if (!target || this.isSavingMember() || !this.memberDraft.displayName.trim()) {
+      return;
+    }
+    this.isSavingMember.set(true);
+    this.error.set(null);
+    try {
+      await this.usersApi.update(target.id, {
+        displayName: this.memberDraft.displayName.trim(),
+        permission: this.memberDraft.permission,
+        isAdmin: this.memberDraft.isAdmin,
+        personId: this.memberDraft.personId,
+      });
+      this.editingMember.set(null);
+      await this.reload();
+    } catch (error) {
+      this.error.set(this.messageFrom(error, 'Could not save those changes.'));
+    } finally {
+      this.isSavingMember.set(false);
+    }
+  }
+
+  async disableMember(user: UserProfile): Promise<void> {
+    const confirmed = await this.confirms.ask({
+      title: `Disable ${user.displayName}?`,
+      message:
+        'They are signed out everywhere and cannot sign in until re-enabled. Nothing they created is affected.',
+      confirmLabel: 'Disable',
+    });
+    if (!confirmed) {
+      return;
+    }
+    await this.usersApi.disable(user.id);
+    this.editingMember.set(null);
+    await this.reload();
+  }
+
+  async enableMember(user: UserProfile): Promise<void> {
+    await this.usersApi.enable(user.id);
+    await this.reload();
+  }
+
   startPasswordReset(user: UserProfile): void {
     this.resetPasswordDraft = '';
     this.resettingUser.set(user);

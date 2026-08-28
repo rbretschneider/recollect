@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -46,6 +47,14 @@ export class LibraryController {
   async scan(@Param('id', ParseUUIDPipe) id: string): Promise<{ accepted: true }> {
     await this.library.enqueueScan(id);
     return { accepted: true };
+  }
+
+  @RequireAdmin()
+  @Delete('roots/:id')
+  async removeRoot(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<{ affectedAssets: number }> {
+    return this.library.removeRoot(id);
   }
 
   @RequireAdmin()

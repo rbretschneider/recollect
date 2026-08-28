@@ -164,6 +164,21 @@ export class LibraryPage implements OnInit {
     this.roots.update((list) => list.map((entry) => (entry.id === updated.id ? updated : entry)));
   }
 
+  /** Unregisters a folder. Files on disk are never touched. */
+  async removeRoot(root: LibraryRootView): Promise<void> {
+    const confirmed = await this.confirms.ask({
+      title: `Remove “${root.name}”?`,
+      message:
+        'The folder stops being indexed and its photos show as missing here. NOTHING on disk is deleted — add the folder back any time and everything returns.',
+      confirmLabel: 'Remove folder',
+    });
+    if (!confirmed) {
+      return;
+    }
+    await this.api.removeRoot(root.id);
+    this.roots.update((list) => list.filter((entry) => entry.id !== root.id));
+  }
+
   async toggleFailures(): Promise<void> {
     if (this.failures() !== null) {
       this.failures.set(null);

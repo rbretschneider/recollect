@@ -176,6 +176,9 @@
             <button type="button" class="outline" (click)="toggleEnabled(root)">
               {{ root.enabled ? 'Pause' : 'Resume' }}
             </button>
+            <button type="button" class="outline danger" (click)="removeRoot(root)">
+              Remove
+            </button>
           </div>
         }
       </div>

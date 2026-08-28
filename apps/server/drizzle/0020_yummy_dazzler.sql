@@ -1,0 +1,1 @@
+ALTER TABLE "user_account" ADD COLUMN "person_id" uuid;

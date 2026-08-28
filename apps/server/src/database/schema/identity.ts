@@ -22,6 +22,12 @@ export const userAccount = pgTable(
     permission: text('permission').notNull().default('read'),
     isAdmin: boolean('is_admin').notNull().default(false),
     mustChangePassword: boolean('must_change_password').notNull().default(false),
+    /**
+     * "This account IS this person" — links the login to their face-recognized
+     * identity (plain uuid: person lives in another schema file, and a FK here
+     * would create a circular import).
+     */
+    personId: uuid('person_id'),
     disabledAt: timestamp('disabled_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
