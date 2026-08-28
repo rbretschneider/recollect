@@ -36,6 +36,13 @@ export class PeopleApiService {
     return firstValueFrom(this.http.patch<void>(`/api/v1/people/${personId}`, { name }));
   }
 
+  /** Admin: pin one of this person's faces as their avatar everywhere. */
+  setCoverFace(personId: string, faceId: string): Promise<void> {
+    return firstValueFrom(
+      this.http.put<void>(`/api/v1/people/${personId}/cover-face`, { faceId }),
+    );
+  }
+
   getFaces(personId: string): Promise<{ faces: PersonFace[] }> {
     return firstValueFrom(this.http.get<{ faces: PersonFace[] }>(`/api/v1/people/${personId}/faces`));
   }

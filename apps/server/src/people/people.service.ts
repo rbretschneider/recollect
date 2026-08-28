@@ -34,9 +34,14 @@ export class PeopleService {
     const result = await this.db.execute(sql`
       SELECT p.id, p.name,
              count(f.id) AS face_count,
-             (SELECT f2.id FROM face f2
-              WHERE f2.person_id = p.id AND f2.ignored = false
-              ORDER BY f2.quality DESC LIMIT 1) AS cover_face_id
+             coalesce(
+               -- The admin-chosen avatar wins, as long as it still belongs.
+               (SELECT f3.id FROM face f3
+                WHERE f3.id = p.cover_face_id AND f3.person_id = p.id AND f3.ignored = false),
+               (SELECT f2.id FROM face f2
+                WHERE f2.person_id = p.id AND f2.ignored = false
+                ORDER BY f2.quality DESC LIMIT 1)
+             ) AS cover_face_id
       FROM person p
       JOIN face f ON f.person_id = p.id AND f.ignored = false
       WHERE p.merged_into_id IS NULL AND p.hidden = false
@@ -176,6 +181,23 @@ export class PeopleService {
       ORDER BY a.captured_at DESC
     `);
     return result.rows.map((row) => row.asset_id as string);
+  }
+
+  /** Pins one of the person's own faces as their avatar everywhere. */
+  async setCoverFace(personId: string, faceId: string): Promise<void> {
+    await this.requirePerson(personId);
+    const [row] = await this.db
+      .select({ id: face.id })
+      .from(face)
+      .where(sql`${face.id} = ${faceId} and ${face.personId} = ${personId} and ${face.ignored} = false`)
+      .limit(1);
+    if (!row) {
+      throw new NotFoundException("That face doesn't belong to this person.");
+    }
+    await this.db
+      .update(person)
+      .set({ coverFaceId: faceId, updatedAt: new Date() })
+      .where(eq(person.id, personId));
   }
 
   /** Naming a cluster turns it into a known person (data-model.md §1.3). */

@@ -226,9 +226,14 @@ export class MemoriesService {
         group by 1, 2
       )
       select o.id, o.name, o.photo_count,
-             (select f.id from face f
-              where f.person_id = o.id and f.ignored = false
-              order by f.quality desc limit 1) as cover_face_id
+             coalesce(
+               (select f.id from face f
+                join person p2 on p2.id = o.id and p2.cover_face_id = f.id
+                where f.person_id = o.id and f.ignored = false),
+               (select f.id from face f
+                where f.person_id = o.id and f.ignored = false
+                order by f.quality desc limit 1)
+             ) as cover_face_id
       from owners o
     `);
     const seen = new Set(people.map((entry) => entry.id));

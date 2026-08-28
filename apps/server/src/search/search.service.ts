@@ -119,7 +119,15 @@ export class SearchService {
       cover_face_id: string | null;
       face_count: number;
     }>(sql`
-      select p.id, p.name, p.cover_face_id, count(f.id)::int as face_count
+      select p.id, p.name,
+             coalesce(
+               (select f3.id from face f3
+                where f3.id = p.cover_face_id and f3.person_id = p.id and f3.ignored = false),
+               (select f2.id from face f2
+                where f2.person_id = p.id and f2.ignored = false
+                order by f2.quality desc limit 1)
+             ) as cover_face_id,
+             count(f.id)::int as face_count
       from person p
       left join face f on f.person_id = p.id and f.ignored = false
       where p.name ilike ${'%' + text + '%'}

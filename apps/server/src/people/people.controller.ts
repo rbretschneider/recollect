@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
@@ -16,6 +17,7 @@ import { RequireAdmin } from '../auth/decorators/require-admin.decorator';
 import { FaceIdsRequestDto } from './dto/face-ids-request.dto';
 import { MergePersonRequestDto } from './dto/merge-person-request.dto';
 import { RenamePersonRequestDto } from './dto/rename-person-request.dto';
+import { SetCoverFaceRequestDto } from './dto/set-cover-face-request.dto';
 import { FaceCropService } from './face-crop.service';
 import { PeopleService, PersonFace, PersonSummary } from './people.service';
 
@@ -45,6 +47,16 @@ export class PeopleController {
     @Body() body: RenamePersonRequestDto,
   ): Promise<void> {
     await this.people.rename(id, body.name);
+  }
+
+  @RequireAdmin()
+  @Put(':id/cover-face')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async setCoverFace(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: SetCoverFaceRequestDto,
+  ): Promise<void> {
+    await this.people.setCoverFace(id, body.faceId);
   }
 
   @Get(':id/faces')

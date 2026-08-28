@@ -93,6 +93,11 @@
       @if (selectedFaceIds().size > 0) {
         <div class="face-actions" role="toolbar" aria-label="Selected face actions">
           <span>{{ selectedFaceIds().size }} selected</span>
+          @if (selectedFaceIds().size === 1) {
+            <button type="button" [disabled]="isBusy()" (click)="useSelectedAsAvatar()">
+              Use as avatar
+            </button>
+          }
           <button type="button" [disabled]="isBusy()" (click)="splitSelected()">
             Not this person
           </button>

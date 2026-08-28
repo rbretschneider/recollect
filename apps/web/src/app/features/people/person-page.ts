@@ -127,6 +127,23 @@ export class PersonPage implements OnInit {
     });
   }
 
+  /** Pins the one selected face as this person's avatar app-wide. */
+  async useSelectedAsAvatar(): Promise<void> {
+    const person = this.person();
+    const [faceId] = [...this.selectedFaceIds()];
+    if (!person || !faceId || this.selectedFaceIds().size !== 1 || this.isBusy()) {
+      return;
+    }
+    this.isBusy.set(true);
+    try {
+      await this.api.setCoverFace(person.id, faceId);
+      this.selectedFaceIds.set(new Set());
+      await this.load();
+    } finally {
+      this.isBusy.set(false);
+    }
+  }
+
   /** "Not the same person": selected faces move to a brand-new person. */
   async splitSelected(): Promise<void> {
     const person = this.person();
