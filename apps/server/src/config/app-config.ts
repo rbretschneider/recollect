@@ -28,6 +28,12 @@ const configSchema = z.object({
     .string()
     .default('on')
     .transform((value) => value !== 'off'),
+  /**
+   * Number of reverse-proxy hops to trust for X-Forwarded-* (0 disables).
+   * MUST be set (typically 1) when nginx fronts the app, or per-IP rate
+   * limiting sees every visitor as the proxy and Secure cookies never engage.
+   */
+  trustProxyHops: z.coerce.number().int().min(0).default(0),
   /** Comma-separated bases the library folder picker may browse (mounted volumes). */
   libraryBrowseBases: z
     .string()
@@ -60,6 +66,7 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     transcodeThreads: env.TRANSCODE_THREADS,
     webDistDir: env.WEB_DIST_DIR,
     migrationsDir: env.MIGRATIONS_DIR,
+    trustProxyHops: env.TRUST_PROXY_HOPS,
     libraryBrowseBases: env.LIBRARY_BROWSE_BASES,
     mlUrl: env.RECOLLECT_ML_URL,
     faceClusterDistance: env.FACE_CLUSTER_DISTANCE,

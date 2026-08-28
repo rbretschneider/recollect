@@ -227,3 +227,21 @@ input[type='checkbox'] {
   color: var(--text);
   font-size: 0.9rem;
 }
+
+// The security card's actions: the Change link dresses as a button; the
+// sign-out-everywhere control reads as consequential.
+a.outline {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.outline.danger {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+
+.card.row .outline {
+  flex-shrink: 0;
+}

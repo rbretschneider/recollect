@@ -1,4 +1,10 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { UsersService } from '../../users/users.service';
@@ -40,6 +46,15 @@ export class AuthGuard implements CanActivate {
     const user = await this.users.findById(userId);
     if (!user) {
       throw new UnauthorizedException('Account is no longer active.');
+    }
+    // A forced password change blocks everything except the auth endpoints
+    // themselves (change password, who-am-I, logout). The web app routes the
+    // user to the change screen off this error code.
+    if (user.mustChangePassword && !request.path.startsWith('/api/v1/auth')) {
+      throw new ForbiddenException({
+        message: 'Password change required.',
+        code: 'PASSWORD_CHANGE_REQUIRED',
+      });
     }
     request.user = user;
     return true;

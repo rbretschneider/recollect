@@ -25,9 +25,16 @@ export class LoginPage {
     this.busy.set(true);
     try {
       await this.auth.login(this.email, this.password);
-      await this.router.navigateByUrl('/');
-    } catch {
-      this.error.set('That email or password is not right.');
+      // An admin-reset account must pick its own password before anything else.
+      await this.router.navigateByUrl(
+        this.auth.user()?.mustChangePassword ? '/change-password' : '/',
+      );
+    } catch (raw) {
+      const status = (raw as { status?: number })?.status;
+      const message = (raw as { error?: { message?: string } })?.error?.message;
+      this.error.set(
+        status === 429 && message ? message : 'That email or password is not right.',
+      );
     } finally {
       this.busy.set(false);
     }

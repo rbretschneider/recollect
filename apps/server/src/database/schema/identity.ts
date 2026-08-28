@@ -41,6 +41,12 @@ export const session = pgTable(
       .notNull()
       .references(() => userAccount.id, { onDelete: 'cascade' }),
     refreshTokenHash: text('refresh_token_hash').notNull(),
+    /**
+     * The hash this session rotated away from. A refresh presenting it again
+     * is token reuse — the classic stolen-cookie signature — and revokes the
+     * whole session.
+     */
+    prevRefreshTokenHash: text('prev_refresh_token_hash'),
     deviceLabel: text('device_label'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     lastUsedAt: timestamp('last_used_at', { withTimezone: true }).notNull().defaultNow(),

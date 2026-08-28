@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { existsSync } from 'fs';
@@ -79,6 +80,21 @@ async function bootstrap(): Promise<void> {
   });
   const config = app.get<AppConfig>(APP_CONFIG);
   app.setGlobalPrefix('api/v1');
+  // Behind nginx: honor X-Forwarded-For/Proto from that one hop so req.ip is
+  // the real client (rate limiting) and req.secure is true (Secure cookies).
+  if (config.trustProxyHops > 0) {
+    app.set('trust proxy', config.trustProxyHops);
+  }
+  // Baseline security headers. CSP stays off at the app layer — the Angular
+  // bundle needs a tuned policy, which belongs to the nginx config.
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginEmbedderPolicy: false,
+      // HSTS is meaningful only on the HTTPS host; nginx sets it there.
+      strictTransportSecurity: false,
+    }),
+  );
   // Slow-link essential: JSON compresses 8-10x, the web bundle ~4x.
   app.use(compression({ threshold: 1024 }));
   app.use(cookieParser());

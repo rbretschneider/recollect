@@ -5,7 +5,10 @@ import { DevicesApiService, DeviceView } from '../../core/api/devices-api.servic
 import { PeopleApiService, PersonSummary } from '../../core/api/people-api.service';
 import { CreateUserInput, UsersApiService } from '../../core/api/users-api.service';
 import { UserProfile } from '../../core/api/api-models';
+import { Router } from '@angular/router';
+import { AuthApiService } from '../../core/api/auth-api.service';
 import { AuthStateService } from '../../core/auth/auth-state.service';
+import { ConfirmService } from '../../shared/confirm.service';
 import { AvatarMenu } from '../../shared/avatar-menu';
 import { BackButton } from '../../shared/back-button';
 import { BottomNav } from '../../shared/bottom-nav';
@@ -23,8 +26,14 @@ export class SettingsPage implements OnInit {
   private readonly devicesApi = inject(DevicesApiService);
   private readonly peopleApi = inject(PeopleApiService);
   private readonly auth = inject(AuthStateService);
+  private readonly authApi = inject(AuthApiService);
+  private readonly confirms = inject(ConfirmService);
+  private readonly router = inject(Router);
 
   readonly users = signal<UserProfile[]>([]);
+  /** The member whose password is being reset (drives the sheet). */
+  readonly resettingUser = signal<UserProfile | null>(null);
+  resetPasswordDraft = '';
   readonly devices = signal<DeviceView[]>([]);
   readonly namedPeople = signal<PersonSummary[]>([]);
   /** Device key that just saved, driving the "Saved ✓" flash. */
@@ -81,6 +90,40 @@ export class SettingsPage implements OnInit {
         this.deviceJustSaved.set(null);
       }
     }, 2000);
+  }
+
+  async signOutEverywhere(): Promise<void> {
+    const confirmed = await this.confirms.ask({
+      title: 'Sign out everywhere?',
+      message:
+        'Every device signed in to your account — phones, tablets, browsers — is signed out immediately, including this one.',
+      confirmLabel: 'Sign out all',
+    });
+    if (!confirmed) {
+      return;
+    }
+    await this.auth.logoutAll();
+    await this.router.navigateByUrl('/login');
+  }
+
+  startPasswordReset(user: UserProfile): void {
+    this.resetPasswordDraft = '';
+    this.resettingUser.set(user);
+  }
+
+  async confirmPasswordReset(): Promise<void> {
+    const target = this.resettingUser();
+    if (!target || this.resetPasswordDraft.length < 8) {
+      return;
+    }
+    this.error.set(null);
+    try {
+      await this.authApi.resetMemberPassword(target.id, this.resetPasswordDraft);
+      this.resettingUser.set(null);
+      this.resetPasswordDraft = '';
+    } catch (error) {
+      this.error.set(this.messageFrom(error, 'Could not reset that password.'));
+    }
   }
 
   grantLabel(user: UserProfile): string {

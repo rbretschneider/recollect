@@ -38,6 +38,15 @@ export const authRefreshInterceptor: HttpInterceptorFn = (req, next) => {
       },
     }),
     catchError((error) => {
+      // Admin reset this account: everything 403s until a new password is set.
+      if (
+        error instanceof HttpErrorResponse &&
+        error.status === 403 &&
+        (error.error as { code?: string } | null)?.code === 'PASSWORD_CHANGE_REQUIRED'
+      ) {
+        void router.navigateByUrl('/change-password');
+        return throwError(() => error);
+      }
       const isAuthRoute = req.url.includes('/auth/') || req.url.includes('/setup');
       if (error instanceof HttpErrorResponse && error.status === 401 && !isAuthRoute) {
         return from(auth.tryRefresh()).pipe(

@@ -67,6 +67,34 @@ export class UsersService {
     return { profile: this.toProfile(row), passwordHash: row.passwordHash };
   }
 
+  /** Verifies a password for an existing account; null when wrong or disabled. */
+  async verifyPassword(userId: string, password: string): Promise<UserProfile | null> {
+    const [row] = await this.db
+      .select()
+      .from(userAccount)
+      .where(eq(userAccount.id, userId))
+      .limit(1);
+    if (!row || row.disabledAt !== null) {
+      return null;
+    }
+    return (await this.passwords.verify(row.passwordHash, password)) ? this.toProfile(row) : null;
+  }
+
+  async setPassword(
+    userId: string,
+    newPassword: string,
+    options: { mustChangePassword: boolean },
+  ): Promise<void> {
+    await this.db
+      .update(userAccount)
+      .set({
+        passwordHash: await this.passwords.hash(newPassword),
+        mustChangePassword: options.mustChangePassword,
+      })
+      .where(eq(userAccount.id, userId));
+    this.invalidateProfile(userId);
+  }
+
   async create(input: CreateUserInput): Promise<UserProfile> {
     const [row] = await this.db
       .insert(userAccount)

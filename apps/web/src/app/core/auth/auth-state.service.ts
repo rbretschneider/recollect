@@ -65,6 +65,18 @@ export class AuthStateService {
     this.user.set(null);
   }
 
+  /** Changes the password; the server signs this device back in fresh. */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const { user } = await this.api.changePassword(currentPassword, newPassword);
+    this.user.set(user);
+  }
+
+  /** Signs out everywhere — every device, this one included. */
+  async logoutAll(): Promise<void> {
+    await this.api.logoutAll();
+    this.user.set(null);
+  }
+
   private async resolveWhenSignedOut(): Promise<'app' | 'login' | 'setup'> {
     try {
       const { user } = await this.api.refresh();

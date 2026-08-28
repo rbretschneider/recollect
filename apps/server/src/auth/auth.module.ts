@@ -6,6 +6,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuthGuard } from './guards/auth.guard';
 import { GrantsGuard } from './guards/grants.guard';
+import { LoginThrottleService } from './login-throttle.service';
 import { SetupController } from './setup.controller';
 import { TokenService } from './token.service';
 
@@ -15,6 +16,7 @@ import { TokenService } from './token.service';
   providers: [
     AuthService,
     TokenService,
+    LoginThrottleService,
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: GrantsGuard },
   ],

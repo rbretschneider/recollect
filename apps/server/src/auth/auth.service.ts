@@ -1,5 +1,6 @@
 import { ConflictException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
-import { and, eq, isNull } from 'drizzle-orm';
+import { randomBytes } from 'crypto';
+import { and, eq, isNull, or } from 'drizzle-orm';
 import { v7 as uuidv7 } from 'uuid';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
@@ -48,23 +49,54 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
+  /**
+   * A real Argon2 hash of random bytes, verified against on unknown-email
+   * logins so both miss paths take the same time — no email enumeration by
+   * timing. Built lazily once.
+   */
+  private dummyHashPromise: Promise<string> | null = null;
+
   async login(email: string, password: string, deviceLabel?: string): Promise<IssuedTokens> {
     const found = await this.users.findByEmailWithHash(email);
-    if (!found || !(await this.passwords.verify(found.passwordHash, password))) {
+    if (!found) {
+      this.dummyHashPromise ??= this.passwords.hash(randomBytes(24).toString('hex'));
+      await this.passwords.verify(await this.dummyHashPromise, password);
+      throw new UnauthorizedException('Invalid email or password.');
+    }
+    if (!(await this.passwords.verify(found.passwordHash, password))) {
       throw new UnauthorizedException('Invalid email or password.');
     }
     return this.issueTokens(found.profile, deviceLabel);
   }
 
-  /** Rotates the refresh token and issues a fresh access token. */
+  /**
+   * Rotates the refresh token and issues a fresh access token. Presenting the
+   * PREVIOUS token of a session is reuse — the stolen-cookie signature (two
+   * parties holding one session) — and kills the session for both.
+   */
   async refresh(refreshToken: string): Promise<IssuedTokens> {
     const tokenHash = this.tokens.hashRefreshToken(refreshToken);
     const [row] = await this.db
       .select()
       .from(session)
-      .where(and(eq(session.refreshTokenHash, tokenHash), isNull(session.revokedAt)))
+      .where(
+        and(
+          or(
+            eq(session.refreshTokenHash, tokenHash),
+            eq(session.prevRefreshTokenHash, tokenHash),
+          ),
+          isNull(session.revokedAt),
+        ),
+      )
       .limit(1);
     if (!row || row.expiresAt.getTime() < Date.now()) {
+      throw new UnauthorizedException('Session is no longer valid.');
+    }
+    if (row.refreshTokenHash !== tokenHash) {
+      await this.db
+        .update(session)
+        .set({ revokedAt: new Date() })
+        .where(eq(session.id, row.id));
       throw new UnauthorizedException('Session is no longer valid.');
     }
     const user = await this.users.findById(row.userId);
@@ -74,13 +106,51 @@ export class AuthService {
     const rotated = this.tokens.generateRefreshToken();
     await this.db
       .update(session)
-      .set({ refreshTokenHash: rotated.tokenHash, lastUsedAt: new Date() })
+      .set({
+        refreshTokenHash: rotated.tokenHash,
+        prevRefreshTokenHash: tokenHash,
+        lastUsedAt: new Date(),
+      })
       .where(eq(session.id, row.id));
     return {
       accessToken: await this.tokens.signAccessToken(user.id),
       refreshToken: rotated.token,
       user,
     };
+  }
+
+  /**
+   * Self-service password change. Every session — this device's included — is
+   * revoked and a fresh one issued in the same response, so a change after a
+   * suspected leak doubles as "sign out everywhere".
+   */
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<IssuedTokens> {
+    const user = await this.users.verifyPassword(userId, currentPassword);
+    if (!user) {
+      throw new UnauthorizedException('Current password is incorrect.');
+    }
+    await this.users.setPassword(userId, newPassword, { mustChangePassword: false });
+    await this.revokeAllSessions(userId);
+    // Re-read so the response carries the cleared mustChangePassword flag.
+    const fresh = await this.users.findById(userId);
+    return this.issueTokens(fresh ?? user);
+  }
+
+  /** Admin reset: new password, forced change at next login, every session dead. */
+  async adminResetPassword(userId: string, newPassword: string): Promise<void> {
+    await this.users.setPassword(userId, newPassword, { mustChangePassword: true });
+    await this.revokeAllSessions(userId);
+  }
+
+  async revokeAllSessions(userId: string): Promise<void> {
+    await this.db
+      .update(session)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(session.userId, userId), isNull(session.revokedAt)));
   }
 
   async logout(refreshToken: string): Promise<void> {

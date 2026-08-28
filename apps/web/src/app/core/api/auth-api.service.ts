@@ -35,4 +35,25 @@ export class AuthApiService {
   logout(): Promise<void> {
     return firstValueFrom(this.http.post<void>('/api/v1/auth/logout', {}));
   }
+
+  changePassword(currentPassword: string, newPassword: string): Promise<{ user: UserProfile }> {
+    return firstValueFrom(
+      this.http.post<{ user: UserProfile }>('/api/v1/auth/password', {
+        currentPassword,
+        newPassword,
+      }),
+    );
+  }
+
+  /** Revokes every session on every device, this one included. */
+  logoutAll(): Promise<void> {
+    return firstValueFrom(this.http.post<void>('/api/v1/auth/logout-all', {}));
+  }
+
+  /** Admin: reset a member's password; they must choose a new one at next login. */
+  resetMemberPassword(userId: string, password: string): Promise<void> {
+    return firstValueFrom(
+      this.http.post<void>(`/api/v1/auth/users/${userId}/password`, { password }),
+    );
+  }
 }
