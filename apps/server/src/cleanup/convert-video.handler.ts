@@ -90,6 +90,29 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
       { maxBuffer: FFMPEG_MAX_BUFFER_BYTES },
     );
     const converted = await stat(temp);
+    // Validity gate BEFORE anything is swapped: the encode must be a COMPLETE,
+    // readable video — not just a smaller file. A failed/interrupted ffmpeg run
+    // (a DV source with bitstream errors, a full disk, an OOM kill) leaves a
+    // truncated file with no moov atom that is tiny; the "smaller = success"
+    // heuristic below would otherwise treat that as great compression and
+    // replace a good original with garbage. Compare durations: the output must
+    // run at least 90% as long as the source, or we abort and keep the original.
+    const [sourceSeconds, outputSeconds] = await Promise.all([
+      this.probeDurationSeconds(sourcePath),
+      this.probeDurationSeconds(temp),
+    ]);
+    const outputIsComplete =
+      outputSeconds !== null &&
+      outputSeconds > 0 &&
+      (sourceSeconds === null || outputSeconds >= sourceSeconds * 0.9);
+    if (!outputIsComplete) {
+      await rm(temp, { force: true });
+      throw new Error(
+        `Convert ${assetId}: re-encode failed validation ` +
+          `(source ${sourceSeconds ?? '?'}s → output ${outputSeconds ?? 'unreadable'}); ` +
+          `kept the original untouched.`,
+      );
+    }
     // Not meaningfully smaller → the original wins; nothing is touched.
     if (converted.size >= row.sizeBytes * 0.85) {
       await rm(temp, { force: true });
@@ -157,6 +180,29 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
     this.logger.log(
       `Converted ${row.relPath}: ${row.sizeBytes} → ${converted.size} bytes (original parked for undo).`,
     );
+  }
+
+  /**
+   * Reads a media file's duration in seconds by parsing ffmpeg's own probe
+   * output (we ship ffmpeg, not ffprobe). Returns null when the file has no
+   * readable duration — a truncated/corrupt output prints no "Duration:" line.
+   */
+  private async probeDurationSeconds(path: string): Promise<number | null> {
+    let stderr = '';
+    try {
+      // No output target → ffmpeg exits non-zero after printing stream info;
+      // the duration we want is on stderr either way.
+      await execFileAsync(ffmpegPath as string, ['-hide_banner', '-i', path], {
+        maxBuffer: FFMPEG_MAX_BUFFER_BYTES,
+      });
+    } catch (error) {
+      stderr = String((error as { stderr?: string }).stderr ?? '');
+    }
+    const match = stderr.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
+    if (!match) {
+      return null;
+    }
+    return Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]);
   }
 
   private async moveFile(from: string, to: string): Promise<void> {
