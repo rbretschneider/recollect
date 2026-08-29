@@ -109,9 +109,15 @@
                 decoding="async"
               />
             } @else {
-              <div class="placeholder" aria-label="Photo still processing"></div>
+              <div
+                class="placeholder"
+                [class.damaged]="asset.damaged"
+                [attr.aria-label]="asset.damaged ? 'Damaged file — cannot be displayed' : 'Photo still processing'"
+              ></div>
             }
-            @if (asset.mediaType === 'video') {
+            @if (asset.damaged) {
+              <span class="badge damaged-badge" aria-label="Damaged — cannot be played">⚠ Damaged</span>
+            } @else if (asset.mediaType === 'video') {
               <span class="badge video-badge" [attr.aria-label]="'Video, ' + durationLabel(asset)">
                 ▶ {{ durationLabel(asset) }}
               </span>
@@ -205,9 +211,15 @@
                     decoding="async"
                   />
                 } @else {
-                  <div class="placeholder" aria-label="Photo still processing"></div>
+                  <div
+                    class="placeholder"
+                    [class.damaged]="asset.damaged"
+                    [attr.aria-label]="asset.damaged ? 'Damaged file — cannot be displayed' : 'Photo still processing'"
+                  ></div>
                 }
-                @if (asset.mediaType === 'video') {
+                @if (asset.damaged) {
+                  <span class="badge damaged-badge" aria-label="Damaged — cannot be played">⚠ Damaged</span>
+                } @else if (asset.mediaType === 'video') {
                   <span class="badge video-badge" [attr.aria-label]="'Video, ' + durationLabel(asset)">
                     ▶ {{ durationLabel(asset) }}
                   </span>

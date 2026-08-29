@@ -21,6 +21,8 @@ export interface TimelineAsset {
   height: number | null;
   durationMs: number | null;
   hasThumbnail: boolean;
+  /** The file is unplayable/undisplayable — incomplete or corrupt on disk. */
+  damaged?: boolean;
   /** Whether the signed-in user has hearted this photo. */
   isFavorite: boolean;
   // Card-view metadata — present on timeline responses, optional elsewhere

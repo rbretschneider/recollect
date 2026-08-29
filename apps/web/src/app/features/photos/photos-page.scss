@@ -416,6 +416,21 @@
     font-size: 0.7rem;
     font-variant-numeric: tabular-nums;
   }
+
+  .damaged-badge {
+    position: absolute;
+    bottom: 0.35rem;
+    right: 0.35rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 1rem;
+    background: var(--danger);
+    color: var(--danger-contrast);
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
 }
 
 .placeholder {
@@ -424,6 +439,12 @@
   background: linear-gradient(110deg, var(--surface) 40%, var(--surface-raised) 50%, var(--surface) 60%);
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite;
+
+  // A damaged file isn't loading — no shimmer; a flat, faintly-warning fill.
+  &.damaged {
+    animation: none;
+    background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  }
 }
 
 .skeleton-grid {

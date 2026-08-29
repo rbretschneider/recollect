@@ -38,6 +38,8 @@ export interface TimelineAsset {
   height: number | null;
   durationMs: number | null;
   hasThumbnail: boolean;
+  /** The file is unplayable/undisplayable — incomplete or corrupt on disk. */
+  damaged?: boolean;
   /** Whether the requesting user has hearted this photo. */
   isFavorite: boolean;
   // Card-view metadata (PhotoPrism-style details under each photo).
@@ -136,6 +138,7 @@ export class AssetsService {
         height: asset.height,
         durationMs: asset.durationMs,
         stageThumbsAt: asset.stageThumbsAt,
+        stageErrors: asset.stageErrors,
         favoritedAt: favorite.createdAt,
         mime: asset.mime,
         cameraMake: asset.cameraMake,
@@ -180,6 +183,7 @@ export class AssetsService {
           height: row.height,
           durationMs: row.durationMs,
           hasThumbnail: row.stageThumbsAt !== null,
+          damaged: (row.stageErrors as Record<string, string> | null)?.['playback'] != null,
           isFavorite: row.favoritedAt !== null,
           mime: row.mime,
           cameraMake: row.cameraMake,
@@ -345,6 +349,7 @@ export class AssetsService {
         height: asset.height,
         durationMs: asset.durationMs,
         stageThumbsAt: asset.stageThumbsAt,
+        stageErrors: asset.stageErrors,
         favoritedAt: favorite.createdAt,
         mime: asset.mime,
       })
@@ -368,6 +373,7 @@ export class AssetsService {
           height: row.height,
           durationMs: row.durationMs,
           hasThumbnail: row.stageThumbsAt !== null,
+          damaged: (row.stageErrors as Record<string, string> | null)?.['playback'] != null,
           isFavorite: row.favoritedAt !== null,
           mime: row.mime,
           cameraMake: null,
