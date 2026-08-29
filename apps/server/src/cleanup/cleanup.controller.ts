@@ -57,8 +57,11 @@ export class CleanupController {
   }
 
   @Post('restore/:assetId')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async restore(@Param('assetId', ParseUUIDPipe) assetId: string): Promise<void> {
-    await this.cleanup.restoreOriginal(assetId);
+  @HttpCode(HttpStatus.ACCEPTED)
+  async restore(
+    @Param('assetId', ParseUUIDPipe) assetId: string,
+  ): Promise<{ accepted: true }> {
+    await this.cleanup.queueRestore(assetId);
+    return { accepted: true };
   }
 }

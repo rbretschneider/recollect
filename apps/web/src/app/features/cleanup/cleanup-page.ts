@@ -1,9 +1,10 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { formatBytes } from '../../core/format-date';
 import {
   CleanupApiService,
   CleanupSuggestions,
+  ConvertedOriginal,
   JunkSuggestion,
   SpaceHogSuggestion,
 } from '../../core/api/cleanup-api.service';
@@ -29,7 +30,7 @@ import { ToastService } from '../../shared/toast.service';
   templateUrl: './cleanup-page.html',
   styleUrl: './cleanup-page.scss',
 })
-export class CleanupPage implements OnInit {
+export class CleanupPage implements OnInit, OnDestroy {
   private readonly api = inject(CleanupApiService);
   private readonly trashApi = inject(TrashApiService);
   private readonly confirms = inject(ConfirmService);
@@ -45,6 +46,10 @@ export class CleanupPage implements OnInit {
 
   ngOnInit(): void {
     void this.load();
+  }
+
+  ngOnDestroy(): void {
+    this.stopPolling();
   }
 
   thumbUrl(assetId: string): string {
@@ -173,33 +178,89 @@ export class CleanupPage implements OnInit {
   }
 
   /** Originals slated for deletion after conversion (the visible undo). */
-  readonly convertedOriginals = signal<
-    Array<{ assetId: string; fileName: string; sizeBytes: number; deletesAt: string }>
-  >([]);
-  readonly restoringId = signal<string | null>(null);
+  readonly convertedOriginals = signal<ConvertedOriginal[]>([]);
+  /** Assets with a restore in flight — a big cross-volume copy runs in the background. */
+  readonly restoringIds = signal<ReadonlySet<string>>(new Set());
+  private readonly restoreNames = new Map<string, string>();
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
 
   deletesAtLabel(iso: string): string {
     return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
 
+  isRestoring(original: ConvertedOriginal): boolean {
+    return original.restoring || this.restoringIds().has(original.assetId);
+  }
+
   async restoreOriginal(assetId: string): Promise<void> {
-    if (this.restoringId()) {
+    if (this.restoringIds().has(assetId)) {
       return;
     }
     const name = this.convertedOriginals().find((o) => o.assetId === assetId)?.fileName ?? 'the original';
-    this.restoringId.set(assetId);
-    this.toasts.success(`Restoring “${name}” — putting the original back…`);
+    this.restoreNames.set(assetId, name);
+    this.restoringIds.update((set) => new Set([...set, assetId]));
     try {
+      // Enqueues a background job — the copy is far too big to await in-request.
       await this.api.restore(assetId);
-      this.toasts.success(`Restored “${name}”`);
+      this.toasts.success(
+        `Restoring “${name}” — this runs in the background and can take a while.`,
+      );
+      this.startPolling();
       await this.load();
     } catch {
-      this.toasts.error(`Couldn’t restore “${name}”.`, {
+      this.restoringIds.update((set) => {
+        const next = new Set(set);
+        next.delete(assetId);
+        return next;
+      });
+      this.toasts.error(`Couldn’t start restoring “${name}”.`, {
         label: 'Retry',
         run: () => void this.restoreOriginal(assetId),
       });
-    } finally {
-      this.restoringId.set(null);
+    }
+  }
+
+  private startPolling(): void {
+    if (!this.pollTimer) {
+      this.pollTimer = setInterval(() => void this.load(), 4000);
+    }
+  }
+
+  private stopPolling(): void {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+  }
+
+  /**
+   * Reconcile the in-flight restore set against a fresh listing: an original
+   * that has vanished finished restoring (toast the win); the server's own
+   * "restoring" flag then drives the live chip so a page reload still shows it.
+   */
+  private reconcileRestoring(originals: ConvertedOriginal[]): void {
+    const present = new Set(originals.map((o) => o.assetId));
+    const next = new Set<string>();
+    for (const id of this.restoringIds()) {
+      if (!present.has(id)) {
+        this.toasts.success(`Restored “${this.restoreNames.get(id) ?? 'the original'}”`);
+        this.restoreNames.delete(id);
+      } else if (!originals.find((o) => o.assetId === id)?.restoring) {
+        // Still parked and the server isn't yet reporting the job — hold the
+        // optimistic chip until the server takes over (or the job clears).
+        next.add(id);
+      }
+    }
+    for (const original of originals) {
+      if (original.restoring) {
+        next.add(original.assetId);
+      }
+    }
+    this.restoringIds.set(next);
+    if (next.size === 0) {
+      this.stopPolling();
+    } else {
+      this.startPolling();
     }
   }
 
@@ -219,6 +280,7 @@ export class CleanupPage implements OnInit {
       ]);
       this.data.set(suggestions);
       this.convertedOriginals.set(converted.originals);
+      this.reconcileRestoring(converted.originals);
     } catch {
       this.loadFailed.set(true);
     }

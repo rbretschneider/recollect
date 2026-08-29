@@ -27,6 +27,15 @@ export interface CleanupSuggestions {
   projectedSavingsBytes: number;
 }
 
+export interface ConvertedOriginal {
+  assetId: string;
+  fileName: string;
+  sizeBytes: number;
+  deletesAt: string;
+  /** A restore is queued/running for this original (a slow cross-volume copy). */
+  restoring: boolean;
+}
+
 /** The cleanup advisor: junk flags and space hogs (delete grant). */
 @Injectable({ providedIn: 'root' })
 export class CleanupApiService {
@@ -46,17 +55,15 @@ export class CleanupApiService {
     );
   }
 
-  listConverted(): Promise<{
-    originals: Array<{ assetId: string; fileName: string; sizeBytes: number; deletesAt: string }>;
-  }> {
+  listConverted(): Promise<{ originals: ConvertedOriginal[] }> {
     return firstValueFrom(
-      this.http.get<{
-        originals: Array<{ assetId: string; fileName: string; sizeBytes: number; deletesAt: string }>;
-      }>('/api/v1/cleanup/converted'),
+      this.http.get<{ originals: ConvertedOriginal[] }>('/api/v1/cleanup/converted'),
     );
   }
 
-  restore(assetId: string): Promise<void> {
-    return firstValueFrom(this.http.post<void>(`/api/v1/cleanup/restore/${assetId}`, {}));
+  restore(assetId: string): Promise<{ accepted: true }> {
+    return firstValueFrom(
+      this.http.post<{ accepted: true }>(`/api/v1/cleanup/restore/${assetId}`, {}),
+    );
   }
 }
