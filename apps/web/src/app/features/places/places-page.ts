@@ -59,6 +59,7 @@ export class PlacesPage implements OnInit, OnDestroy {
   readonly viewMode = signal<'cards' | 'map'>(this.loadViewMode());
   private readonly mapHost = viewChild<ElementRef<HTMLDivElement>>('mapHost');
   private map: L.Map | null = null;
+  private mapResizeObserver: ResizeObserver | null = null;
 
   constructor() {
     // (Re)build the map whenever the host div exists and places are in —
@@ -69,15 +70,20 @@ export class PlacesPage implements OnInit, OnDestroy {
       if (host && places.length > 0) {
         this.renderMap(host.nativeElement, places);
       } else if (!host && this.map) {
-        this.map.remove();
-        this.map = null;
+        this.teardownMap();
       }
     });
   }
 
-  ngOnDestroy(): void {
+  private teardownMap(): void {
+    this.mapResizeObserver?.disconnect();
+    this.mapResizeObserver = null;
     this.map?.remove();
     this.map = null;
+  }
+
+  ngOnDestroy(): void {
+    this.teardownMap();
   }
 
   setViewMode(mode: 'cards' | 'map'): void {
@@ -99,36 +105,62 @@ export class PlacesPage implements OnInit, OnDestroy {
 
   /** One bubble per place, sized by how much of life happened there. */
   private renderMap(host: HTMLDivElement, places: PlaceView[]): void {
-    if (this.map) {
-      this.map.remove();
-    }
-    const map = L.map(host, { zoomControl: true, attributionControl: true });
-    this.map = map;
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(map);
-    const accent =
-      getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#7aa2f7';
-    const maxCount = Math.max(...places.map((place) => place.assetCount));
+    this.teardownMap();
+
+    let userTookOver = false;
+
+    // Building a Leaflet map in a zero-size container (a hidden tab, or a phone
+    // whose dvh-based height hasn't resolved on first paint) caches a broken
+    // size: it fits the bubbles at world zoom, requests one tile, and never
+    // recovers — the grey box users saw. So the whole thing is driven by a
+    // ResizeObserver: build only once the container has real dimensions, then
+    // keep the size in sync and re-fit until the user takes the map over (a real
+    // pointer/wheel gesture, which a programmatic fitBounds never fires).
     const bounds = L.latLngBounds([]);
-    for (const place of places) {
-      const point = L.latLng(place.gpsLat, place.gpsLon);
-      bounds.extend(point);
-      const radius = 10 + 22 * Math.sqrt(place.assetCount / maxCount);
-      const marker = L.circleMarker(point, {
-        radius,
-        color: accent,
-        weight: 2,
-        fillColor: accent,
-        fillOpacity: 0.35,
-      }).addTo(map);
-      marker.bindTooltip(`${place.town} · ${place.assetCount.toLocaleString()} photos`, {
-        direction: 'top',
-      });
-      marker.on('click', () => this.openPlace(place));
-    }
-    map.fitBounds(bounds.pad(0.15));
+    const sync = (): void => {
+      if (host.clientWidth === 0 || host.clientHeight === 0) {
+        return;
+      }
+      if (!this.map) {
+        const map = L.map(host, { zoomControl: true, attributionControl: true });
+        this.map = map;
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        }).addTo(map);
+        const accent =
+          getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() ||
+          '#7aa2f7';
+        const maxCount = Math.max(...places.map((place) => place.assetCount));
+        for (const place of places) {
+          const point = L.latLng(place.gpsLat, place.gpsLon);
+          bounds.extend(point);
+          const radius = 10 + 22 * Math.sqrt(place.assetCount / maxCount);
+          const marker = L.circleMarker(point, {
+            radius,
+            color: accent,
+            weight: 2,
+            fillColor: accent,
+            fillOpacity: 0.35,
+          }).addTo(map);
+          marker.bindTooltip(`${place.town} · ${place.assetCount.toLocaleString()} photos`, {
+            direction: 'top',
+          });
+          marker.on('click', () => this.openPlace(place));
+        }
+        map.on('mousedown touchstart wheel', () => {
+          userTookOver = true;
+        });
+      }
+      this.map.invalidateSize();
+      if (!userTookOver && bounds.isValid()) {
+        this.map.fitBounds(bounds.pad(0.15));
+      }
+    };
+
+    this.mapResizeObserver = new ResizeObserver(sync);
+    this.mapResizeObserver.observe(host);
+    sync();
   }
 
   ngOnInit(): void {
