@@ -136,6 +136,9 @@ section h2 {
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
+    // Keep the fanned polaroids' z-indexes local to each stack, so they layer
+    // among themselves but never rise above the sticky topbar.
+    isolation: isolate;
 
     &:hover .polaroid[data-card='0'] {
       rotate: -9deg;

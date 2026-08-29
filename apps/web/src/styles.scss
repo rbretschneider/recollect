@@ -163,7 +163,7 @@
   /* --- Z-index ladder ----------------------------------------------------
      One ordered scale for every stacking surface. Overlays share --z-scrim /
      --z-modal so a picker can never render beneath a sheet again. */
-  --z-topbar: 3;
+  --z-topbar: 20;
   --z-scrim: 40;
   --z-modal: 41;
   --z-toast: 60;
