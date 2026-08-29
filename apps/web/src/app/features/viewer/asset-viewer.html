@@ -165,6 +165,21 @@
                 </button>
               }
             </div>
+          } @else if (canWrite) {
+            <button
+              type="button"
+              class="repull"
+              [disabled]="reprocessState() === 'running'"
+              (click)="reprocess()"
+            >
+              @if (reprocessState() === 'running') {
+                Re-pulling…
+              } @else if (reprocessState() === 'done') {
+                Updated ✓
+              } @else {
+                Re-pull date &amp; metadata
+              }
+            </button>
           }
           <dl>
             @if (info.takenBy) {

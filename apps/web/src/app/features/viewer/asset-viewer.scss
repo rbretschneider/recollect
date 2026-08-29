@@ -337,6 +337,22 @@
     }
   }
 
+  .repull {
+    margin: 0 0 0.75rem;
+    min-height: 34px;
+    padding: 0 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--surface-raised);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.6;
+    }
+  }
+
   dl {
     margin: 0;
     display: grid;
