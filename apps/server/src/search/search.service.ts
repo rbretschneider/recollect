@@ -72,6 +72,9 @@ const MEMORY_LIMIT = 20;
 const ALBUM_LIMIT = 20;
 const FOLDER_LIMIT = 10;
 const ASSET_LIMIT = 100;
+/** Date-range (month/year) searches return the whole period, not a page —
+ *  the wife needs every photo of the month. High ceiling is just a safety cap. */
+const DATE_RANGE_LIMIT = 50000;
 
 /**
  * Search v1: one query across memories (title/description/journal), albums,
@@ -262,6 +265,9 @@ export class SearchService {
   }
 
   private async assetsInRange(range: DateQueryRange): Promise<SearchAssetHit[]> {
+    // A month/year search must return the WHOLE period — never a truncated
+    // page. The result is asset ids only and the grid lazy-loads thumbnails, so
+    // even a busy month is cheap; the ceiling is a safety valve, not a page.
     const rows = await this.db
       .select({
         id: asset.id,
@@ -277,7 +283,7 @@ export class SearchService {
         ),
       )
       .orderBy(desc(asset.capturedAt))
-      .limit(ASSET_LIMIT);
+      .limit(DATE_RANGE_LIMIT);
     return rows.map((row) => this.toAssetHit(row));
   }
 
