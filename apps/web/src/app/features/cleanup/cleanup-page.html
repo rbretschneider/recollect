@@ -40,8 +40,10 @@
                 <h3>{{ item.fileName }}</h3>
                 <p>{{ formatSize(item.sizeBytes) }} · {{ item.reason }}</p>
               </div>
-              <button type="button" class="outline" (click)="dismissJunk(item)">Keep</button>
-              <button type="button" class="outline danger" (click)="trashJunk(item)">Trash</button>
+              <div class="row-actions">
+                <button type="button" class="outline" (click)="dismissJunk(item)">Keep</button>
+                <button type="button" class="outline danger" (click)="trashJunk(item)">Trash</button>
+              </div>
             </div>
           }
         </div>
@@ -70,12 +72,14 @@
                   }
                 </p>
               </div>
-              @if (isQueued(item)) {
-                <span class="chip">Converting…</span>
-              } @else {
-                <button type="button" class="outline" (click)="dismissHog(item)">Keep</button>
-                <button type="button" class="primary" (click)="openConvert(item)">Convert</button>
-              }
+              <div class="row-actions">
+                @if (isQueued(item)) {
+                  <span class="chip">Converting… <span class="chip-sub">runs in the background</span></span>
+                } @else {
+                  <button type="button" class="outline" (click)="dismissHog(item)">Keep</button>
+                  <button type="button" class="primary" (click)="openConvert(item)">Convert</button>
+                }
+              </div>
             </div>
           }
         </div>
@@ -99,14 +103,16 @@
                 <h3>{{ original.fileName }}</h3>
                 <p>{{ formatSize(original.sizeBytes) }} · deletes {{ deletesAtLabel(original.deletesAt) }}</p>
               </div>
-              <button
-                type="button"
-                class="outline"
-                [disabled]="restoringId() === original.assetId"
-                (click)="restoreOriginal(original.assetId)"
-              >
-                {{ restoringId() === original.assetId ? 'Restoring…' : 'Restore original' }}
-              </button>
+              <div class="row-actions">
+                <button
+                  type="button"
+                  class="outline"
+                  [disabled]="restoringId() === original.assetId"
+                  (click)="restoreOriginal(original.assetId)"
+                >
+                  {{ restoringId() === original.assetId ? 'Restoring…' : 'Restore original' }}
+                </button>
+              </div>
             </div>
           }
         </div>

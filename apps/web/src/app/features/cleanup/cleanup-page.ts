@@ -164,7 +164,7 @@ export class CleanupPage implements OnInit {
       await this.api.convert(item.assetId, this.convertCodec);
       this.queuedConversions.update((set) => new Set([...set, item.assetId]));
       this.convertTarget.set(null);
-      this.toasts.success(`Converting “${item.fileName}”`);
+      this.toasts.success(`Converting “${item.fileName}” — this runs in the background and can take a while.`);
     } catch {
       this.toasts.error("Couldn't start that conversion.");
     } finally {
@@ -183,10 +183,21 @@ export class CleanupPage implements OnInit {
   }
 
   async restoreOriginal(assetId: string): Promise<void> {
+    if (this.restoringId()) {
+      return;
+    }
+    const name = this.convertedOriginals().find((o) => o.assetId === assetId)?.fileName ?? 'the original';
     this.restoringId.set(assetId);
+    this.toasts.success(`Restoring “${name}” — putting the original back…`);
     try {
       await this.api.restore(assetId);
+      this.toasts.success(`Restored “${name}”`);
       await this.load();
+    } catch {
+      this.toasts.error(`Couldn’t restore “${name}”.`, {
+        label: 'Retry',
+        run: () => void this.restoreOriginal(assetId),
+      });
     } finally {
       this.restoringId.set(null);
     }

@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
-import { mkdir, readdir, rename, rm, stat } from 'fs/promises';
+import { mkdir, readdir, rm, stat } from 'fs/promises';
 import { join, resolve } from 'path';
 import { APP_CONFIG } from '../config/app-config';
 import type { AppConfig } from '../config/app-config';
@@ -8,6 +8,7 @@ import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
 import { cleanupDismissal } from '../database/schema';
 import { JobQueueService } from '../jobs/job-queue.service';
+import { safeMoveFile } from '../trash/safe-file-move';
 
 /** Background job type for in-place video conversion. */
 export const CONVERT_VIDEO_JOB = 'convert_video';
@@ -246,14 +247,21 @@ export class CleanupService {
     // Original file name back in the original folder.
     const originalRelPath = row.rel_path.replace(/[^/\\]+$/, parked.fileName);
     const restoredPath = join(row.root_path, originalRelPath);
-    await rename(parkedPath, restoredPath);
-    if (convertedPath !== restoredPath) {
+    // safeMoveFile (copy-then-delete fallback), NOT rename: the parked original
+    // lives on the app-data volume while the library is a separate NAS mount, so
+    // a plain rename across them throws EXDEV and the restore silently fails.
+    const finalPath = await safeMoveFile(parkedPath, restoredPath);
+    if (convertedPath !== finalPath) {
       await rm(convertedPath, { force: true }).catch(() => undefined);
     }
+    const finalRelPath = finalPath
+      .slice(row.root_path.length)
+      .replace(/^[\\/]/, '')
+      .replaceAll('\\', '/');
     await this.db.execute(sql`
       update asset_file
-      set rel_path = ${originalRelPath.replaceAll('\\', '/')},
-          file_name = ${parked.fileName},
+      set rel_path = ${finalRelPath},
+          file_name = ${finalRelPath.split('/').pop() ?? parked.fileName},
           size_bytes = ${parked.sizeBytes},
           fs_mtime = now(), last_verified_at = now()
       where id = ${row.file_id}

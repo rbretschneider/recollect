@@ -67,8 +67,11 @@
 
 .row {
   display: flex;
+  // Actions drop to their own line rather than clipping off the right edge on a
+  // phone; on a wide screen everything sits on one row.
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem 0.75rem;
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: 0.7rem;
@@ -84,7 +87,9 @@
   }
 
   .info {
-    flex: 1;
+    // Wants a readable width; when it and the actions can't share a line, the
+    // actions wrap below instead of the buttons being pushed off-screen.
+    flex: 1 1 11rem;
     min-width: 0;
 
     h3 {
@@ -102,13 +107,30 @@
     }
   }
 
+  .row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
   .chip {
-    padding: 0.2rem 0.7rem;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    padding: 0.3rem 0.7rem;
     border-radius: 1rem;
     background: color-mix(in srgb, var(--accent) 18%, var(--surface));
     color: var(--accent);
     font-size: 0.78rem;
-    flex-shrink: 0;
+
+    .chip-sub {
+      color: var(--text-muted);
+      font-size: 0.68rem;
+    }
   }
 }
 
