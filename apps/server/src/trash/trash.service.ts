@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { and, eq, inArray, lt } from 'drizzle-orm';
-import { unlink } from 'fs/promises';
+import { access, unlink } from 'fs/promises';
 import { join } from 'path';
 import { v7 as uuidv7 } from 'uuid';
 import { APP_CONFIG } from '../config/app-config';
@@ -112,13 +112,20 @@ export class TrashService {
     const day = new Date().toISOString().slice(0, 10);
     for (const file of files) {
       const sourcePath = join(file.rootPath, file.relPath);
-      const destinationPath = join(
-        file.rootPath,
-        TRASH_DIRECTORY_NAME,
-        day,
-        file.relPath.replaceAll('/', '_'),
-      );
-      const finalPath = await safeMoveFile(sourcePath, destinationPath);
+      // The original may already be gone from disk (e.g. a corrupt-conversion
+      // stand-in that was cleaned up out from under its DB row). Trashing must
+      // still succeed — there's simply nothing to move — so the user can clear
+      // the tombstone. A null trashPath is fine: purge and restore both handle it.
+      let finalPath: string | null = null;
+      if (await this.pathExists(sourcePath)) {
+        const destinationPath = join(
+          file.rootPath,
+          TRASH_DIRECTORY_NAME,
+          day,
+          file.relPath.replaceAll('/', '_'),
+        );
+        finalPath = await safeMoveFile(sourcePath, destinationPath);
+      }
       await this.db
         .update(assetFile)
         .set({ state: 'trashed', trashPath: finalPath, originalRelPath: file.relPath })
@@ -223,6 +230,15 @@ export class TrashService {
       await unlink(path);
     } catch {
       // Already gone is fine; purge must be idempotent.
+    }
+  }
+
+  private async pathExists(path: string): Promise<boolean> {
+    try {
+      await access(path);
+      return true;
+    } catch {
+      return false;
     }
   }
 

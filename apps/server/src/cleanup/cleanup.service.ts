@@ -313,9 +313,14 @@ export class CleanupService {
       update asset set status = 'active', updated_at = now()
       where id = ${assetId} and status <> 'trashed'
     `);
-    await this.db.execute(
-      sql`delete from cleanup_dismissal where asset_id = ${assetId}`,
-    );
+    // The user just chose the original over the converted copy — retire the
+    // suggestion so the advisor doesn't immediately nag to redo the very
+    // conversion they undid. (They can always re-suggest by not dismissing.)
+    await this.db.execute(sql`
+      insert into cleanup_dismissal (asset_id, dismissed_by)
+      values (${assetId}, null)
+      on conflict (asset_id) do nothing
+    `);
     // Re-extract metadata (true codec, dimensions) and re-queue playback prep.
     await this.queue.enqueue(
       'reprocess_asset',
