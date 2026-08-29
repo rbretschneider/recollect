@@ -98,6 +98,16 @@ export class AssetViewer implements OnInit, OnDestroy {
 
   readonly current = computed<TimelineAsset | null>(() => this.assets()[this.index()] ?? null);
 
+  /**
+   * The current video is known-unplayable (incomplete/corrupt on disk — no
+   * valid index). Show that plainly instead of an endless "Preparing…" spinner:
+   * transcoding can never make a damaged file playable.
+   */
+  readonly videoDamaged = computed<boolean>(() => {
+    const asset = this.current();
+    return asset?.mediaType === 'video' && this.detail()?.stageErrors?.['playback'] != null;
+  });
+
   /** The caption for the photo on screen, if the memory gave it one. */
   readonly currentCaption = computed<string>(() => {
     const asset = this.current();
@@ -164,6 +174,14 @@ export class AssetViewer implements OnInit, OnDestroy {
   constructor() {
     effect(() => {
       this.index.set(this.startIndex());
+    });
+    effect(() => {
+      // Once detail confirms a video is damaged, drop any "Preparing…" state —
+      // there is nothing to wait for.
+      if (this.videoDamaged()) {
+        this.isPreparingVideo.set(false);
+        this.stopPreparePolling();
+      }
     });
     effect(() => {
       // Detail loads for every shown asset (small JSON): it powers the info
@@ -235,7 +253,7 @@ export class AssetViewer implements OnInit, OnDestroy {
   /** The playback route answered 202 (transcoding): show status and poll. */
   onVideoError(): void {
     const asset = this.current();
-    if (!asset || asset.mediaType !== 'video' || this.isPreparingVideo()) {
+    if (!asset || asset.mediaType !== 'video' || this.isPreparingVideo() || this.videoDamaged()) {
       return;
     }
     this.isPreparingVideo.set(true);
