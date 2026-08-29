@@ -135,6 +135,21 @@
       font-style: italic;
     }
   }
+
+  // The collapsed gateway to the unidentified faces — keeps the guest list from
+  // becoming a wall of "Who's this?".
+  .identify-toggle {
+    margin-top: 0.6rem;
+    min-height: 40px;
+    padding: 0 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 2rem;
+    background: var(--surface);
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
 }
 
 // Read mode is a blog post: journal paragraphs interleaved with captioned photo

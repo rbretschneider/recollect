@@ -36,17 +36,18 @@
         }
       </div>
       <div class="hero-text">
-        @if (isEditingTitle()) {
+        @if (editMode.isEditing()) {
           <input
             class="title-input"
             name="title"
             [(ngModel)]="titleDraft"
             (blur)="saveTitle()"
-            (keydown.enter)="saveTitle()"
-            autofocus
+            (keydown.enter)="saveTitle(); $any($event.target).blur()"
+            placeholder="Name this memory"
+            aria-label="Memory title"
           />
         } @else {
-          <h1 (click)="startEditingTitle()" [class.editable]="editMode.isEditing()">{{ memory.title }}</h1>
+          <h1>{{ memory.title }}</h1>
         }
         <p>
           @if (memory.locationLabel) {
@@ -57,20 +58,38 @@
       </div>
     </header>
 
-    @if (memory.people.length > 0 || memory.unnamedPeopleCount > 0) {
+    @if (attendeesNamed().length > 0 || attendeesUnnamed().length > 0) {
       <section class="who" aria-label="Who was there">
         <h2>Who was there</h2>
         <div class="chips">
-          @for (person of memory.people; track person.id) {
-            <a class="chip" [class.unnamed]="person.name === null" [routerLink]="['/people', person.id]">
+          @for (person of attendeesNamed(); track person.id) {
+            <a class="chip" [routerLink]="['/people', person.id]">
               <img [src]="cropUrl(person.coverFaceId)" alt="" loading="lazy" />
-              {{ person.name ?? 'Who’s this?' }}
+              {{ person.name }}
               @if (person.behindCamera) {
                 <app-icon name="camera" [size]="14" class="camera-tag" />
               }
             </a>
           }
+          @if (showUnidentified()) {
+            @for (person of attendeesUnnamed(); track person.id) {
+              <a class="chip unnamed" [routerLink]="['/people', person.id]">
+                <img [src]="cropUrl(person.coverFaceId)" alt="" loading="lazy" />
+                Who’s this?
+              </a>
+            }
+          }
         </div>
+        @if (attendeesUnnamed().length > 0) {
+          <button type="button" class="identify-toggle" (click)="showUnidentified.set(!showUnidentified())">
+            @if (showUnidentified()) {
+              Hide unidentified faces
+            } @else {
+              Help identify {{ attendeesUnnamed().length }}
+              {{ attendeesUnnamed().length === 1 ? 'more face' : 'more faces' }}
+            }
+          </button>
+        }
       </section>
     }
 

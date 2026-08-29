@@ -72,7 +72,14 @@ export class MemoryDetailPage implements OnInit {
   readonly isEditingTitle = signal(false);
   readonly journalDraft = signal('');
   readonly saveState = signal<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  /** Reveal the collapsed "help identify" faces in Who was there. */
+  readonly showUnidentified = signal(false);
   titleDraft = '';
+
+  /** Named attendees — the guest list, always shown. */
+  readonly attendeesNamed = computed(() => this.detail()?.people.filter((p) => p.name !== null) ?? []);
+  /** Recurring but still-unnamed faces — collapsed behind a "help identify" toggle. */
+  readonly attendeesUnnamed = computed(() => this.detail()?.people.filter((p) => p.name === null) ?? []);
   quoteTextDraft = '';
   quoteSaidByDraft = '';
   /** Person explicitly picked from the who-said-it typeahead. */
@@ -448,6 +455,8 @@ export class MemoryDetailPage implements OnInit {
     try {
       const detail = await this.api.getMemory(memoryId);
       this.detail.set(detail);
+      // Seed the title field so edit mode can show it editable immediately.
+      this.titleDraft = detail.title;
       this.journalDraft.set(
         detail.journal.find((entry) => entry.authorUserId === this.auth.user()?.id)?.bodyMd ?? '',
       );

@@ -200,6 +200,11 @@ export class MemoriesService {
       where ma.memory_id = ${memoryId}
         and coalesce(survivor.hidden, p.hidden) = false
       group by 1, 2
+      -- Named people always count as "there". An UNNAMED cluster only does if it
+      -- recurs (≥2 photos): a real guest shows up across the day, while a blurry
+      -- stranger in one background frame would otherwise flood the guest list.
+      having coalesce(survivor.name, p.name) is not null
+          or count(distinct f.asset_id) >= 2
       order by (coalesce(survivor.name, p.name) is null), count(distinct f.asset_id) desc
     `);
     const people: MemoryPersonView[] = result.rows.map((row) => ({
