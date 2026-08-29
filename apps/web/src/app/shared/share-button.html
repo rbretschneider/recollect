@@ -18,40 +18,59 @@
 @if (isOpen()) {
   <app-sheet [sheetTitle]="'Share this ' + targetLabel" (closed)="close()">
     <div class="share-content">
-    <p class="hint">
-      This {{ targetLabel }} is private. Creating a link makes it viewable
-      (read-only) by anyone who has the URL, until it expires or you turn it off.
-    </p>
+    @if (isShared()) {
+      <!-- Already public: manage the existing link — never offer to create another. -->
+      <p class="status" role="status">
+        <span class="dot" aria-hidden="true"></span>
+        Shared publicly · {{ expiryLabel(links()[0]) }}
+      </p>
 
-    @for (link of links(); track link.id) {
-      <div class="link-row">
-        <div class="link-info">
-          <input type="text" readonly [value]="urlFor(link)" aria-label="Public link URL" />
-          <span class="meta">
-            {{ expiryLabel(link) }} · {{ link.viewCount }} views
-          </span>
+      @for (link of links(); track link.id) {
+        <div class="link-row">
+          <div class="link-info">
+            <input type="text" readonly [value]="urlFor(link)" aria-label="Public link URL" />
+            <span class="meta">{{ expiryLabel(link) }} · {{ link.viewCount }} views</span>
+          </div>
+          <button type="button" class="small" (click)="copy(link)">
+            {{ copiedLinkId() === link.id ? 'Copied!' : 'Copy' }}
+          </button>
+          <button type="button" class="small danger" (click)="turnOff(link)">Revoke</button>
         </div>
-        <button type="button" class="small" (click)="copy(link)">
-          {{ copiedLinkId() === link.id ? 'Copied!' : 'Copy' }}
+      }
+
+      <div class="create-row">
+        <label>
+          Change expiration
+          <select name="expiry" [(ngModel)]="selectedExpiryHours">
+            @for (option of expiryOptions; track option.label) {
+              <option [ngValue]="option.hours">{{ option.label }}</option>
+            }
+          </select>
+        </label>
+        <button type="button" class="primary" [disabled]="isBusy()" (click)="extend(links()[0])">
+          {{ isBusy() ? 'Updating…' : 'Update expiration' }}
         </button>
-        <button type="button" class="small danger" (click)="turnOff(link)">Turn off</button>
+      </div>
+    } @else {
+      <!-- Private: the single, deliberate action that makes it public. -->
+      <p class="hint">
+        This {{ targetLabel }} is private. Creating a link makes it viewable
+        (read-only) by anyone who has the URL, until it expires or you turn it off.
+      </p>
+      <div class="create-row">
+        <label>
+          Link expires after
+          <select name="expiry" [(ngModel)]="selectedExpiryHours">
+            @for (option of expiryOptions; track option.label) {
+              <option [ngValue]="option.hours">{{ option.label }}</option>
+            }
+          </select>
+        </label>
+        <button type="button" class="primary" [disabled]="isBusy()" (click)="createLink()">
+          {{ isBusy() ? 'Creating…' : 'Create public link' }}
+        </button>
       </div>
     }
-
-    <div class="create-row">
-      <label>
-        Link expires after
-        <select name="expiry" [(ngModel)]="selectedExpiryHours">
-          @for (option of expiryOptions; track option.label) {
-            <option [ngValue]="option.hours">{{ option.label }}</option>
-          }
-        </select>
-      </label>
-      <button type="button" class="primary" [disabled]="isBusy()" (click)="createLink()">
-        {{ isBusy() ? 'Creating…' : 'Create public link' }}
-      </button>
-    </div>
-
     </div>
   </app-sheet>
 }

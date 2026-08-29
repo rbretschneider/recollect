@@ -48,6 +48,23 @@
     line-height: 1.5;
   }
 
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+
+    .dot {
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+  }
+
   .link-row {
     display: flex;
     align-items: center;

@@ -32,6 +32,16 @@ export class SharingApiService {
     );
   }
 
+  /** Extend / change an existing link's expiration (null = never expires). */
+  updateExpiry(linkId: string, expiresInHours: number | null): Promise<{ link: ShareLinkView }> {
+    return firstValueFrom(
+      this.http.patch<{ link: ShareLinkView }>(
+        `/api/v1/sharing/${linkId}`,
+        expiresInHours === null ? { neverExpires: true } : { expiresInHours },
+      ),
+    );
+  }
+
   revoke(linkId: string): Promise<void> {
     return firstValueFrom(this.http.delete<void>(`/api/v1/sharing/${linkId}`));
   }

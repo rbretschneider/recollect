@@ -14,6 +14,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { PhotosApiService } from '../../core/api/photos-api.service';
+import { SharingApiService } from '../../core/api/sharing-api.service';
 import { PeopleApiService, PersonSummary } from '../../core/api/people-api.service';
 import { MemoryDetail, MemoryQuote, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
@@ -54,6 +55,7 @@ export class MemoryDetailPage implements OnInit {
   private readonly api = inject(MemoriesApiService);
   private readonly peopleApi = inject(PeopleApiService);
   private readonly photosApi = inject(PhotosApiService);
+  private readonly sharingApi = inject(SharingApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStateService);
@@ -74,6 +76,8 @@ export class MemoryDetailPage implements OnInit {
   readonly saveState = signal<'idle' | 'saving' | 'saved' | 'error'>('idle');
   /** Reveal the collapsed "help identify" faces in Who was there. */
   readonly showUnidentified = signal(false);
+  /** "Public until Sep 4" / "Public — no expiration" when a share link is live. */
+  readonly shareBadge = signal<string | null>(null);
   titleDraft = '';
 
   /** Named attendees — the guest list, always shown. */
@@ -322,6 +326,24 @@ export class MemoryDetailPage implements OnInit {
     this.isEditingTitle.set(true);
   }
 
+  /** Share status is a garnish — fire-and-forget, never blocking the memory.
+   *  Read-only users get a 403 and simply see no badge. */
+  refreshShareBadge(memoryId: string): void {
+    void this.sharingApi
+      .listFor('memory', memoryId)
+      .then(({ links }) => {
+        const share = links[0];
+        this.shareBadge.set(
+          share
+            ? share.expiresAt === null
+              ? 'Public — no expiration'
+              : `Public until ${new Date(share.expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+            : null,
+        );
+      })
+      .catch(() => this.shareBadge.set(null));
+  }
+
   async saveTitle(): Promise<void> {
     const detail = this.detail();
     const title = this.titleDraft.trim();
@@ -457,6 +479,7 @@ export class MemoryDetailPage implements OnInit {
       this.detail.set(detail);
       // Seed the title field so edit mode can show it editable immediately.
       this.titleDraft = detail.title;
+      this.refreshShareBadge(memoryId);
       this.journalDraft.set(
         detail.journal.find((entry) => entry.authorUserId === this.auth.user()?.id)?.bodyMd ?? '',
       );

@@ -101,6 +101,16 @@ export class SharingService {
       .where(eq(shareLink.id, linkId));
   }
 
+  /** Extend / change an active link's expiration (or make it permanent). */
+  async updateExpiry(linkId: string, expiresAt: Date | null): Promise<ShareLinkView | null> {
+    const [row] = await this.db
+      .update(shareLink)
+      .set({ expiresAt })
+      .where(and(eq(shareLink.id, linkId), isNull(shareLink.revokedAt)))
+      .returning();
+    return row ? this.toView(row) : null;
+  }
+
   /** Resolves a public token into its view payload; counts the view. */
   async getSharedView(token: string): Promise<SharedView> {
     const link = await this.requireActiveLink(token);

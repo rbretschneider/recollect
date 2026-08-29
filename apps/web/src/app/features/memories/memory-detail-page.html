@@ -32,6 +32,7 @@
             targetType="memory"
             [targetId]="memory.id"
             [includeJournal]="true"
+            (changed)="refreshShareBadge(memory.id)"
           />
         }
       </div>
@@ -55,6 +56,9 @@
           }
           {{ formatSpan(memory) }} · {{ memory.assetIds.length }} photos
         </p>
+        @if (shareBadge(); as badge) {
+          <span class="share-badge"><span class="dot" aria-hidden="true"></span>{{ badge }}</span>
+        }
       </div>
     </header>
 

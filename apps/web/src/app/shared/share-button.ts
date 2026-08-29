@@ -1,4 +1,4 @@
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SharingApiService } from '../core/api/sharing-api.service';
 import { ShareLinkView } from '../core/api/api-models';
@@ -36,6 +36,9 @@ export class ShareButton {
   readonly includeJournal = input<boolean>(false);
   /** 'overlay': circular chrome; 'icon': bordered icon; 'labeled': icon over a tiny label. */
   readonly variant = input<'button' | 'overlay' | 'icon' | 'labeled'>('button');
+  /** Fires after any share change (create / revoke / extend) so hosts can
+   *  refresh their own "publicly shared" badge. */
+  readonly changed = output<void>();
 
   /** Human word for the sheet copy — "asset" is engineer-speak. */
   get targetLabel(): string {
@@ -46,6 +49,9 @@ export class ShareButton {
   readonly links = signal<ShareLinkView[]>([]);
   readonly isBusy = signal(false);
   readonly copiedLinkId = signal<string | null>(null);
+
+  /** Already public? Then the sheet manages the link — it never offers "create". */
+  readonly isShared = computed(() => this.links().length > 0);
 
   readonly expiryOptions = EXPIRY_OPTIONS;
   selectedExpiryHours: number | null = 24 * 7;
@@ -87,6 +93,19 @@ export class ShareButton {
         this.selectedExpiryHours,
       );
       this.links.update((existing) => [link, ...existing]);
+      this.changed.emit();
+    } finally {
+      this.isBusy.set(false);
+    }
+  }
+
+  /** Extend / change an existing link's expiration — no new link is made. */
+  async extend(link: ShareLinkView): Promise<void> {
+    this.isBusy.set(true);
+    try {
+      const { link: updated } = await this.api.updateExpiry(link.id, this.selectedExpiryHours);
+      this.links.update((existing) => existing.map((item) => (item.id === updated.id ? updated : item)));
+      this.changed.emit();
     } finally {
       this.isBusy.set(false);
     }
@@ -103,6 +122,7 @@ export class ShareButton {
     }
     await this.api.revoke(link.id);
     this.links.update((existing) => existing.filter((item) => item.id !== link.id));
+    this.changed.emit();
   }
 
   async copy(link: ShareLinkView): Promise<void> {

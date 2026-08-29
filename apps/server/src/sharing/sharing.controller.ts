@@ -5,14 +5,17 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
 } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequireGrant } from '../auth/decorators/require-grant.decorator';
 import type { UserProfile } from '../users/user.types';
 import { CreateShareRequestDto } from './dto/create-share-request.dto';
+import { UpdateShareRequestDto } from './dto/update-share-request.dto';
 import { ShareLinkView, ShareTargetType, SharingService } from './sharing.service';
 
 /** Bounded default lifetime for a share link when the caller doesn't set one. */
@@ -51,6 +54,22 @@ export class SharingController {
     @Param('targetId', ParseUUIDPipe) targetId: string,
   ): Promise<{ links: ShareLinkView[] }> {
     return { links: await this.sharing.listLinksFor(targetType as ShareTargetType, targetId) };
+  }
+
+  @RequireGrant('write')
+  @Patch(':id')
+  async updateExpiry(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: UpdateShareRequestDto,
+  ): Promise<{ link: ShareLinkView }> {
+    const hours =
+      body.expiresInHours ?? (body.neverExpires ? null : DEFAULT_SHARE_EXPIRY_HOURS);
+    const expiresAt = hours === null ? null : new Date(Date.now() + hours * 60 * 60 * 1000);
+    const link = await this.sharing.updateExpiry(id, expiresAt);
+    if (!link) {
+      throw new NotFoundException('That share link no longer exists.');
+    }
+    return { link };
   }
 
   @RequireGrant('write')
