@@ -124,7 +124,9 @@ export class PlacesPage implements OnInit, OnDestroy {
       if (!this.map) {
         const map = L.map(host, { zoomControl: true, attributionControl: true });
         this.map = map;
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // Same-origin tile proxy (see PlacesController.tile): the browser only
+        // ever talks to us, so no cross-origin CSP/CORP/DNS wall can blank the map.
+        L.tileLayer('/api/v1/places/tiles/{z}/{x}/{y}', {
           maxZoom: 19,
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         }).addTo(map);
