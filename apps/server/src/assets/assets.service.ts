@@ -41,6 +41,8 @@ export interface TimelineAsset {
   hasThumbnail: boolean;
   /** The file is unplayable/undisplayable — incomplete or corrupt on disk. */
   damaged?: boolean;
+  /** A still that carries an embedded motion clip (playable on hold). */
+  motionPhoto?: boolean;
   /** Whether the requesting user has hearted this photo. */
   isFavorite: boolean;
   // Card-view metadata (PhotoPrism-style details under each photo).
@@ -141,6 +143,7 @@ export class AssetsService {
         width: asset.width,
         height: asset.height,
         durationMs: asset.durationMs,
+        motionPhoto: asset.motionPhoto,
         stageThumbsAt: asset.stageThumbsAt,
         stageErrors: asset.stageErrors,
         favoritedAt: favorite.createdAt,
@@ -188,6 +191,7 @@ export class AssetsService {
           durationMs: row.durationMs,
           hasThumbnail: row.stageThumbsAt !== null,
           damaged: (row.stageErrors as Record<string, string> | null)?.['playback'] != null,
+          motionPhoto: row.motionPhoto,
           isFavorite: row.favoritedAt !== null,
           mime: row.mime,
           cameraMake: row.cameraMake,
@@ -353,6 +357,7 @@ export class AssetsService {
         width: asset.width,
         height: asset.height,
         durationMs: asset.durationMs,
+        motionPhoto: asset.motionPhoto,
         stageThumbsAt: asset.stageThumbsAt,
         stageErrors: asset.stageErrors,
         favoritedAt: favorite.createdAt,
@@ -379,6 +384,7 @@ export class AssetsService {
           durationMs: row.durationMs,
           hasThumbnail: row.stageThumbsAt !== null,
           damaged: (row.stageErrors as Record<string, string> | null)?.['playback'] != null,
+          motionPhoto: row.motionPhoto,
           isFavorite: row.favoritedAt !== null,
           mime: row.mime,
           cameraMake: null,

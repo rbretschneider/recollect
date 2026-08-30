@@ -64,6 +64,8 @@ export const asset = pgTable(
     ),
     /** Video codec id from container metadata (e.g. 'hvc1', 'avc1'); drives playback transcoding. */
     videoCodec: text('video_codec'),
+    /** True for stills carrying an embedded motion clip (Android/Pixel/Samsung). */
+    motionPhoto: boolean('motion_photo').notNull().default(false),
     cameraMake: text('camera_make'),
     cameraModel: text('camera_model'),
     lensModel: text('lens_model'),

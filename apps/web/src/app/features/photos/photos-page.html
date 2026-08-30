@@ -121,6 +121,10 @@
               <span class="badge video-badge" [attr.aria-label]="'Video, ' + durationLabel(asset)">
                 ▶ {{ durationLabel(asset) }}
               </span>
+            } @else if (asset.motionPhoto) {
+              <span class="badge motion-badge" aria-label="Motion photo — hold to play in the viewer">
+                ◉ LIVE
+              </span>
             }
           </button>
           <figcaption class="meta">
@@ -222,6 +226,10 @@
                 } @else if (asset.mediaType === 'video') {
                   <span class="badge video-badge" [attr.aria-label]="'Video, ' + durationLabel(asset)">
                     ▶ {{ durationLabel(asset) }}
+                  </span>
+                } @else if (asset.motionPhoto) {
+                  <span class="badge motion-badge" aria-label="Motion photo — hold to play in the viewer">
+                    ◉ LIVE
                   </span>
                 }
               </button>

@@ -156,7 +156,14 @@ export class IngestService {
       // Garnish: cache the embedded motion clip if this is a motion photo.
       // Best-effort — the still is already stored regardless of the outcome.
       if (typeInfo.mediaType === 'image') {
-        await this.motion.extractIfPresent(assetId, absolutePath, metadata.raw);
+        const hasMotion = await this.motion.extractIfPresent(assetId, absolutePath, metadata.raw);
+        if (hasMotion) {
+          // Persist the flag so the grid can badge it without a per-tile file stat.
+          await this.db
+            .update(asset)
+            .set({ motionPhoto: true })
+            .where(eq(asset.id, assetId));
+        }
       }
     }
     return assetId;
@@ -314,7 +321,8 @@ export class IngestService {
     if (typeInfo.mediaType === 'image') {
       const rawTags = metadata?.raw ?? {};
       await this.motion.removeMotion(assetId);
-      await this.motion.extractIfPresent(assetId, absolutePath, rawTags);
+      const hasMotion = await this.motion.extractIfPresent(assetId, absolutePath, rawTags);
+      await this.db.update(asset).set({ motionPhoto: hasMotion }).where(eq(asset.id, assetId));
     }
     await this.queuePlaybackTranscodeIfNeeded(assetId);
   }

@@ -23,6 +23,8 @@ export interface TimelineAsset {
   hasThumbnail: boolean;
   /** The file is unplayable/undisplayable — incomplete or corrupt on disk. */
   damaged?: boolean;
+  /** A still carrying an embedded motion clip (playable on hold in the viewer). */
+  motionPhoto?: boolean;
   /** Whether the signed-in user has hearted this photo. */
   isFavorite: boolean;
   // Card-view metadata — present on timeline responses, optional elsewhere

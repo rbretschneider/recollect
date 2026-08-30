@@ -1,9 +1,13 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { inArray } from 'drizzle-orm';
 import { exiftool } from 'exiftool-vendored';
-import { access, mkdir, open, rm, stat } from 'fs/promises';
+import { access, mkdir, open, readdir, rm, stat } from 'fs/promises';
 import { dirname, join } from 'path';
 import { APP_CONFIG } from '../config/app-config';
 import type { AppConfig } from '../config/app-config';
+import { DATABASE } from '../database/database.module';
+import type { Database } from '../database/database.module';
+import { asset } from '../database/schema';
 
 /**
  * Android/Pixel/Samsung "motion photos" carry a short MP4 embedded inside the
@@ -13,10 +17,56 @@ import type { AppConfig } from '../config/app-config';
  * still photo — never blocks or breaks the image (the prime directive).
  */
 @Injectable()
-export class MotionPhotoService {
+export class MotionPhotoService implements OnApplicationBootstrap {
   private readonly logger = new Logger(MotionPhotoService.name);
 
-  constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {}
+  constructor(
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
+    @Inject(DATABASE) private readonly db: Database,
+  ) {}
+
+  /**
+   * Reconcile the asset.motion_photo flag with the clip cache once at boot —
+   * covers clips extracted before the flag column existed. Best-effort.
+   */
+  async onApplicationBootstrap(): Promise<void> {
+    try {
+      const ids = await this.cachedAssetIds();
+      if (ids.length > 0) {
+        await this.db.update(asset).set({ motionPhoto: true }).where(inArray(asset.id, ids));
+        this.logger.log(`Motion-photo flag reconciled for ${ids.length} cached clip(s).`);
+      }
+    } catch (error) {
+      this.logger.warn(`Motion-photo boot reconcile skipped: ${(error as Error).message}`);
+    }
+  }
+
+  /** Asset ids that currently have a cached motion clip on disk. */
+  private async cachedAssetIds(): Promise<string[]> {
+    const root = join(this.config.appDataDir, 'motion');
+    const ids: string[] = [];
+    let shards: string[];
+    try {
+      shards = await readdir(root);
+    } catch {
+      return ids; // No motion cache yet.
+    }
+    for (const shard of shards) {
+      let files: string[];
+      try {
+        files = await readdir(join(root, shard));
+      } catch {
+        continue;
+      }
+      for (const file of files) {
+        const match = /^([0-9a-f-]{36})\.mp4$/.exec(file);
+        if (match) {
+          ids.push(match[1]);
+        }
+      }
+    }
+    return ids;
+  }
 
   /** Cached embedded clip for an asset (may not exist). */
   motionPathFor(assetId: string): string {
