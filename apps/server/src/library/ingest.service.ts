@@ -12,6 +12,7 @@ import { asset, assetFile, assetMetadata, libraryRoot } from '../database/schema
 import { toCapturedDay } from '../media/captured-day';
 import { classifyMediaFile, MediaTypeInfo } from '../media/media-types';
 import { ExtractedMetadata, MetadataExtractorService } from '../media/metadata-extractor.service';
+import { MotionPhotoService } from '../media/motion-photo.service';
 import { ThumbnailService } from '../media/thumbnail.service';
 import { DETECT_EVENTS_JOB } from '../memories/handlers/detect-events.handler';
 import { JobQueueService } from '../jobs/job-queue.service';
@@ -37,6 +38,7 @@ export class IngestService {
     private readonly thumbnails: ThumbnailService,
     private readonly queue: JobQueueService,
     private readonly ml: MlClientService,
+    private readonly motion: MotionPhotoService,
   ) {}
 
   async ingestFile(payload: IngestFilePayload): Promise<void> {
@@ -151,6 +153,11 @@ export class IngestService {
         .insert(assetMetadata)
         .values({ assetId, raw: metadata.raw })
         .onConflictDoNothing();
+      // Garnish: cache the embedded motion clip if this is a motion photo.
+      // Best-effort — the still is already stored regardless of the outcome.
+      if (typeInfo.mediaType === 'image') {
+        await this.motion.extractIfPresent(assetId, absolutePath, metadata.raw);
+      }
     }
     return assetId;
   }
@@ -302,6 +309,13 @@ export class IngestService {
         .where(eq(asset.id, assetId));
     }
     await this.runThumbnailStage(assetId, absolutePath, typeInfo);
+    // Re-derive the motion clip too, so reprocessing an existing photo (or the
+    // viewer's "Re-pull" button) picks up a motion photo the first scan missed.
+    if (typeInfo.mediaType === 'image') {
+      const rawTags = metadata?.raw ?? {};
+      await this.motion.removeMotion(assetId);
+      await this.motion.extractIfPresent(assetId, absolutePath, rawTags);
+    }
     await this.queuePlaybackTranscodeIfNeeded(assetId);
   }
 

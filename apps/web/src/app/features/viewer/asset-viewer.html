@@ -106,6 +106,30 @@
               <p class="sub">The file may be damaged or incomplete on disk.</p>
             </div>
           }
+          @if (motionPlaying()) {
+            <video
+              class="media motion"
+              [src]="motionUrl(media.id)"
+              autoplay
+              muted
+              loop
+              playsinline
+            ></video>
+          }
+          @if (showMotionBadge()) {
+            <button
+              type="button"
+              class="motion-badge"
+              aria-label="Hold to play motion photo"
+              (pointerdown)="startMotion($event)"
+              (pointerup)="stopMotion()"
+              (pointerleave)="stopMotion()"
+              (pointercancel)="stopMotion()"
+              (contextmenu)="$event.preventDefault()"
+            >
+              <span class="dot" aria-hidden="true"></span> LIVE
+            </button>
+          }
         } @else if (videoDamaged()) {
           <div class="image-failed" role="status">
             <p>This video can't be played.</p>

@@ -1,11 +1,24 @@
 import { Module } from '@nestjs/common';
 import { MetadataExtractorService } from './metadata-extractor.service';
+import { MotionPhotoService } from './motion-photo.service';
 import { ThumbnailService } from './thumbnail.service';
 import { ThumbnailStore } from './thumbnail-store';
 import { TranscodeService } from './transcode.service';
 
 @Module({
-  providers: [MetadataExtractorService, ThumbnailService, ThumbnailStore, TranscodeService],
-  exports: [MetadataExtractorService, ThumbnailService, ThumbnailStore, TranscodeService],
+  providers: [
+    MetadataExtractorService,
+    MotionPhotoService,
+    ThumbnailService,
+    ThumbnailStore,
+    TranscodeService,
+  ],
+  exports: [
+    MetadataExtractorService,
+    MotionPhotoService,
+    ThumbnailService,
+    ThumbnailStore,
+    TranscodeService,
+  ],
 })
 export class MediaModule {}

@@ -102,6 +102,8 @@ export interface AssetDetail {
   uploadedByGuest: string | null;
   /** True for 360° equirectangular panoramas (GPano metadata or filename). */
   isPhotosphere: boolean;
+  /** True when a motion-photo clip is available to play on hold. */
+  motionPhoto: boolean;
   isFavorite: boolean;
   gpsLat: number | null;
   gpsLon: number | null;

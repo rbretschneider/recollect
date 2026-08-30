@@ -214,6 +214,7 @@ export class AssetViewer implements OnInit, OnDestroy {
       this.isPreparingVideo.set(false);
       this.isImageLoading.set(true);
       this.imageFailed.set(false);
+      this.motionPlaying.set(false);
       this.resetZoom();
     });
   }
@@ -248,6 +249,34 @@ export class AssetViewer implements OnInit, OnDestroy {
   /** Videos play through the playback route (original or H.264 rendition). */
   videoUrl(assetId: string): string {
     return `${this.mediaBase()}/${assetId}/playback?r=${this.videoReloadKey()}`;
+  }
+
+  /** The embedded clip of a motion photo. */
+  motionUrl(assetId: string): string {
+    return `${this.mediaBase()}/${assetId}/motion`;
+  }
+
+  /** True while the viewer is holding to play a motion photo's clip. */
+  readonly motionPlaying = signal(false);
+
+  /** Show the LIVE badge only on a still motion photo at rest (not zoomed). */
+  readonly showMotionBadge = computed<boolean>(() => {
+    const asset = this.current();
+    return (
+      asset?.mediaType === 'image' && (this.detail()?.motionPhoto ?? false) && this.zoom() === 1
+    );
+  });
+
+  /** Press-and-hold the badge to play the clip; release restores the still. */
+  startMotion(event: Event): void {
+    event.preventDefault();
+    if (this.showMotionBadge()) {
+      this.motionPlaying.set(true);
+    }
+  }
+
+  stopMotion(): void {
+    this.motionPlaying.set(false);
   }
 
   /** The playback route answered 202 (transcoding): show status and poll. */

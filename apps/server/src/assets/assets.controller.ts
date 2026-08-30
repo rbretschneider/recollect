@@ -124,6 +124,12 @@ export class AssetsController {
     await this.media.streamPlayback(res, id);
   }
 
+  /** Streams the embedded motion-photo clip (Android/Pixel/Samsung), 404 if none. */
+  @Get(':id/motion')
+  async motion(@Param('id', ParseUUIDPipe) id: string, @Res() res: Response): Promise<void> {
+    await this.media.streamMotion(res, id);
+  }
+
   @Get(':id/thumb/:size')
   @Header('Cache-Control', 'private, max-age=31536000, immutable')
   async thumbnail(

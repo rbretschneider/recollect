@@ -41,6 +41,14 @@ export class AssetMediaStreamer {
     this.send(res, resolution.path, 'This video is not available.');
   }
 
+  async streamMotion(res: Response, assetId: string): Promise<void> {
+    const file = await this.assets.getMotionFile(assetId);
+    // The clip is derived from a hash-identified still, so it never changes.
+    res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
+    res.type(file.mime);
+    this.send(res, file.path, 'This motion clip is not available.');
+  }
+
   private send(res: Response, path: string, notFoundMessage: string): void {
     res.sendFile(path, (error) => {
       if (error && !res.headersSent) {

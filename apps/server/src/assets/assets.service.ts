@@ -16,6 +16,7 @@ import {
 } from '../database/schema';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { MetadataExtractorService } from '../media/metadata-extractor.service';
+import { MotionPhotoService } from '../media/motion-photo.service';
 import { ThumbnailSize, ThumbnailStore } from '../media/thumbnail-store';
 import { isWebSafeVideoCodec, TranscodeService } from '../media/transcode.service';
 import { decodeTimelineCursor, encodeTimelineCursor } from './timeline-cursor';
@@ -87,6 +88,8 @@ export interface AssetDetail {
   uploadedByGuest: string | null;
   /** True for 360° equirectangular panoramas (GPano metadata or filename). */
   isPhotosphere: boolean;
+  /** True when a motion-photo clip was extracted and can be played on hold. */
+  motionPhoto: boolean;
   gpsLat: number | null;
   gpsLon: number | null;
   relPath: string | null;
@@ -112,6 +115,7 @@ export class AssetsService {
     private readonly transcode: TranscodeService,
     private readonly extractor: MetadataExtractorService,
     private readonly queue: JobQueueService,
+    private readonly motion: MotionPhotoService,
   ) {}
 
   async listTimeline(
@@ -323,6 +327,7 @@ export class AssetsService {
       takenByPersonId: owner?.ownerPersonId ?? null,
       uploadedByGuest: guest?.uploaderName ?? null,
       isPhotosphere: await this.isPhotosphere(assetId, file?.relPath ?? null),
+      motionPhoto: row.mediaType === 'image' && (await this.motion.hasMotion(assetId)),
       gpsLat: row.gpsLat,
       gpsLon: row.gpsLon,
       relPath: file?.relPath ?? null,
@@ -473,6 +478,14 @@ export class AssetsService {
       throw new NotFoundException('The original file is not available.');
     }
     return { path: resolve(join(row.rootPath, row.relPath)), mime: row.mime };
+  }
+
+  /** Absolute path of the cached motion-photo clip, or 404 if there is none. */
+  async getMotionFile(assetId: string): Promise<{ path: string; mime: string }> {
+    if (!(await this.motion.hasMotion(assetId))) {
+      throw new NotFoundException('This photo has no motion clip.');
+    }
+    return { path: resolve(this.motion.motionPathFor(assetId)), mime: 'video/mp4' };
   }
 
   /**
