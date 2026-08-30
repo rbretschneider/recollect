@@ -35,7 +35,9 @@
         <div class="rows">
           @for (item of suggestions.junk; track item.assetId) {
             <div class="row">
-              <img [src]="thumbUrl(item.assetId)" alt="" loading="lazy" />
+              <button type="button" class="thumb" aria-label="Open to verify" (click)="openViewer(item.assetId)">
+                <img [src]="thumbUrl(item.assetId)" alt="" loading="lazy" />
+              </button>
               <div class="info">
                 <h3>{{ item.fileName }}</h3>
                 <p>{{ formatSize(item.sizeBytes) }} · {{ item.reason }}</p>
@@ -62,7 +64,9 @@
         <div class="rows">
           @for (item of suggestions.hogs; track item.assetId) {
             <div class="row">
-              <img [src]="thumbUrl(item.assetId)" alt="" loading="lazy" />
+              <button type="button" class="thumb" aria-label="Open to verify" (click)="openViewer(item.assetId)">
+                <img [src]="thumbUrl(item.assetId)" alt="" loading="lazy" />
+              </button>
               <div class="info">
                 <h3>{{ item.fileName }}</h3>
                 <p>
@@ -98,7 +102,9 @@
         <div class="rows">
           @for (original of convertedOriginals(); track original.assetId) {
             <div class="row">
-              <img [src]="thumbUrl(original.assetId)" alt="" loading="lazy" />
+              <button type="button" class="thumb" aria-label="Open to verify" (click)="openViewer(original.assetId)">
+                <img [src]="thumbUrl(original.assetId)" alt="" loading="lazy" />
+              </button>
               <div class="info">
                 <h3>{{ original.fileName }}</h3>
                 <p>{{ formatSize(original.sizeBytes) }} · deletes {{ deletesAtLabel(original.deletesAt) }}</p>
@@ -159,4 +165,12 @@
       </div>
     </div>
   </app-sheet>
+}
+
+@if (viewerIndex() !== null) {
+  <app-asset-viewer
+    [assets]="flaggedAssets()"
+    [startIndex]="viewerIndex()!"
+    (closed)="closeViewer()"
+  />
 }

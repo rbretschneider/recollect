@@ -1,4 +1,4 @@
-import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { formatBytes } from '../../core/format-date';
 import {
@@ -8,6 +8,7 @@ import {
   JunkSuggestion,
   SpaceHogSuggestion,
 } from '../../core/api/cleanup-api.service';
+import { TimelineAsset, toViewerAsset } from '../../core/api/api-models';
 import { TrashApiService } from '../../core/api/trash-api.service';
 import { FormsModule } from '@angular/forms';
 import { AccountBadge } from '../../shared/account-badge';
@@ -18,6 +19,7 @@ import { MenuButton } from '../../shared/menu-button';
 import { PageLoading } from '../../shared/page-loading';
 import { LoadError } from '../../shared/load-error';
 import { ToastService } from '../../shared/toast.service';
+import { AssetViewer } from '../viewer/asset-viewer';
 
 /**
  * The cleanup advisor: reclaim NAS space. Junk flags go to Trash (normal
@@ -26,7 +28,7 @@ import { ToastService } from '../../shared/toast.service';
  */
 @Component({
   selector: 'app-cleanup-page',
-  imports: [AccountBadge, BackButton, FormsModule, MenuButton, PageLoading, Sheet, LoadError],
+  imports: [AccountBadge, BackButton, FormsModule, MenuButton, PageLoading, Sheet, LoadError, AssetViewer],
   templateUrl: './cleanup-page.html',
   styleUrl: './cleanup-page.scss',
 })
@@ -43,6 +45,41 @@ export class CleanupPage implements OnInit, OnDestroy {
   readonly isConverting = signal(false);
   /** Asset ids whose conversion was queued this visit (instant feedback). */
   readonly queuedConversions = signal<ReadonlySet<string>>(new Set());
+
+  /** Open index into flaggedAssets for the full-screen verify viewer. */
+  readonly viewerIndex = signal<number | null>(null);
+
+  /**
+   * Every flagged item as a viewer asset, so a tap opens it full-screen (with
+   * zoom, video playback, and the info/delete panel) to verify before removing.
+   * Order matches the page: junk, then hogs, then converted originals.
+   */
+  readonly flaggedAssets = computed<TimelineAsset[]>(() => {
+    const suggestions = this.data();
+    const placeholderDate = new Date(0).toISOString();
+    const items: TimelineAsset[] = [];
+    for (const junk of suggestions?.junk ?? []) {
+      items.push(toViewerAsset(junk.assetId, junk.mediaType === 'video' ? 'video' : 'image', placeholderDate));
+    }
+    for (const hog of suggestions?.hogs ?? []) {
+      items.push(toViewerAsset(hog.assetId, hog.mediaType === 'video' ? 'video' : 'image', placeholderDate));
+    }
+    for (const original of this.convertedOriginals()) {
+      items.push(toViewerAsset(original.assetId, 'video', placeholderDate));
+    }
+    return items;
+  });
+
+  openViewer(assetId: string): void {
+    const index = this.flaggedAssets().findIndex((asset) => asset.id === assetId);
+    if (index >= 0) {
+      this.viewerIndex.set(index);
+    }
+  }
+
+  closeViewer(): void {
+    this.viewerIndex.set(null);
+  }
 
   ngOnInit(): void {
     void this.load();

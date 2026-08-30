@@ -42,11 +42,17 @@ left drawer. Details in git history.)
 
 1. **Live Photos pairing** (needs real iPhone HEIC+MOV pairs).
 2. **Memory day-by-day chapters** — date subheads inside multi-day
-   memories (needs per-asset dates on MemoryDetail).
+   memories (needs per-asset dates on MemoryDetail). DEFERRED by user
+   (2026-08-30) until they can test it on a real multi-day memory.
 3. **Cleanup advisor v2**: CLIP zero-shot junk categories (floor/pocket/
    blur), oversized-image conversion, photo-frame-face cluster flag (every
-   face under ~5% of frame width).
-4. **Pixel motion photos** — play the embedded video, not just the still.
+   face under ~5% of frame width). User confirmed 2026-08-30: NO autodeletes
+   (flag only), and every flagged item must open full-screen in one tap to
+   verify before removal — tap-to-open SHIPPED 2026-08-30 (flagged rows open
+   the AssetViewer with info/delete). Remaining: the new detectors.
+4. **Pixel/Android motion photos** — play the embedded video, not just the
+   still. (Distinct from #1: the MP4 is embedded IN the JPEG via GCamera
+   MicroVideo / MotionPhoto XMP, not a separate MOV.)
 5. **Push notifications (larger feature)** — installed PWA users can be
    notified on certain conditions (conditions TBD — user is mulling;
    candidates: new guest photos on your album, new suggested memories,
@@ -100,6 +106,9 @@ left drawer. Details in git history.)
   optional *pool view* toggle (guests see the whole album — on for a
   birthday, off for upload-only drops). Never people data, never search,
   never anything outside the event.
+
+  **nginx reverse proxy DONE & tested (2026-08-30)** — the public path
+  exists, so guest uploads and share links are reachable off-LAN over HTTPS.
 
   **Security**
   - Link auto-expires (default one week after the event date) and is
