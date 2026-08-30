@@ -31,8 +31,11 @@ export interface OnThisDayMoment {
 const WINDOW_RADIUS_DAYS = 3;
 const TINY_IMAGE_BYTES = 32 * 1024;
 const CANDIDATE_LIMIT = 3000;
-/** A place cluster this small is only kept if a named person is in it. */
-const MIN_PLACE_CLUSTER = 3;
+/** A place cluster this small is only kept if a named person is in it. A
+ * coherent 2-shot sitting is still a real moment; we'd rather show it than
+ * leave the section empty — the time+place clustering is what keeps unrelated
+ * shots out of the same card. */
+const MIN_PLACE_CLUSTER = 2;
 /** Minimum photos of one person (in a year's window) to earn a person card. */
 const MIN_PERSON_PHOTOS = 3;
 const MAX_MOMENTS = 14;
@@ -63,7 +66,10 @@ export class DashboardService {
    */
   async onThisDayMoments(day: string, nowYear: number): Promise<OnThisDayMoment[]> {
     const days = windowDays(day, WINDOW_RADIUS_DAYS);
-    const candidates = await this.loadCandidates(days);
+    // "This week, years ago" — the current year is not a memory yet, so drop it.
+    const candidates = (await this.loadCandidates(days)).filter(
+      (candidate) => candidate.year < nowYear,
+    );
     if (candidates.length === 0) {
       return [];
     }
@@ -74,6 +80,7 @@ export class DashboardService {
     ]);
 
     const moments: OnThisDayMoment[] = [];
+    const score = new Map<string, number>();
     const claimed = new Set<string>();
 
     // 1) Memory moments — an already-curated story wins over anything derived.
@@ -97,8 +104,9 @@ export class DashboardService {
       byMemory.set(memory.memoryId, group);
     }
     for (const [memoryId, group] of byMemory) {
+      const key = `memory:${memoryId}`;
       moments.push({
-        key: `memory:${memoryId}`,
+        key,
         kind: 'memory',
         year: group.year,
         title: group.title,
@@ -108,6 +116,7 @@ export class DashboardService {
         coverAssetId: group.cover ?? group.items[0].id,
         items: group.items.map(toItem),
       });
+      score.set(key, 1000 + Math.min(group.items.length, 20));
     }
 
     // 2) Place + time clusters over the leftover loose photos, per year.
@@ -145,17 +154,24 @@ export class DashboardService {
           continue; // A stray shot or two — not a moment.
         }
         const place = mostCommonPlace(members);
+        const key = `place:${year}:${members[0].id}`;
         moments.push({
-          key: `place:${year}:${members[0].id}`,
+          key,
           kind: 'place',
           year,
-          title: place ?? 'Around this day',
-          subtitle: names.length > 0 ? withPeople(names) : place ? null : null,
+          // A place name when we have one; otherwise the sitting's own date, so
+          // the card is grounded in a real moment rather than a vague "this day".
+          title: place ?? dateLabel(members[0].capturedAt),
+          subtitle: names.length > 0 ? withPeople(names) : null,
           memoryId: null,
           personId: null,
           coverAssetId: members[0].id,
           items: members.map(toItem),
         });
+        score.set(
+          key,
+          100 + (place ? 20 : 0) + (names.length > 0 ? 20 : 0) + Math.min(members.length, 20),
+        );
       }
     }
 
@@ -179,8 +195,9 @@ export class DashboardService {
       if (group.items.length < MIN_PERSON_PHOTOS) {
         continue;
       }
+      const momentKey = `person:${key}`;
       moments.push({
-        key: `person:${key}`,
+        key: momentKey,
         kind: 'person',
         year: group.year,
         title: `With ${group.name}`,
@@ -190,13 +207,12 @@ export class DashboardService {
         coverAssetId: group.items[0].id,
         items: group.items.map(toItem),
       });
+      score.set(momentKey, 500 + Math.min(group.items.length, 20));
     }
 
     return moments
-      .map((moment) => ({ moment, score: scoreMoment(moment) }))
-      .sort((a, b) => b.score - a.score || b.moment.year - a.moment.year)
-      .slice(0, MAX_MOMENTS)
-      .map((entry) => entry.moment);
+      .sort((a, b) => (score.get(b.key) ?? 0) - (score.get(a.key) ?? 0) || b.year - a.year)
+      .slice(0, MAX_MOMENTS);
   }
 
   private async loadCandidates(days: string[]): Promise<Candidate[]> {
@@ -219,7 +235,7 @@ export class DashboardService {
       join asset_file f on f.asset_id = a.id and f.state = 'present'
       left join geocode_cache g on g.cell_key = a.geocode_cell_key
       where a.status = 'active'
-        and to_char(a.captured_day, 'MM-DD') = any(${days}::text[])
+        and to_char(a.captured_day, 'MM-DD') = any(string_to_array(${days.join(',')}, ','))
       order by a.captured_at asc
       limit ${CANDIDATE_LIMIT}
     `);
@@ -252,7 +268,7 @@ export class DashboardService {
     const result = await this.db.execute<{ asset_id: string; person_id: string; name: string }>(sql`
       select distinct f.asset_id, p.id as person_id, p.name
       from face f join person p on p.id = f.person_id
-      where p.name is not null and f.asset_id = any(${ids}::uuid[])
+      where p.name is not null and f.asset_id = any(string_to_array(${ids.join(',')}, ',')::uuid[])
     `);
     for (const row of result.rows) {
       const list = map.get(row.asset_id) ?? [];
@@ -282,7 +298,7 @@ export class DashboardService {
       select ma.asset_id, m.id as memory_id, m.title,
              extract(year from m.start_at)::int as year, m.cover_asset_id
       from memory_asset ma join memory m on m.id = ma.memory_id
-      where ma.asset_id = any(${ids}::uuid[])
+      where ma.asset_id = any(string_to_array(${ids.join(',')}, ',')::uuid[])
     `);
     for (const row of result.rows) {
       if (!map.has(row.asset_id)) {
@@ -353,15 +369,7 @@ function withPeople(names: string[]): string {
   return `with ${names[0]}, ${names[1]} & ${names.length - 2} more`;
 }
 
-function scoreMoment(moment: OnThisDayMoment): number {
-  const size = Math.min(moment.items.length, 20);
-  if (moment.kind === 'memory') {
-    return 1000 + size;
-  }
-  if (moment.kind === 'person') {
-    return 500 + size;
-  }
-  const hasPlace = moment.title !== 'Around this day' ? 20 : 0;
-  const hasPeople = moment.subtitle ? 20 : 0;
-  return 100 + hasPlace + hasPeople + size;
+/** A short, human date for a place moment that has no reverse-geocoded name. */
+function dateLabel(date: Date): string {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
