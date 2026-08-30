@@ -40,9 +40,9 @@ const MIN_PLACE_CLUSTER = 2;
 const MIN_PERSON_PHOTOS = 3;
 /** A moment containing a favorite (close-family) person jumps to the top. */
 const FAVORITE_BOOST = 400;
-/** At most this many moments per past year, so no single year dominates. */
-const PER_YEAR_CAP = 2;
-const MAX_MOMENTS = 10;
+/** One moment per past year, so the handful spans different years. */
+const PER_YEAR_CAP = 1;
+const MAX_MOMENTS = 4;
 
 interface Candidate {
   id: string;
