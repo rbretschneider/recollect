@@ -71,6 +71,23 @@ export const session = pgTable(
   (table) => [index('session_user_id_idx').on(table.userId)],
 );
 
+/** A browser's Web Push subscription (one row per installed PWA/device). */
+export const pushSubscription = pgTable(
+  'push_subscription',
+  {
+    id: uuid('id').primaryKey(),
+    userId: uuid('user_id').notNull(),
+    /** The push service endpoint URL — unique per browser subscription. */
+    endpoint: text('endpoint').notNull().unique(),
+    /** Client public key + auth secret for payload encryption (RFC 8291). */
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    userAgent: text('user_agent'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('push_subscription_user_id_idx').on(table.userId)],
+);
+
 /** Append-only record of every destructive or structural action. */
 export const auditLog = pgTable(
   'audit_log',

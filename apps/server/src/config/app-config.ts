@@ -58,6 +58,11 @@ const configSchema = z.object({
   smtpPass: z.string().default(''),
   /** From header, e.g. "Recollect <you@gmail.com>". Required when host is set. */
   smtpFrom: z.string().default(''),
+  /** Web Push VAPID keys; empty disables push notifications entirely. */
+  vapidPublicKey: z.string().default(''),
+  vapidPrivateKey: z.string().default(''),
+  /** Contact URI web-push sends to push services (mailto: or https:). */
+  vapidSubject: z.string().default('mailto:admin@recollect.app'),
   /** Comma-separated bases the library folder picker may browse (mounted volumes). */
   libraryBrowseBases: z
     .string()
@@ -97,6 +102,9 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     smtpUser: env.SMTP_USER,
     smtpPass: env.SMTP_PASS,
     smtpFrom: env.SMTP_FROM,
+    vapidPublicKey: env.VAPID_PUBLIC_KEY,
+    vapidPrivateKey: env.VAPID_PRIVATE_KEY,
+    vapidSubject: env.VAPID_SUBJECT,
     libraryBrowseBases: env.LIBRARY_BROWSE_BASES,
     mlUrl: env.RECOLLECT_ML_URL,
     faceClusterDistance: env.FACE_CLUSTER_DISTANCE,

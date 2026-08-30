@@ -17,6 +17,7 @@ import { MemoriesModule } from './memories/memories.module';
 import { MlModule } from './ml/ml.module';
 import { PeopleModule } from './people/people.module';
 import { PlacesModule } from './places/places.module';
+import { PushModule } from './push/push.module';
 import { SearchModule } from './search/search.module';
 import { SharingModule } from './sharing/sharing.module';
 import { SystemModule } from './system/system.module';
@@ -43,6 +44,7 @@ import { UsersModule } from './users/users.module';
     MlModule,
     PeopleModule,
     PlacesModule,
+    PushModule,
     SearchModule,
     SharingModule,
     SystemModule,

@@ -33,6 +33,42 @@
     </div>
   </section>
 
+  @if (push.supported && push.serverEnabled()) {
+    <section aria-label="Notifications">
+      <div class="section-head">
+        <h2>Notifications</h2>
+      </div>
+      <div class="card row">
+        <div class="info">
+          <h3>Push notifications on this device</h3>
+          <p class="muted">
+            {{ push.subscribed()
+              ? 'This device will get notifications from Recollect.'
+              : 'Get notified on this device (you choose what for — coming soon).' }}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="outline"
+          [class.danger]="push.subscribed()"
+          [disabled]="push.busy()"
+          (click)="toggleNotifications()"
+        >
+          {{ push.busy() ? 'Working…' : (push.subscribed() ? 'Turn off' : 'Turn on') }}
+        </button>
+      </div>
+      @if (isAdmin && push.subscribed()) {
+        <div class="card row">
+          <div class="info">
+            <h3>Send a test</h3>
+            <p class="muted">Fire a test notification to your own subscribed devices.</p>
+          </div>
+          <button type="button" class="outline" (click)="sendTestNotification()">Send test</button>
+        </div>
+      }
+    </section>
+  }
+
   @if (isAdmin) {
     <section aria-label="Household members">
       @if (inviteNote(); as note) {

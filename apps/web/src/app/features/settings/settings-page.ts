@@ -16,6 +16,7 @@ import { MenuButton } from '../../shared/menu-button';
 import { BackButton } from '../../shared/back-button';
 import { Sheet } from '../../shared/sheet';
 import { ToastService } from '../../shared/toast.service';
+import { PushNotificationsService } from '../../core/push-notifications.service';
 
 /** Admin settings: cameras and household members. The library has its own page. */
 @Component({
@@ -34,6 +35,7 @@ export class SettingsPage implements OnInit {
   private readonly confirms = inject(ConfirmService);
   private readonly router = inject(Router);
   private readonly toasts = inject(ToastService);
+  readonly push = inject(PushNotificationsService);
 
   readonly users = signal<UserProfile[]>([]);
   /** The member whose password is being reset (drives the sheet). */
@@ -57,6 +59,37 @@ export class SettingsPage implements OnInit {
 
   ngOnInit(): void {
     void this.reload();
+    void this.push.refresh();
+  }
+
+  /** Turn this device's push notifications on or off. */
+  async toggleNotifications(): Promise<void> {
+    try {
+      if (this.push.subscribed()) {
+        await this.push.disable();
+        this.toasts.success('Notifications turned off for this device.');
+      } else {
+        await this.push.enable();
+        this.toasts.success('Notifications on — this device will be notified.');
+      }
+    } catch {
+      this.toasts.error(
+        "Couldn't change notifications. Your browser may have blocked them — check its site permissions.",
+      );
+    }
+  }
+
+  async sendTestNotification(): Promise<void> {
+    try {
+      const delivered = await this.push.sendTest();
+      this.toasts.success(
+        delivered > 0
+          ? `Test sent to ${delivered} device${delivered === 1 ? '' : 's'}.`
+          : 'No subscribed devices to notify yet.',
+      );
+    } catch {
+      this.toasts.error("Couldn't send the test notification.");
+    }
   }
 
   /** "Invite email sent to X" flash after member creation (or a heads-up). */
