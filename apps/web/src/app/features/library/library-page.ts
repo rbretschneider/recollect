@@ -61,7 +61,12 @@ export class LibraryPage implements OnInit {
   readonly scheduleView = signal<ScanScheduleView | null>(null);
   readonly scheduleJustSaved = signal(false);
   /** Bound to the schedule controls; every change saves immediately. */
-  scheduleDraft: ScanScheduleView['schedule'] = { mode: 'interval', time: '03:00', weekday: 0 };
+  scheduleDraft: ScanScheduleView['schedule'] = {
+    mode: 'interval',
+    time: '03:00',
+    weekday: 0,
+    everyMinutes: 15,
+  };
 
   readonly weekdays = [
     { value: 0, label: 'Sunday' },
@@ -72,6 +77,9 @@ export class LibraryPage implements OnInit {
     { value: 5, label: 'Friday' },
     { value: 6, label: 'Saturday' },
   ];
+
+  /** Cadence choices for the "every few minutes" scan mode. */
+  readonly everyMinuteOptions = [5, 15, 30, 60];
 
   readonly pendingCount = computed(() => {
     const status = this.status();
@@ -262,7 +270,9 @@ export class LibraryPage implements OnInit {
       if (this.isAdmin) {
         const view = await this.api.getSchedule();
         this.scheduleView.set(view);
-        this.scheduleDraft = { ...view.schedule };
+        // Keep a cadence value bound even when the saved mode carries none, so
+        // the "every few minutes" picker always has a sensible selection.
+        this.scheduleDraft = { everyMinutes: 15, ...view.schedule };
       }
       this.isLoaded.set(true);
     } catch {

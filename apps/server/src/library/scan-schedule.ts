@@ -1,11 +1,20 @@
-/** When the library rescans on its own. 'interval' is the legacy env-driven default. */
+/**
+ * When the library rescans on its own. 'interval' is the legacy env-driven
+ * default (~daily); 'every' is a user-chosen minutes cadence for NAS drops that
+ * should show up quickly (scans are incremental, so a tight cadence is cheap).
+ */
 export interface ScanSchedule {
-  mode: 'off' | 'interval' | 'daily' | 'weekly';
+  mode: 'off' | 'every' | 'interval' | 'daily' | 'weekly';
   /** Local server time, "HH:MM" 24h. */
   time: string;
   /** 0 = Sunday … 6 = Saturday; only meaningful for weekly. */
   weekday: number;
+  /** Minutes between rescans; only meaningful for 'every'. */
+  everyMinutes?: number;
 }
+
+/** Floor for the 'every' cadence — protects the NAS from a hammering walk. */
+export const MIN_SCAN_EVERY_MINUTES = 5;
 
 /** Settings-store key holding the schedule. */
 export const SCAN_SCHEDULE_KEY = 'library.scanSchedule';

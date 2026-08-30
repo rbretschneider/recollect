@@ -83,7 +83,12 @@ export class LibraryController {
     nextRunAt: string | null;
     serverTimeZone: string;
   }> {
-    await this.library.setSchedule({ mode: body.mode, time: body.time, weekday: body.weekday });
+    await this.library.setSchedule({
+      mode: body.mode,
+      time: body.time,
+      weekday: body.weekday,
+      everyMinutes: body.everyMinutes,
+    });
     return this.library.getSchedule();
   }
 

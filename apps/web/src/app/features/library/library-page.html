@@ -115,10 +115,18 @@
         <div class="schedule-row">
           <select name="scheduleMode" [(ngModel)]="scheduleDraft.mode" (ngModelChange)="saveSchedule()">
             <option value="off">Off — manual scans only</option>
+            <option value="every">Every few minutes (for NAS drops)</option>
             <option value="interval">Every 24 hours (rolling)</option>
             <option value="daily">Daily at a set time</option>
             <option value="weekly">Weekly at a set time</option>
           </select>
+          @if (scheduleDraft.mode === 'every') {
+            <select name="scheduleEvery" [(ngModel)]="scheduleDraft.everyMinutes" (ngModelChange)="saveSchedule()">
+              @for (mins of everyMinuteOptions; track mins) {
+                <option [ngValue]="mins">every {{ mins }} min</option>
+              }
+            </select>
+          }
           @if (scheduleDraft.mode === 'weekly') {
             <select name="scheduleWeekday" [(ngModel)]="scheduleDraft.weekday" (ngModelChange)="saveSchedule()">
               @for (day of weekdays; track day.value) {
@@ -136,7 +144,10 @@
           }
         </div>
         <p class="muted">
-          @if (sv.nextRunAt) {
+          @if (scheduleDraft.mode === 'every') {
+            Each folder rescans about every {{ scheduleDraft.everyMinutes }} minutes — new files
+            dropped on the NAS appear on their own. Scans are incremental, so this stays cheap.
+          } @else if (sv.nextRunAt) {
             Next scan {{ formatNextRun(sv.nextRunAt) }} · server time ({{ sv.serverTimeZone }})
           } @else if (scheduleDraft.mode === 'interval') {
             Each folder rescans about once a day.

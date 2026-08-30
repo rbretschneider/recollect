@@ -6,9 +6,10 @@ import { BrowseListing, LibraryFailure, LibraryRootView, LibraryStatus } from '.
 /** Mirrors the server's schedule response. */
 export interface ScanScheduleView {
   schedule: {
-    mode: 'off' | 'interval' | 'daily' | 'weekly';
+    mode: 'off' | 'every' | 'interval' | 'daily' | 'weekly';
     time: string;
     weekday: number;
+    everyMinutes?: number;
   };
   nextRunAt: string | null;
   serverTimeZone: string;

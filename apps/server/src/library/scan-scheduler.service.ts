@@ -13,6 +13,7 @@ import type { Database } from '../database/database.module';
 import { libraryRoot } from '../database/schema';
 import { LibraryService } from './library.service';
 import {
+  MIN_SCAN_EVERY_MINUTES,
   mostRecentOccurrence,
   SCAN_LAST_RUN_KEY,
   SCAN_SCHEDULE_KEY,
@@ -62,7 +63,12 @@ export class ScanSchedulerService implements OnApplicationBootstrap, OnApplicati
         return;
       }
       if (schedule.mode === 'interval') {
-        await this.enqueueIntervalScans();
+        await this.enqueueDueRootScans(this.config.scanIntervalHours * MILLISECONDS_PER_HOUR);
+        return;
+      }
+      if (schedule.mode === 'every') {
+        const minutes = Math.max(MIN_SCAN_EVERY_MINUTES, schedule.everyMinutes ?? 15);
+        await this.enqueueDueRootScans(minutes * 60 * 1000);
         return;
       }
       const due = mostRecentOccurrence(schedule, new Date());
@@ -81,9 +87,14 @@ export class ScanSchedulerService implements OnApplicationBootstrap, OnApplicati
     }
   }
 
-  /** Legacy behavior: each root rescans once per SCAN_INTERVAL_HOURS. */
-  private async enqueueIntervalScans(): Promise<void> {
-    const cutoff = Date.now() - this.config.scanIntervalHours * MILLISECONDS_PER_HOUR;
+  /**
+   * Enqueues a scan for each enabled root whose last scan is older than
+   * maxAgeMs. Drives both the legacy hourly interval and the minutes-cadence
+   * 'every' mode; keying off each root's lastScanStartedAt means a scan already
+   * running (or just run) is never doubled up, so a tight cadence is safe.
+   */
+  private async enqueueDueRootScans(maxAgeMs: number): Promise<void> {
+    const cutoff = Date.now() - maxAgeMs;
     const roots = await this.db
       .select({ id: libraryRoot.id, lastScanStartedAt: libraryRoot.lastScanStartedAt })
       .from(libraryRoot)
