@@ -234,14 +234,59 @@ section h2 {
     display: grid;
     justify-items: center;
     gap: 0.1rem;
+    max-width: 12rem;
+
+    .moment-head {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      color: var(--accent);
+
+      app-icon {
+        flex-shrink: 0;
+      }
+    }
 
     strong {
       font-size: 0.95rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 10rem;
+    }
+
+    .years {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
     }
 
     .sub {
       font-size: 0.75rem;
       color: var(--text-muted);
+      text-align: center;
+    }
+  }
+
+  .stack-actions {
+    display: flex;
+    justify-content: center;
+  }
+
+  .ghost-link {
+    padding: 0.4rem 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: 2rem;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--accent-contrast);
     }
   }
 }

@@ -15,8 +15,15 @@ import { Icon } from '../../shared/icon';
 import { AssetViewer } from '../viewer/asset-viewer';
 import { SlideshowOverlay, SlideItem } from './slideshow-overlay';
 
-interface OnThisDayYear {
+interface OnThisDayMoment {
+  key: string;
+  kind: 'memory' | 'place' | 'person';
   year: number;
+  title: string;
+  subtitle: string | null;
+  memoryId: string | null;
+  personId: string | null;
+  coverAssetId: string;
   items: Array<{ id: string; mediaType: 'image' | 'video' }>;
 }
 
@@ -38,7 +45,7 @@ export class DashboardPage implements OnInit {
   private readonly auth = inject(AuthStateService);
   private readonly toasts = inject(ToastService);
 
-  readonly onThisDay = signal<OnThisDayYear[]>([]);
+  readonly onThisDay = signal<OnThisDayMoment[]>([]);
   readonly suggestions = signal<InboxSuggestion[]>([]);
   readonly recentMemories = signal<MemorySummary[]>([]);
   /** The newest photos to land in the library, by when they were added. */
@@ -94,13 +101,13 @@ export class DashboardPage implements OnInit {
     return start.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
-  /** The polaroid stack was tapped: run that year as a slideshow. */
+  /** The moment's stack was tapped: play it as a slideshow. */
   readonly slideshowItems = signal<SlideItem[] | null>(null);
   readonly slideshowTitle = signal('');
 
-  openSlideshow(group: OnThisDayYear): void {
-    this.slideshowTitle.set(`${this.yearsAgo(group.year)} · ${group.year}`);
-    this.slideshowItems.set(group.items);
+  openSlideshow(moment: OnThisDayMoment): void {
+    this.slideshowTitle.set(`${moment.title} · ${this.yearsAgo(moment.year)}`);
+    this.slideshowItems.set(moment.items);
   }
 
   closeSlideshow(): void {
@@ -108,33 +115,42 @@ export class DashboardPage implements OnInit {
   }
 
   /** Up to four fanned photos per stack; the rest wait for the show. */
-  stackPreview(group: OnThisDayYear): Array<{ id: string; mediaType: string }> {
-    return group.items.slice(0, 4);
+  stackPreview(moment: OnThisDayMoment): Array<{ id: string; mediaType: string }> {
+    return moment.items.slice(0, 4);
   }
 
-  /** Which year's save-as-album is in flight (per-stack busy state). */
-  readonly savingAlbumYear = signal<number | null>(null);
+  /** The secondary line under a moment: year, count, and place/people. */
+  momentMeta(moment: OnThisDayMoment): string {
+    const count = `${moment.items.length} ${moment.items.length === 1 ? 'photo' : 'photos'}`;
+    const parts = [String(moment.year), count];
+    if (moment.subtitle) {
+      parts.push(moment.subtitle);
+    }
+    return parts.join(' · ');
+  }
 
-  /** One tap turns a year's pile into a real album and opens it. */
-  async saveAsAlbum(group: OnThisDayYear): Promise<void> {
-    if (this.savingAlbumYear() !== null) {
+  /** Which moment's save-as-album is in flight (per-stack busy state). */
+  readonly savingAlbumKey = signal<string | null>(null);
+
+  /** One tap turns a moment's pile into a real album and opens it. */
+  async saveAsAlbum(moment: OnThisDayMoment): Promise<void> {
+    if (this.savingAlbumKey() !== null) {
       return;
     }
-    this.savingAlbumYear.set(group.year);
+    this.savingAlbumKey.set(moment.key);
     try {
-      const dayLabel = new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
       const { albumId } = await this.albumsApi.create(
-        `${dayLabel}, ${group.year}`,
-        group.items.map((item) => item.id),
+        `${moment.title}, ${moment.year}`,
+        moment.items.map((item) => item.id),
       );
       await this.router.navigate(['/albums', albumId]);
     } catch {
       this.toasts.error('Couldn’t create that album.', {
         label: 'Retry',
-        run: () => void this.saveAsAlbum(group),
+        run: () => void this.saveAsAlbum(moment),
       });
     } finally {
-      this.savingAlbumYear.set(null);
+      this.savingAlbumKey.set(null);
     }
   }
 
@@ -149,9 +165,6 @@ export class DashboardPage implements OnInit {
   protected load(): void {
     const now = new Date();
     const day = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    // Fibonacci anniversaries only: 1, 2, 3, 5, 8, 13, 21, 34 years ago —
-    // "today" isn't a memory yet, and year 4 is just year 4.
-    const fibonacci = new Set([1, 2, 3, 5, 8, 13, 21, 34, 55]);
 
     this.photosPending.set(true);
     this.allLoaded.set(false);
@@ -180,10 +193,12 @@ export class DashboardPage implements OnInit {
     };
 
     void firstValueFrom(
-      this.http.get<{ years: OnThisDayYear[] }>(`/api/v1/dashboard/on-this-day?day=${day}`),
+      this.http.get<{ moments: OnThisDayMoment[] }>(
+        `/api/v1/dashboard/on-this-day?day=${day}&year=${now.getFullYear()}`,
+      ),
     )
       .then((otd) => {
-        this.onThisDay.set(otd.years.filter((g) => fibonacci.has(now.getFullYear() - g.year)));
+        this.onThisDay.set(otd.moments);
         settle(false);
       })
       .catch(() => settle(true))

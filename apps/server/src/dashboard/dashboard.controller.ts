@@ -2,50 +2,32 @@ import { BadRequestException, Controller, Get, Inject, Query } from '@nestjs/com
 import { sql } from 'drizzle-orm';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
-
-/** One past year's photos for today's date. */
-export interface OnThisDayYear {
-  year: number;
-  items: Array<{ id: string; mediaType: 'image' | 'video' }>;
-}
+import { DashboardService, OnThisDayMoment } from './dashboard.service';
 
 /** Home-page data: "on this day" through the years. */
 @Controller('dashboard')
 export class DashboardController {
-  constructor(@Inject(DATABASE) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Database,
+    private readonly dashboard: DashboardService,
+  ) {}
 
   /**
-   * Every photo taken on this calendar day (MM-DD, the client's local date —
-   * the server must not decide what "today" means for a phone abroad),
-   * grouped by year, newest year first.
+   * "On this day", reimagined as coherent moments rather than a flat pile:
+   * existing Memories on this date, place+time clusters of loose photos, and
+   * per-person "with them" cards — filtered and ranked. The client sends its
+   * own local MM-DD so the server never decides "today" for a phone abroad.
    */
   @Get('on-this-day')
-  async onThisDay(@Query('day') day: string): Promise<{ years: OnThisDayYear[] }> {
+  async onThisDay(
+    @Query('day') day: string,
+    @Query('year') year?: string,
+  ): Promise<{ moments: OnThisDayMoment[] }> {
     if (!/^\d{2}-\d{2}$/.test(day ?? '')) {
       throw new BadRequestException('day must be MM-DD.');
     }
-    const result = await this.db.execute<{
-      id: string;
-      year: number;
-      media_type: 'image' | 'video';
-    }>(sql`
-      select id, extract(year from captured_day)::int as year, media_type
-      from asset
-      where status = 'active' and to_char(captured_day, 'MM-DD') = ${day}
-      order by captured_day desc, captured_at asc
-      limit 400
-    `);
-    const byYear = new Map<number, Array<{ id: string; mediaType: 'image' | 'video' }>>();
-    for (const row of result.rows) {
-      const list = byYear.get(row.year) ?? [];
-      list.push({ id: row.id, mediaType: row.media_type });
-      byYear.set(row.year, list);
-    }
-    return {
-      years: [...byYear.entries()]
-        .sort((a, b) => b[0] - a[0])
-        .map(([year, items]) => ({ year, items })),
-    };
+    const nowYear = Number(year) || new Date().getFullYear();
+    return { moments: await this.dashboard.onThisDayMoments(day, nowYear) };
   }
 
   /**

@@ -24,37 +24,54 @@
     <section class="on-this-day" aria-label="On this day">
       <h2>On this day</h2>
       <div class="stacks">
-        @for (group of onThisDay(); track group.year) {
+        @for (moment of onThisDay(); track moment.key) {
           <div class="stack">
-            <button type="button" class="stack-tap" (click)="openSlideshow(group)">
+            <button type="button" class="stack-tap" (click)="openSlideshow(moment)">
               <span class="fan">
-                @for (item of stackPreview(group); track item.id; let cardIndex = $index) {
+                @for (item of stackPreview(moment); track item.id; let cardIndex = $index) {
                   <span class="polaroid" [attr.data-card]="cardIndex">
                     <img [src]="thumbUrl(item.id, 720)" alt="" loading="lazy" />
                   </span>
                 }
               </span>
               <span class="caption">
-                <strong>{{ yearsAgo(group.year) }}</strong>
-                <span class="sub">{{ group.year }} · {{ group.items.length }}
-                  {{ group.items.length === 1 ? 'photo' : 'photos' }} · tap to relive</span>
+                <span class="moment-head">
+                  @if (moment.kind === 'memory') {
+                    <app-icon name="sparkles" [size]="14" aria-hidden="true" />
+                  } @else if (moment.kind === 'person') {
+                    <app-icon name="user" [size]="14" aria-hidden="true" />
+                  } @else {
+                    <app-icon name="map-pin" [size]="14" aria-hidden="true" />
+                  }
+                  <strong>{{ moment.title }}</strong>
+                </span>
+                <span class="years">{{ yearsAgo(moment.year) }}</span>
+                <span class="sub">{{ momentMeta(moment) }} · tap to relive</span>
               </span>
             </button>
-            <button
-              type="button"
-              class="create-album"
-              [disabled]="savingAlbumYear() === group.year"
-              [attr.aria-label]="'Create an album from ' + group.year"
-              (click)="saveAsAlbum(group)"
-            >
-              @if (savingAlbumYear() === group.year) {
-                <span class="spinner" aria-hidden="true"></span>
-                Creating…
+            <div class="stack-actions">
+              @if (moment.kind === 'memory' && moment.memoryId) {
+                <a class="ghost-link" [routerLink]="['/memories', moment.memoryId]">Open memory</a>
+              } @else if (moment.kind === 'person' && moment.personId) {
+                <a class="ghost-link" [routerLink]="['/people', moment.personId]">See person</a>
               } @else {
-                <app-icon name="images" [size]="16" />
-                Create album
+                <button
+                  type="button"
+                  class="create-album"
+                  [disabled]="savingAlbumKey() === moment.key"
+                  [attr.aria-label]="'Create an album from ' + moment.title"
+                  (click)="saveAsAlbum(moment)"
+                >
+                  @if (savingAlbumKey() === moment.key) {
+                    <span class="spinner" aria-hidden="true"></span>
+                    Creating…
+                  } @else {
+                    <app-icon name="images" [size]="16" />
+                    Create album
+                  }
+                </button>
               }
-            </button>
+            </div>
           </div>
         }
       </div>
