@@ -57,6 +57,34 @@
           {{ push.busy() ? 'Working…' : (push.subscribed() ? 'Turn off' : 'Turn on') }}
         </button>
       </div>
+      @if (push.subscribed()) {
+        <div class="card row">
+          <div class="info">
+            <h3>Daily look-back</h3>
+            <p class="muted">
+              A morning nudge with this week’s photos from years past — sent only
+              when there’s actually something to relive.
+            </p>
+          </div>
+          <div class="daily-controls">
+            <input
+              type="time"
+              [value]="push.daily().dailyTime"
+              [disabled]="!push.daily().dailyEnabled"
+              (change)="onDailyTime($event)"
+              aria-label="Daily look-back time"
+            />
+            <button
+              type="button"
+              class="outline"
+              [class.on]="push.daily().dailyEnabled"
+              (click)="toggleDaily()"
+            >
+              {{ push.daily().dailyEnabled ? 'On' : 'Off' }}
+            </button>
+          </div>
+        </div>
+      }
       @if (isAdmin && push.subscribed()) {
         <div class="card row">
           <div class="info">

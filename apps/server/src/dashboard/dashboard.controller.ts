@@ -22,12 +22,14 @@ export class DashboardController {
   async onThisDay(
     @Query('day') day: string,
     @Query('year') year?: string,
+    @Query('limit') limit?: string,
   ): Promise<{ moments: OnThisDayMoment[] }> {
     if (!/^\d{2}-\d{2}$/.test(day ?? '')) {
       throw new BadRequestException('day must be MM-DD.');
     }
     const nowYear = Number(year) || new Date().getFullYear();
-    return { moments: await this.dashboard.onThisDayMoments(day, nowYear) };
+    const cap = Math.min(Math.max(Number(limit) || 4, 1), 12);
+    return { moments: await this.dashboard.onThisDayMoments(day, nowYear, cap) };
   }
 
   /**

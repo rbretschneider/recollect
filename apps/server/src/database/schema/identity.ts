@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  date,
   index,
   integer,
   jsonb,
@@ -87,6 +88,19 @@ export const pushSubscription = pgTable(
   },
   (table) => [index('push_subscription_user_id_idx').on(table.userId)],
 );
+
+/** Per-user notification settings (the daily "years ago" look-back push). */
+export const notificationPref = pgTable('notification_pref', {
+  userId: uuid('user_id').primaryKey(),
+  dailyEnabled: boolean('daily_enabled').notNull().default(true),
+  /** Local wall-clock time to send, "HH:MM" 24h. */
+  dailyTime: text('daily_time').notNull().default('07:30'),
+  /** IANA zone the time is interpreted in (captured from the device). */
+  timezone: text('timezone').notNull().default('UTC'),
+  /** Local calendar date we last sent, so a day never double-fires. */
+  lastSentOn: date('last_sent_on'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
 
 /** Append-only record of every destructive or structural action. */
 export const auditLog = pgTable(

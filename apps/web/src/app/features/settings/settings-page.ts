@@ -79,6 +79,17 @@ export class SettingsPage implements OnInit {
     }
   }
 
+  onDailyTime(event: Event): void {
+    const time = (event.target as HTMLInputElement).value;
+    if (/^\d{2}:\d{2}$/.test(time)) {
+      void this.push.saveDaily({ dailyTime: time });
+    }
+  }
+
+  async toggleDaily(): Promise<void> {
+    await this.push.saveDaily({ dailyEnabled: !this.push.daily().dailyEnabled });
+  }
+
   async sendTestNotification(): Promise<void> {
     try {
       const delivered = await this.push.sendTest();

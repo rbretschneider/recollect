@@ -68,7 +68,11 @@ export class DashboardService {
    * them" card. Accidental/tiny/damaged shots are filtered out. Ranked so the
    * most memorable moment leads.
    */
-  async onThisDayMoments(day: string, nowYear: number): Promise<OnThisDayMoment[]> {
+  async onThisDayMoments(
+    day: string,
+    nowYear: number,
+    limit: number = MAX_MOMENTS,
+  ): Promise<OnThisDayMoment[]> {
     const days = windowDays(day, WINDOW_RADIUS_DAYS);
     // "This week, years ago" — the current year is not a memory yet, so drop it.
     const candidates = (await this.loadCandidates(days)).filter(
@@ -245,7 +249,7 @@ export class DashboardService {
       }
       perYear.set(moment.year, count + 1);
       kept.push(moment);
-      if (kept.length >= MAX_MOMENTS) {
+      if (kept.length >= limit) {
         break;
       }
     }

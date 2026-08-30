@@ -18,6 +18,13 @@ export const routes: Routes = [
       import('./features/dashboard/dashboard-page').then((m) => m.DashboardPage),
   },
   {
+    // The daily push lands here: this week's look-backs, a few more than home.
+    path: 'lookback',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/lookback/lookback-page').then((m) => m.LookbackPage),
+  },
+  {
     path: 'photos',
     canActivate: [authGuard],
     loadComponent: () => import('./features/photos/photos-page').then((m) => m.PhotosPage),

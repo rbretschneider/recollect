@@ -227,6 +227,32 @@ a.outline {
   flex-shrink: 0;
 }
 
+.daily-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+
+  input[type='time'] {
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.85rem;
+
+    &:disabled {
+      opacity: 0.5;
+    }
+  }
+
+  .outline.on {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+    color: var(--accent);
+  }
+}
+
 // Disabled members read as switched off, not gone.
 .card.row.disabled-member {
   opacity: 0.65;

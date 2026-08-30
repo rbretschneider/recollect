@@ -1,0 +1,62 @@
+<app-topbar />
+
+<main class="lookback">
+  <header class="hello">
+    <h1>This week, years ago</h1>
+    <p>{{ todayLabel }}</p>
+  </header>
+
+  @if (loading()) {
+    <app-page-loading label="Looking back…" />
+  } @else if (loadFailed()) {
+    <app-load-error message="Couldn’t load your look-backs." (retry)="load()" />
+  } @else if (moments().length === 0) {
+    <section class="empty">
+      <h2>Nothing from this week yet</h2>
+      <p>As the years add up, moments from around today will gather here.</p>
+    </section>
+  } @else {
+    <div class="stacks">
+      @for (moment of moments(); track moment.key) {
+        <div class="stack">
+          <button type="button" class="stack-tap" (click)="openSlideshow(moment)">
+            <span class="fan">
+              @for (item of stackPreview(moment); track item.id; let cardIndex = $index) {
+                <span class="polaroid" [attr.data-card]="cardIndex">
+                  <img [src]="thumbUrl(item.id, 720)" alt="" loading="lazy" />
+                </span>
+              }
+            </span>
+            <span class="caption">
+              <span class="moment-head">
+                @if (moment.kind === 'memory') {
+                  <app-icon name="sparkles" [size]="14" aria-hidden="true" />
+                } @else if (moment.kind === 'person') {
+                  <app-icon name="user" [size]="14" aria-hidden="true" />
+                } @else {
+                  <app-icon name="map-pin" [size]="14" aria-hidden="true" />
+                }
+                <strong>{{ moment.title }}</strong>
+              </span>
+              <span class="years">{{ yearsAgo(moment.year) }}</span>
+              <span class="sub">{{ momentMeta(moment) }} · tap to relive</span>
+            </span>
+          </button>
+          @if (moment.kind === 'memory' && moment.memoryId) {
+            <a class="ghost-link" [routerLink]="['/memories', moment.memoryId]">Open memory</a>
+          } @else if (moment.kind === 'person' && moment.personId) {
+            <a class="ghost-link" [routerLink]="['/people', moment.personId]">See person</a>
+          }
+        </div>
+      }
+    </div>
+  }
+</main>
+
+@if (slideshowItems(); as slides) {
+  <app-slideshow-overlay
+    [items]="slides"
+    [title]="slideshowTitle()"
+    (closed)="closeSlideshow()"
+  />
+}

@@ -183,6 +183,13 @@
       "when": 1788000200000,
       "tag": "0025_person_favorite",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1788000300000,
+      "tag": "0026_notification_pref",
+      "breakpoints": true
     }
   ]
 }

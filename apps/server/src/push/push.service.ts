@@ -1,12 +1,12 @@
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import webpush from 'web-push';
 import { APP_CONFIG } from '../config/app-config';
 import type { AppConfig } from '../config/app-config';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
-import { pushSubscription } from '../database/schema';
+import { notificationPref, pushSubscription } from '../database/schema';
 
 /** The browser-supplied Web Push subscription (PushSubscription.toJSON()). */
 export interface PushSubscriptionInput {
@@ -21,6 +21,16 @@ export interface PushPayload {
   /** Where tapping the notification should open the app. */
   url?: string;
 }
+
+/** The daily "years ago" look-back push settings for one user. */
+export interface DailyPref {
+  dailyEnabled: boolean;
+  /** Local wall-clock "HH:MM". */
+  dailyTime: string;
+  timezone: string;
+}
+
+const DEFAULT_DAILY: DailyPref = { dailyEnabled: true, dailyTime: '07:30', timezone: 'UTC' };
 
 /**
  * Web Push (VAPID) delivery to installed PWAs. Self-hosted — no third party.
@@ -65,6 +75,7 @@ export class PushService implements OnModuleInit {
     userId: string,
     input: PushSubscriptionInput,
     userAgent: string | null,
+    timezone?: string,
   ): Promise<void> {
     await this.db
       .insert(pushSubscription)
@@ -85,6 +96,76 @@ export class PushService implements OnModuleInit {
           userAgent,
         },
       });
+    // First device to enable notifications seeds the daily look-back on at
+    // 07:30 in the device's own zone; the user can change it in Settings.
+    await this.db
+      .insert(notificationPref)
+      .values({ userId, timezone: timezone ?? DEFAULT_DAILY.timezone })
+      .onConflictDoNothing();
+  }
+
+  /** This user's daily look-back settings (defaults if never set). */
+  async getDailyPref(userId: string): Promise<DailyPref> {
+    const [row] = await this.db
+      .select()
+      .from(notificationPref)
+      .where(eq(notificationPref.userId, userId));
+    if (!row) {
+      return DEFAULT_DAILY;
+    }
+    return { dailyEnabled: row.dailyEnabled, dailyTime: row.dailyTime, timezone: row.timezone };
+  }
+
+  /** Upsert this user's daily look-back settings. */
+  async setDailyPref(userId: string, pref: DailyPref): Promise<void> {
+    await this.db
+      .insert(notificationPref)
+      .values({
+        userId,
+        dailyEnabled: pref.dailyEnabled,
+        dailyTime: pref.dailyTime,
+        timezone: pref.timezone,
+      })
+      .onConflictDoUpdate({
+        target: notificationPref.userId,
+        set: {
+          dailyEnabled: pref.dailyEnabled,
+          dailyTime: pref.dailyTime,
+          timezone: pref.timezone,
+          updatedAt: new Date(),
+        },
+      });
+  }
+
+  /** Enabled daily-look-back users who have at least one live subscription. */
+  async dailyCandidates(): Promise<
+    Array<{ userId: string; dailyTime: string; timezone: string; lastSentOn: string | null }>
+  > {
+    const rows = await this.db.execute<{
+      user_id: string;
+      daily_time: string;
+      timezone: string;
+      last_sent_on: string | null;
+    }>(sql`
+      select p.user_id, p.daily_time, p.timezone, p.last_sent_on::text as last_sent_on
+      from notification_pref p
+      where p.daily_enabled = true
+        and exists (select 1 from push_subscription s where s.user_id = p.user_id)
+    `);
+    return rows.rows.map((row) => ({
+      userId: row.user_id,
+      dailyTime: row.daily_time,
+      timezone: row.timezone,
+      lastSentOn: row.last_sent_on,
+    }));
+  }
+
+  /** Record that today's local date was handled, so it never double-fires. */
+  async markDailySent(userId: string, localDate: string): Promise<void> {
+    await this.db
+      .update(notificationPref)
+      .set({ lastSentOn: localDate })
+      .where(eq(notificationPref.userId, userId));
   }
 
   /** Remove one subscription (this browser opted out or the endpoint died). */
