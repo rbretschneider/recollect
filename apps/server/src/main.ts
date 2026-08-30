@@ -8,7 +8,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { existsSync } from 'fs';
 import { readFile } from 'fs/promises';
-import { join, resolve } from 'path';
+import { basename, join, resolve } from 'path';
 import { Pool } from 'pg';
 import { AppModule } from './app.module';
 import { APP_CONFIG, AppConfig, loadAppConfig } from './config/app-config';
@@ -82,6 +82,20 @@ function serveWebApp(app: NestExpressApplication, config: AppConfig): void {
   app.useStaticAssets(config.webDistDir, {
     index: false,
     setHeaders: (res, path) => {
+      // The service worker's manifest and scripts MUST always revalidate. The
+      // SW detects a new deploy by polling ngsw.json; if that (or the worker
+      // itself) is served from cache, an installed PWA can go a full cache
+      // lifetime without ever seeing the update. Force no-cache on them.
+      const file = basename(path);
+      if (
+        file === 'ngsw.json' ||
+        file === 'ngsw-worker.js' ||
+        file === 'safety-worker.js' ||
+        file === 'worker-basic.min.js'
+      ) {
+        res.setHeader('Cache-Control', 'no-cache');
+        return;
+      }
       // Angular content-hashes its bundles; those never change under a name.
       const isHashed = /-[0-9A-Z]{8,}\.(js|css)$|\.(woff2?|webp|png|svg|ico)$/i.test(path);
       res.setHeader(

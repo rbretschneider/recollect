@@ -1,6 +1,6 @@
-import { ApplicationRef, inject, Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
-import { filter, first } from 'rxjs';
+import { filter } from 'rxjs';
 import { AuthStateService } from './auth/auth-state.service';
 
 const UPDATE_CHECK_MS = 5 * 60 * 1000;
@@ -16,14 +16,13 @@ const STALE_AFTER_HIDDEN_MS = 5 * 60 * 1000;
 @Injectable({ providedIn: 'root' })
 export class AppUpdateService {
   private readonly updates = inject(SwUpdate);
-  private readonly appRef = inject(ApplicationRef);
   private readonly auth = inject(AuthStateService);
   private hiddenAt: number | null = null;
 
   start(): void {
     // Waking from a suspend: refresh the session BEFORE the user taps, so
     // the first interaction never eats the 401-retry latency, and check for
-    // a new app version while we're at it.
+    // a new app version whenever we come back to the foreground.
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
         this.hiddenAt = Date.now();
@@ -31,11 +30,10 @@ export class AppUpdateService {
       }
       const hiddenFor = this.hiddenAt === null ? 0 : Date.now() - this.hiddenAt;
       this.hiddenAt = null;
+      // Every return to foreground is a chance to catch a fresh deploy.
+      this.checkForUpdate();
       if (hiddenFor > STALE_AFTER_HIDDEN_MS && this.auth.user() !== null) {
         void this.auth.tryRefresh();
-        if (this.updates.isEnabled) {
-          void this.updates.checkForUpdate();
-        }
       }
     });
     if (!this.updates.isEnabled) {
@@ -46,10 +44,19 @@ export class AppUpdateService {
       .subscribe(() => {
         void this.updates.activateUpdate().then(() => window.location.reload());
       });
-    // First check once the app settles, then keep checking while it stays open.
-    this.appRef.isStable.pipe(first((stable) => stable)).subscribe(() => {
-      void this.updates.checkForUpdate();
-      setInterval(() => void this.updates.checkForUpdate(), UPDATE_CHECK_MS);
-    });
+    // Check right away and on a fixed cadence. NOT gated on appRef.isStable:
+    // any long-lived timer (a slideshow, a poll) can keep the app from ever
+    // reporting "stable", which would silently kill the update loop for an
+    // open tab — exactly the case where a deploy needs to reach the user.
+    this.checkForUpdate();
+    setInterval(() => this.checkForUpdate(), UPDATE_CHECK_MS);
+  }
+
+  private checkForUpdate(): void {
+    if (!this.updates.isEnabled) {
+      return;
+    }
+    // Rejects if the SW isn't registered yet (early boot) — harmless, ignore.
+    void this.updates.checkForUpdate().catch(() => undefined);
   }
 }
