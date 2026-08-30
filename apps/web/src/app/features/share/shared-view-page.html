@@ -89,7 +89,7 @@
 
     @if (looseAssetIds().length > 0) {
       <section class="more-photos" aria-label="More photos">
-        <button type="button" class="stack" (click)="showSlideshow.set(true)">
+        <button type="button" class="stack" (click)="openViewerForAsset(looseAssetIds()[0])">
           <span class="fan">
             @for (assetId of loosePreview(); track assetId; let i = $index) {
               <span class="polaroid" [attr.data-card]="i">
@@ -99,9 +99,14 @@
           </span>
           <span class="stack-label">
             <strong>{{ looseAssetIds().length }} more {{ looseAssetIds().length === 1 ? 'photo' : 'photos' }}</strong>
-            <span class="sub">tap to play the whole memory ▶</span>
+            <span class="sub">tap to browse — swipe &amp; zoom at your own pace</span>
           </span>
         </button>
+        @if (shared.assetIds.length > 1) {
+          <button type="button" class="play-here" (click)="showSlideshow.set(true)">
+            ▶ Play slideshow
+          </button>
+        }
       </section>
     }
 
