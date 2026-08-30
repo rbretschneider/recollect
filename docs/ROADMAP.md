@@ -49,10 +49,17 @@ left drawer. Details in git history.)
    face under ~5% of frame width). User confirmed 2026-08-30: NO autodeletes
    (flag only), and every flagged item must open full-screen in one tap to
    verify before removal — tap-to-open SHIPPED 2026-08-30 (flagged rows open
-   the AssetViewer with info/delete). Remaining: the new detectors.
-4. **Pixel/Android motion photos** — play the embedded video, not just the
-   still. (Distinct from #1: the MP4 is embedded IN the JPEG via GCamera
-   MicroVideo / MotionPhoto XMP, not a separate MOV.)
+   the AssetViewer with info/delete). CLIP zero-shot "Possibly accidental"
+   (floor / all-dark / blur) SHIPPED 2026-08-30 — zero-shot over existing CLIP
+   embeddings, isolated + conservative + dismissible; thresholds
+   (CLIP_ACCIDENTAL_MARGIN/_MAX_DISTANCE constants) need tuning on the real
+   library. Remaining: oversized-image conversion + photo-of-a-frame (tiny-faces)
+   flag.
+4. **Pixel/Android motion photos** — SHIPPED 2026-08-30. MP4 embedded in the
+   JPEG (GCamera MicroVideo / MotionPhoto XMP) is extracted at ingest to an
+   app-data cache and served at /assets/:id/motion; viewer shows a LIVE badge
+   with press-and-hold playback. Best-effort, no schema change. Needs a real
+   Pixel/Samsung motion photo to confirm extraction end-to-end.
 5. **Push notifications (larger feature)** — installed PWA users can be
    notified on certain conditions (conditions TBD — user is mulling;
    candidates: new guest photos on your album, new suggested memories,
