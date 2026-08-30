@@ -90,6 +90,7 @@ export class CleanupPage implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopPolling();
+    this.disarmTrash();
   }
 
   thumbUrl(assetId: string): string {
@@ -115,15 +116,25 @@ export class CleanupPage implements OnInit, OnDestroy {
     return item.converting || this.queuedConversions().has(item.assetId);
   }
 
+  /** The junk/accidental row whose Trash button is armed (tap-twice to confirm). */
+  readonly armedTrashId = signal<string | null>(null);
+  private armTrashTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Two-tap trash: the first tap arms the button (no drawer, no mouse travel
+   * across the screen after checking each photo); the second tap within a few
+   * seconds moves it to Trash. Trash keeps its holding period, so it's undoable.
+   */
   async trashJunk(item: JunkSuggestion): Promise<void> {
-    const confirmed = await this.confirms.ask({
-      title: `Move “${item.fileName}” to Trash?`,
-      message: `${item.reason}. The normal Trash holding period applies — restore any time before it empties.`,
-      confirmLabel: 'Move to Trash',
-    });
-    if (!confirmed) {
+    if (this.armedTrashId() !== item.assetId) {
+      this.armedTrashId.set(item.assetId);
+      if (this.armTrashTimer) {
+        clearTimeout(this.armTrashTimer);
+      }
+      this.armTrashTimer = setTimeout(() => this.armedTrashId.set(null), 3500);
       return;
     }
+    this.disarmTrash();
     try {
       await this.trashApi.trashAssets([item.assetId]);
       this.removeJunk(item.assetId);
@@ -133,6 +144,14 @@ export class CleanupPage implements OnInit, OnDestroy {
         label: 'Retry',
         run: () => void this.trashJunk(item),
       });
+    }
+  }
+
+  private disarmTrash(): void {
+    this.armedTrashId.set(null);
+    if (this.armTrashTimer) {
+      clearTimeout(this.armTrashTimer);
+      this.armTrashTimer = null;
     }
   }
 

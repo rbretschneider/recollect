@@ -44,7 +44,14 @@
               </div>
               <div class="row-actions">
                 <button type="button" class="outline" (click)="dismissJunk(item)">Keep</button>
-                <button type="button" class="outline danger" (click)="trashJunk(item)">Trash</button>
+                <button
+                  type="button"
+                  class="outline danger"
+                  [class.armed]="armedTrashId() === item.assetId"
+                  (click)="trashJunk(item)"
+                >
+                  {{ armedTrashId() === item.assetId ? 'Confirm?' : 'Trash' }}
+                </button>
               </div>
             </div>
           }
@@ -74,7 +81,14 @@
               </div>
               <div class="row-actions">
                 <button type="button" class="outline" (click)="dismissJunk(item)">Keep</button>
-                <button type="button" class="outline danger" (click)="trashJunk(item)">Trash</button>
+                <button
+                  type="button"
+                  class="outline danger"
+                  [class.armed]="armedTrashId() === item.assetId"
+                  (click)="trashJunk(item)"
+                >
+                  {{ armedTrashId() === item.assetId ? 'Confirm?' : 'Trash' }}
+                </button>
               </div>
             </div>
           }

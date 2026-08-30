@@ -164,6 +164,13 @@
     color: var(--danger);
   }
 
+  // Armed (first tap) — solid so the "tap again to confirm" is unmistakable.
+  &.danger.armed {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+  }
+
   &:disabled {
     opacity: 0.6;
   }
