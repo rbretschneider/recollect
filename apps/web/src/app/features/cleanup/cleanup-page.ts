@@ -61,6 +61,9 @@ export class CleanupPage implements OnInit, OnDestroy {
     for (const junk of suggestions?.junk ?? []) {
       items.push(toViewerAsset(junk.assetId, junk.mediaType === 'video' ? 'video' : 'image', placeholderDate));
     }
+    for (const item of suggestions?.accidental ?? []) {
+      items.push(toViewerAsset(item.assetId, item.mediaType === 'video' ? 'video' : 'image', placeholderDate));
+    }
     for (const hog of suggestions?.hogs ?? []) {
       items.push(toViewerAsset(hog.assetId, hog.mediaType === 'video' ? 'video' : 'image', placeholderDate));
     }
@@ -304,7 +307,11 @@ export class CleanupPage implements OnInit, OnDestroy {
   private removeJunk(assetId: string): void {
     const data = this.data();
     if (data) {
-      this.data.set({ ...data, junk: data.junk.filter((item) => item.assetId !== assetId) });
+      this.data.set({
+        ...data,
+        junk: data.junk.filter((item) => item.assetId !== assetId),
+        accidental: data.accidental.filter((item) => item.assetId !== assetId),
+      });
     }
   }
 

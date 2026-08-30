@@ -52,6 +52,36 @@
       </section>
     }
 
+    @if (suggestions.accidental.length > 0) {
+      <section class="junk" aria-label="Possibly accidental">
+        <div class="section-head">
+          <h2>Possibly accidental ({{ suggestions.accidental.length }})</h2>
+        </div>
+        <p class="hint">
+          A best guess from image recognition — floor shots, all-dark “pocket”
+          photos, heavy blur. Tap a photo to check it first; nothing is removed
+          until you say so.
+        </p>
+        <div class="rows">
+          @for (item of suggestions.accidental; track item.assetId) {
+            <div class="row">
+              <button type="button" class="thumb" aria-label="Open to verify" (click)="openViewer(item.assetId)">
+                <img [src]="thumbUrl(item.assetId)" alt="" loading="lazy" />
+              </button>
+              <div class="info">
+                <h3>{{ item.fileName }}</h3>
+                <p>{{ formatSize(item.sizeBytes) }} · {{ item.reason }}</p>
+              </div>
+              <div class="row-actions">
+                <button type="button" class="outline" (click)="dismissJunk(item)">Keep</button>
+                <button type="button" class="outline danger" (click)="trashJunk(item)">Trash</button>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
     @if (suggestions.hogs.length > 0) {
       <section class="hogs" aria-label="Space hogs">
         <div class="section-head">

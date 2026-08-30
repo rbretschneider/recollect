@@ -24,6 +24,8 @@ export interface SpaceHogSuggestion {
 export interface CleanupSuggestions {
   junk: JunkSuggestion[];
   hogs: SpaceHogSuggestion[];
+  /** Images CLIP thinks are probably accidental (floor / all-dark / blur). */
+  accidental: JunkSuggestion[];
   projectedSavingsBytes: number;
 }
 

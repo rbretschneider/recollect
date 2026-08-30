@@ -9,6 +9,7 @@ import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
 import { cleanupDismissal } from '../database/schema';
 import { JobQueueService } from '../jobs/job-queue.service';
+import { MlClientService } from '../ml/ml-client.service';
 import { safeMoveFile } from '../trash/safe-file-move';
 
 /** Background job type for in-place video conversion. */
@@ -53,9 +54,47 @@ export interface ConvertedOriginal {
 export interface CleanupSuggestions {
   junk: JunkSuggestion[];
   hogs: SpaceHogSuggestion[];
+  /**
+   * Images CLIP thinks are probably accidental (floor / all-dark / heavy blur).
+   * Suggestion-only and separated from hard "junk" because it's a fuzzy guess —
+   * verify by tapping before removing. Empty when ML is off or unavailable.
+   */
+  accidental: JunkSuggestion[];
   /** Bytes reclaimable if every suggestion is accepted. */
   projectedSavingsBytes: number;
 }
+
+/**
+ * Zero-shot "probably accidental" prompts. Each junk prompt only flags an image
+ * when it's notably closer (smaller cosine distance) to that prompt than to the
+ * good-photo reference — the relative margin is far more robust than any
+ * absolute CLIP distance. Thresholds are deliberately conservative; tune
+ * CLIP_ACCIDENTAL_* against the real library (false positives erode trust).
+ */
+const CLIP_GOOD_PROMPT = 'a clear normal photo of people, a place, or an object';
+const CLIP_ACCIDENTAL_PROMPTS: ReadonlyArray<{ category: string; reason: string; prompt: string }> = [
+  {
+    category: 'floor',
+    reason: 'Looks like an accidental shot of the floor or ground',
+    prompt: 'a photo of an empty floor, carpet, pavement, or ground with nothing of interest',
+  },
+  {
+    category: 'dark',
+    reason: 'Looks like an accidental all-dark “pocket” shot',
+    prompt: 'a completely black or near-black accidental photo taken by mistake',
+  },
+  {
+    category: 'blur',
+    reason: 'Looks heavily blurred / out of focus',
+    prompt: 'an extremely blurry, badly out-of-focus, unusable smeared photo',
+  },
+];
+/** Junk prompt must beat the good prompt by at least this cosine-distance margin. */
+const CLIP_ACCIDENTAL_MARGIN = 0.05;
+/** …and be within this absolute cosine distance of the junk prompt. */
+const CLIP_ACCIDENTAL_MAX_DISTANCE = 0.85;
+/** Cap so a bad threshold can't flood the advisor. */
+const CLIP_ACCIDENTAL_LIMIT = 60;
 
 /** Videos above this bitrate are worth re-encoding (old cameras, screen recs). */
 const HOG_BITRATE_THRESHOLD = 12_000_000;
@@ -75,7 +114,12 @@ export class CleanupService {
     @Inject(DATABASE) private readonly db: Database,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     private readonly queue: JobQueueService,
+    private readonly ml: MlClientService,
   ) {}
+
+  /** Cached prompt embeddings so we only hit the sidecar once per process. */
+  private clipPrompts: { good: number[]; junk: Array<{ category: string; reason: string; vec: number[] }> } | null =
+    null;
 
   /** Where replaced originals wait out the undo window after a conversion. */
   get convertedOriginalsDir(): string {
@@ -159,13 +203,88 @@ export class CleanupService {
         converting: row.converting,
       };
     });
+    // Fuzzy CLIP guesses are fully isolated: any failure yields an empty list
+    // and never disturbs the deterministic junk/hog advice above.
+    const accidental = await this.clipFlagged().catch((error) => {
+      this.logger.warn(`CLIP accidental-photo pass skipped: ${(error as Error).message}`);
+      return [] as JunkSuggestion[];
+    });
     const projectedSavingsBytes =
       junk.reduce((sum, item) => sum + item.sizeBytes, 0) +
       hogs.reduce(
         (sum, item) => sum + Math.max(0, item.sizeBytes - (item.estimatedBytes ?? item.sizeBytes)),
         0,
       );
-    return { junk, hogs, projectedSavingsBytes };
+    return { junk, hogs, accidental, projectedSavingsBytes };
+  }
+
+  /** Embed the prompt set once, caching the vectors for the process lifetime. */
+  private async ensureClipPrompts(): Promise<boolean> {
+    if (this.clipPrompts) {
+      return this.clipPrompts.good.length > 0;
+    }
+    const good = (await this.ml.embedText(CLIP_GOOD_PROMPT)).embedding;
+    const junk: Array<{ category: string; reason: string; vec: number[] }> = [];
+    for (const entry of CLIP_ACCIDENTAL_PROMPTS) {
+      const vec = (await this.ml.embedText(entry.prompt)).embedding;
+      if (vec.length > 0) {
+        junk.push({ category: entry.category, reason: entry.reason, vec });
+      }
+    }
+    this.clipPrompts = { good, junk };
+    return good.length > 0 && junk.length > 0;
+  }
+
+  /**
+   * Images CLIP judges probably-accidental. For each junk prompt, an image is
+   * flagged only when it sits meaningfully closer to that prompt than to the
+   * good-photo reference. First matching category wins; capped and dismissible.
+   */
+  private async clipFlagged(): Promise<JunkSuggestion[]> {
+    if (!this.ml.isEnabled) {
+      return [];
+    }
+    if (!(await this.ensureClipPrompts()) || !this.clipPrompts) {
+      return [];
+    }
+    const goodLiteral = JSON.stringify(this.clipPrompts.good);
+    const seen = new Set<string>();
+    const flagged: JunkSuggestion[] = [];
+    for (const junk of this.clipPrompts.junk) {
+      const junkLiteral = JSON.stringify(junk.vec);
+      const result = await this.db.execute<{
+        id: string;
+        file_name: string;
+        size_bytes: number;
+        media_type: string;
+      }>(sql`
+        select a.id, f.file_name, f.size_bytes, a.media_type
+        from asset_embedding e
+        join asset a on a.id = e.asset_id and a.status = 'active' and a.media_type = 'image'
+        join asset_file f on f.asset_id = a.id and f.state = 'present'
+        left join cleanup_dismissal d on d.asset_id = a.id
+        where d.asset_id is null
+          and (e.embedding <=> ${junkLiteral}::vector) < ${CLIP_ACCIDENTAL_MAX_DISTANCE}
+          and (e.embedding <=> ${junkLiteral}::vector)
+              < (e.embedding <=> ${goodLiteral}::vector) - ${CLIP_ACCIDENTAL_MARGIN}
+        order by (e.embedding <=> ${junkLiteral}::vector)
+        limit ${CLIP_ACCIDENTAL_LIMIT}
+      `);
+      for (const row of result.rows) {
+        if (seen.has(row.id)) {
+          continue;
+        }
+        seen.add(row.id);
+        flagged.push({
+          assetId: row.id,
+          fileName: row.file_name,
+          sizeBytes: Number(row.size_bytes),
+          mediaType: row.media_type,
+          reason: junk.reason,
+        });
+      }
+    }
+    return flagged.slice(0, CLIP_ACCIDENTAL_LIMIT);
   }
 
   /** "Leave these alone" — the suggestion never returns. */
