@@ -38,7 +38,11 @@ const CANDIDATE_LIMIT = 3000;
 const MIN_PLACE_CLUSTER = 2;
 /** Minimum photos of one person (in a year's window) to earn a person card. */
 const MIN_PERSON_PHOTOS = 3;
-const MAX_MOMENTS = 14;
+/** A moment containing a favorite (close-family) person jumps to the top. */
+const FAVORITE_BOOST = 400;
+/** At most this many moments per past year, so no single year dominates. */
+const PER_YEAR_CAP = 2;
+const MAX_MOMENTS = 10;
 
 interface Candidate {
   id: string;
@@ -74,10 +78,15 @@ export class DashboardService {
       return [];
     }
     const ids = candidates.map((candidate) => candidate.id);
-    const [people, memberships] = await Promise.all([
+    const [people, memberships, favoriteIds] = await Promise.all([
       this.loadPeople(ids),
       this.loadMemoryMemberships(ids),
+      this.loadFavoritePeople(),
     ]);
+    const hasFavorite = (members: Candidate[]): boolean =>
+      members.some((member) =>
+        (people.get(member.id) ?? []).some((person) => favoriteIds.has(person.personId)),
+      );
 
     const moments: OnThisDayMoment[] = [];
     const score = new Map<string, number>();
@@ -116,7 +125,10 @@ export class DashboardService {
         coverAssetId: group.cover ?? group.items[0].id,
         items: group.items.map(toItem),
       });
-      score.set(key, 1000 + Math.min(group.items.length, 20));
+      score.set(
+        key,
+        1000 + Math.min(group.items.length, 20) + (hasFavorite(group.items) ? FAVORITE_BOOST : 0),
+      );
     }
 
     // 2) Place + time clusters over the leftover loose photos, per year.
@@ -170,7 +182,11 @@ export class DashboardService {
         });
         score.set(
           key,
-          100 + (place ? 20 : 0) + (names.length > 0 ? 20 : 0) + Math.min(members.length, 20),
+          100 +
+            (place ? 20 : 0) +
+            (names.length > 0 ? 20 : 0) +
+            Math.min(members.length, 20) +
+            (hasFavorite(members) ? FAVORITE_BOOST : 0),
         );
       }
     }
@@ -180,6 +196,11 @@ export class DashboardService {
     const byPersonYear = new Map<string, { name: string; personId: string; year: number; items: Candidate[] }>();
     for (const candidate of candidates) {
       for (const person of people.get(candidate.id) ?? []) {
+        // Only close-family "with them" cards — otherwise every named
+        // acquaintance floods the home page.
+        if (!favoriteIds.has(person.personId)) {
+          continue;
+        }
         const key = `${person.personId}:${candidate.year}`;
         const group = byPersonYear.get(key) ?? {
           name: person.name,
@@ -210,9 +231,25 @@ export class DashboardService {
       score.set(momentKey, 500 + Math.min(group.items.length, 20));
     }
 
-    return moments
-      .sort((a, b) => (score.get(b.key) ?? 0) - (score.get(a.key) ?? 0) || b.year - a.year)
-      .slice(0, MAX_MOMENTS);
+    const sorted = moments.sort(
+      (a, b) => (score.get(b.key) ?? 0) - (score.get(a.key) ?? 0) || b.year - a.year,
+    );
+    // Cap per year (favorites sort first, so they survive) and overall, so the
+    // home page stays a tight handful rather than a wall of stacks.
+    const perYear = new Map<number, number>();
+    const kept: OnThisDayMoment[] = [];
+    for (const moment of sorted) {
+      const count = perYear.get(moment.year) ?? 0;
+      if (count >= PER_YEAR_CAP) {
+        continue;
+      }
+      perYear.set(moment.year, count + 1);
+      kept.push(moment);
+      if (kept.length >= MAX_MOMENTS) {
+        break;
+      }
+    }
+    return kept;
   }
 
   private async loadCandidates(days: string[]): Promise<Candidate[]> {
@@ -276,6 +313,14 @@ export class DashboardService {
       map.set(row.asset_id, list);
     }
     return map;
+  }
+
+  /** Person ids marked as close family — they steer home-page ranking. */
+  private async loadFavoritePeople(): Promise<Set<string>> {
+    const result = await this.db.execute<{ id: string }>(
+      sql`select id from person where favorite = true and merged_into_id is null`,
+    );
+    return new Set(result.rows.map((row) => row.id));
   }
 
   private async loadMemoryMemberships(

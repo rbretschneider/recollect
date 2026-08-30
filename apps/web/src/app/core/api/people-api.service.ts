@@ -8,6 +8,8 @@ export interface PersonSummary {
   name: string | null;
   faceCount: number;
   coverFaceId: string | null;
+  /** Marked as close family — surfaced first on the home page. */
+  favorite: boolean;
 }
 
 /** Mirrors the server's PersonFace. */
@@ -77,6 +79,12 @@ export class PeopleApiService {
 
   hide(personId: string): Promise<void> {
     return firstValueFrom(this.http.post<void>(`/api/v1/people/${personId}/hide`, {}));
+  }
+
+  setFavorite(personId: string, favorite: boolean): Promise<void> {
+    return firstValueFrom(
+      this.http.post<void>(`/api/v1/people/${personId}/favorite`, { favorite }),
+    );
   }
 
   disband(personId: string): Promise<{ reclustered: number }> {

@@ -26,6 +26,8 @@ export const person = pgTable(
     /** A face id chosen as the avatar; plain uuid to avoid a circular FK. */
     coverFaceId: uuid('cover_face_id'),
     hidden: boolean('hidden').notNull().default(false),
+    /** Close family you want surfaced first — e.g. a toddler with no login. */
+    favorite: boolean('favorite').notNull().default(false),
     mergedIntoId: uuid('merged_into_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

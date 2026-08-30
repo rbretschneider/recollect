@@ -13,6 +13,8 @@ export interface PersonSummary {
   faceCount: number;
   /** The best-quality face, for a cropped avatar. */
   coverFaceId: string | null;
+  /** Marked as close family — surfaced first on the home page. */
+  favorite: boolean;
 }
 
 /** One face instance of a person (for merge/split/ignore curation). */
@@ -32,7 +34,7 @@ export class PeopleService {
 
   async list(): Promise<PersonSummary[]> {
     const result = await this.db.execute(sql`
-      SELECT p.id, p.name,
+      SELECT p.id, p.name, p.favorite,
              count(f.id) AS face_count,
              coalesce(
                -- The admin-chosen avatar wins, as long as it still belongs.
@@ -45,15 +47,26 @@ export class PeopleService {
       FROM person p
       JOIN face f ON f.person_id = p.id AND f.ignored = false
       WHERE p.merged_into_id IS NULL AND p.hidden = false
-      GROUP BY p.id, p.name
-      ORDER BY count(f.id) DESC
+      GROUP BY p.id, p.name, p.favorite
+      -- Favorites first, then most-photographed.
+      ORDER BY p.favorite DESC, count(f.id) DESC
     `);
     return result.rows.map((row) => ({
       id: row.id as string,
       name: (row.name as string | null) ?? null,
       faceCount: Number(row.face_count),
       coverFaceId: (row.cover_face_id as string | null) ?? null,
+      favorite: Boolean(row.favorite),
     }));
+  }
+
+  /** Mark (or unmark) a person as close family — drives home-page ranking. */
+  async setFavorite(personId: string, favorite: boolean): Promise<void> {
+    await this.requirePerson(personId);
+    await this.db
+      .update(person)
+      .set({ favorite, updatedAt: new Date() })
+      .where(sql`${person.id} = ${personId}`);
   }
 
   /** Every visible face of a person, best quality first (curation UI). */

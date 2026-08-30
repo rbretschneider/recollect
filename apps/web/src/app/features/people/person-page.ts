@@ -212,6 +212,27 @@ export class PersonPage implements OnInit {
     }
   }
 
+  /** Mark this person as close family, so their moments lead the home page. */
+  async toggleFavorite(): Promise<void> {
+    const person = this.person();
+    if (!person) {
+      return;
+    }
+    const favorite = !person.favorite;
+    this.person.set({ ...person, favorite }); // Optimistic — the star flips at once.
+    try {
+      await this.api.setFavorite(person.id, favorite);
+      this.toasts.success(
+        favorite
+          ? `${person.name ?? 'This person'} is marked as family.`
+          : `Removed ${person.name ?? 'this person'} from family.`,
+      );
+    } catch {
+      this.person.set({ ...person, favorite: !favorite }); // Roll back.
+      this.toasts.error("Couldn't update that.");
+    }
+  }
+
   async hidePerson(): Promise<void> {
     const person = this.person();
     if (!person) {

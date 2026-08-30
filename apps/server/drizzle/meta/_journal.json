@@ -176,6 +176,13 @@
       "when": 1788000100000,
       "tag": "0024_motion_photo",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1788000200000,
+      "tag": "0025_person_favorite",
+      "breakpoints": true
     }
   ]
 }

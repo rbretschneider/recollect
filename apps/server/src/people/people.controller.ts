@@ -17,6 +17,7 @@ import { RequireAdmin } from '../auth/decorators/require-admin.decorator';
 import { FaceIdsRequestDto } from './dto/face-ids-request.dto';
 import { MergePersonRequestDto } from './dto/merge-person-request.dto';
 import { RenamePersonRequestDto } from './dto/rename-person-request.dto';
+import { SetFavoriteRequestDto } from './dto/set-favorite-request.dto';
 import { SetCoverFaceRequestDto } from './dto/set-cover-face-request.dto';
 import { FaceCropService } from './face-crop.service';
 import { PeopleService, PersonFace, PersonSummary } from './people.service';
@@ -47,6 +48,16 @@ export class PeopleController {
     @Body() body: RenamePersonRequestDto,
   ): Promise<void> {
     await this.people.rename(id, body.name);
+  }
+
+  @RequireAdmin()
+  @Post(':id/favorite')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async setFavorite(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: SetFavoriteRequestDto,
+  ): Promise<void> {
+    await this.people.setFavorite(id, body.favorite);
   }
 
   @RequireAdmin()

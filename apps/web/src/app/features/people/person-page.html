@@ -29,6 +29,17 @@
         </div>
         @if (canWrite) {
           <span class="profile-spacer"></span>
+          <button
+            type="button"
+            class="family-toggle"
+            [class.on]="p.favorite"
+            [attr.aria-pressed]="p.favorite"
+            [attr.aria-label]="p.favorite ? 'Remove from family' : 'Mark as family'"
+            (click)="toggleFavorite()"
+          >
+            <span aria-hidden="true">{{ p.favorite ? '★' : '☆' }}</span>
+            {{ p.favorite ? 'Family' : 'Mark family' }}
+          </button>
           <app-edit-toggle />
         }
       </header>
