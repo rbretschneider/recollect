@@ -60,13 +60,15 @@ left drawer. Details in git history.)
    app-data cache and served at /assets/:id/motion; viewer shows a LIVE badge
    with press-and-hold playback. Best-effort, no schema change. Needs a real
    Pixel/Samsung motion photo to confirm extraction end-to-end.
-5. **Push notifications (larger feature)** — installed PWA users can be
-   notified on certain conditions (conditions TBD — user is mulling;
-   candidates: new guest photos on your album, new suggested memories,
-   On This Day mornings, a member joined). Shape: Web Push (VAPID keys
-   server-side, service-worker push handler, per-user subscription table,
-   per-condition opt-in toggles in Settings). No third-party service
-   required — works self-hosted over the existing HTTPS.
+5. **Push notifications (larger feature)** — INFRA SHIPPED 2026-08-30
+   (self-hosted Web Push / VAPID): push_subscription table, PushService
+   (subscribe/unsubscribe/sendToUser + dead-endpoint pruning), /push/key|
+   subscribe|unsubscribe|test routes, Settings "Notifications" toggle over
+   Angular SwPush, VAPID_* config. To ACTIVATE: set VAPID_PUBLIC_KEY /
+   VAPID_PRIVATE_KEY / VAPID_SUBJECT in hawaii .env and restart (disabled +
+   no-op until then). REMAINING — the actual conditions (still TBD with user;
+   candidates: new guest photos on your album, new suggested memories, On This
+   Day mornings, a member joined) and per-condition opt-in toggles.
 
 ## The big design pass
 
