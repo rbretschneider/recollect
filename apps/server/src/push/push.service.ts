@@ -196,11 +196,18 @@ export class PushService implements OnModuleInit {
       .select()
       .from(pushSubscription)
       .where(eq(pushSubscription.userId, userId));
+    const url = payload.url ?? '/';
     const body = JSON.stringify({
       notification: {
         title: payload.title,
         body: payload.body,
-        data: { url: payload.url ?? '/' },
+        // onActionClick is what makes the ngsw service worker OPEN/focus the PWA
+        // when the app is closed. Without it a tap does nothing but dismiss.
+        // navigate…Open focuses an existing window (and routes it) or opens one.
+        data: {
+          url,
+          onActionClick: { default: { operation: 'navigateLastFocusedOrOpen', url } },
+        },
       },
     });
     let delivered = 0;
