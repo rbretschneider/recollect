@@ -36,13 +36,13 @@
         <span class="icon" aria-hidden="true">🗑</span> Trash
       </a>
     }
+    <a routerLink="/settings" (click)="closed.emit()">
+      <span class="icon" aria-hidden="true">⚙️</span> Settings
+    </a>
     @if (isAdmin) {
       <hr />
       <a routerLink="/library" (click)="closed.emit()">
         <span class="icon" aria-hidden="true">🗂️</span> Library
-      </a>
-      <a routerLink="/settings" (click)="closed.emit()">
-        <span class="icon" aria-hidden="true">⚙️</span> Settings
       </a>
     }
   </nav>

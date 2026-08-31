@@ -19,7 +19,10 @@ export class PwaInstallService {
 
   register(el: { showDialog: (forced?: boolean) => void; isUnderStandaloneMode?: boolean }): void {
     this.element = el;
-    this.canPrompt.set(!el.isUnderStandaloneMode);
+    // Don't offer Install when the app is already running installed — check the
+    // display mode directly (the web component's own flag isn't reliably set at
+    // registration), covering Android/desktop standalone and iOS home-screen.
+    this.canPrompt.set(!isRunningStandalone() && !el.isUnderStandaloneMode);
   }
 
   /** Opens the install helper, even after a prior dismissal. */
@@ -29,5 +32,19 @@ export class PwaInstallService {
 
   markInstalled(): void {
     this.canPrompt.set(false);
+  }
+}
+
+/** True when the page is already running as an installed PWA. */
+function isRunningStandalone(): boolean {
+  try {
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.matchMedia('(display-mode: window-controls-overlay)').matches ||
+      // iOS Safari's non-standard flag for home-screen apps.
+      (navigator as unknown as { standalone?: boolean }).standalone === true
+    );
+  } catch {
+    return false;
   }
 }
