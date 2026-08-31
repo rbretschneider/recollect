@@ -2,6 +2,9 @@
   display: block;
   min-height: 100dvh;
   padding-bottom: 1.5rem;
+  // Hard guarantee: nothing on this page can push a horizontal scrollbar /
+  // clip off the right edge on a phone — content wraps instead.
+  overflow-x: clip;
 }
 
 .cleanup {
@@ -45,12 +48,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  // The "Trash all" button drops below the heading rather than off the right
+  // edge when the title + button can't share a line on a narrow phone.
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
   margin-bottom: 0.5rem;
 
   h2 {
     margin: 0;
     font-size: 1rem;
+    min-width: 0;
+  }
+
+  .outline {
+    margin-left: auto;
   }
 }
 
