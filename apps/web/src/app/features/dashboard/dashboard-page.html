@@ -22,7 +22,10 @@
 
   @if (onThisDay().length > 0) {
     <section class="on-this-day" aria-label="This week, years ago">
-      <h2>This week, years ago</h2>
+      <div class="section-head">
+        <h2>This week, years ago</h2>
+        <a routerLink="/lookback">All look-backs ›</a>
+      </div>
       <div class="stacks">
         @for (moment of onThisDay(); track moment.key) {
           <div class="stack">
