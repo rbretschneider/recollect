@@ -49,10 +49,15 @@ interface Candidate {
   mediaType: MediaType;
   year: number;
   capturedAt: Date;
+  /** Local calendar MM-DD, so we can tell "exactly today" from "this week". */
+  mmdd: string;
   gpsLat: number | null;
   gpsLon: number | null;
   place: string | null;
 }
+
+/** Extra score for a moment that happened on exactly today's date (not just the week). */
+const ON_DAY_BOOST = 40;
 
 @Injectable()
 export class DashboardService {
@@ -91,6 +96,9 @@ export class DashboardService {
       members.some((member) =>
         (people.get(member.id) ?? []).some((person) => favoriteIds.has(person.personId)),
       );
+    // A moment "from today" (exactly this date, years ago) leads over the
+    // surrounding week — a fresh daily hook, and it keeps the notification new.
+    const onDay = (members: Candidate[]): boolean => members.some((member) => member.mmdd === day);
 
     const moments: OnThisDayMoment[] = [];
     const score = new Map<string, number>();
@@ -131,7 +139,10 @@ export class DashboardService {
       });
       score.set(
         key,
-        1000 + Math.min(group.items.length, 20) + (hasFavorite(group.items) ? FAVORITE_BOOST : 0),
+        1000 +
+          Math.min(group.items.length, 20) +
+          (hasFavorite(group.items) ? FAVORITE_BOOST : 0) +
+          (onDay(group.items) ? ON_DAY_BOOST : 0),
       );
     }
 
@@ -190,7 +201,8 @@ export class DashboardService {
             (place ? 20 : 0) +
             (names.length > 0 ? 20 : 0) +
             Math.min(members.length, 20) +
-            (hasFavorite(members) ? FAVORITE_BOOST : 0),
+            (hasFavorite(members) ? FAVORITE_BOOST : 0) +
+            (onDay(members) ? ON_DAY_BOOST : 0),
         );
       }
     }
@@ -232,7 +244,10 @@ export class DashboardService {
         coverAssetId: group.items[0].id,
         items: group.items.map(toItem),
       });
-      score.set(momentKey, 500 + Math.min(group.items.length, 20));
+      score.set(
+        momentKey,
+        500 + Math.min(group.items.length, 20) + (onDay(group.items) ? ON_DAY_BOOST : 0),
+      );
     }
 
     const sorted = moments.sort(
@@ -262,6 +277,7 @@ export class DashboardService {
       media_type: MediaType;
       year: number;
       captured_at: string;
+      mmdd: string;
       gps_lat: number | null;
       gps_lon: number | null;
       place: string | null;
@@ -270,7 +286,8 @@ export class DashboardService {
     }>(sql`
       select a.id, a.media_type,
              extract(year from a.captured_day)::int as year,
-             a.captured_at, a.gps_lat, a.gps_lon,
+             a.captured_at, to_char(a.captured_day, 'MM-DD') as mmdd,
+             a.gps_lat, a.gps_lon,
              g.label as place, f.size_bytes, a.stage_errors
       from asset a
       join asset_file f on f.asset_id = a.id and f.state = 'present'
@@ -293,6 +310,7 @@ export class DashboardService {
         mediaType: row.media_type,
         year: Number(row.year),
         capturedAt: new Date(row.captured_at),
+        mmdd: row.mmdd,
         gpsLat: row.gps_lat === null ? null : Number(row.gps_lat),
         gpsLon: row.gps_lon === null ? null : Number(row.gps_lon),
         place: row.place,
