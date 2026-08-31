@@ -26,6 +26,8 @@ export interface CleanupSuggestions {
   hogs: SpaceHogSuggestion[];
   /** Images CLIP thinks are probably accidental (floor / all-dark / blur). */
   accidental: JunkSuggestion[];
+  /** Redundant copies of near-duplicate shots (the best of each group is kept). */
+  duplicates: JunkSuggestion[];
   projectedSavingsBytes: number;
 }
 

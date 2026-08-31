@@ -60,9 +60,20 @@ export interface CleanupSuggestions {
    * verify by tapping before removing. Empty when ML is off or unavailable.
    */
   accidental: JunkSuggestion[];
+  /**
+   * The redundant copies of near-duplicate photos (the best copy of each is
+   * kept off the list). Exact byte-dupes are already merged by content hash;
+   * these are re-encodes/re-exports — same shot, different bytes.
+   */
+  duplicates: JunkSuggestion[];
   /** Bytes reclaimable if every suggestion is accepted. */
   projectedSavingsBytes: number;
 }
+
+/** Cosine distance under which two images are treated as the same shot. */
+const DUPLICATE_DISTANCE = 0.06;
+/** Cap on how many duplicate copies to surface at once. */
+const DUPLICATE_LIMIT = 200;
 
 /**
  * Zero-shot "probably accidental" prompts. Each junk prompt only flags an image
@@ -209,13 +220,117 @@ export class CleanupService {
       this.logger.warn(`CLIP accidental-photo pass skipped: ${(error as Error).message}`);
       return [] as JunkSuggestion[];
     });
+    const duplicates = await this.findDuplicates().catch((error) => {
+      this.logger.warn(`Duplicate pass skipped: ${(error as Error).message}`);
+      return [] as JunkSuggestion[];
+    });
     const projectedSavingsBytes =
       junk.reduce((sum, item) => sum + item.sizeBytes, 0) +
       hogs.reduce(
         (sum, item) => sum + Math.max(0, item.sizeBytes - (item.estimatedBytes ?? item.sizeBytes)),
         0,
       );
-    return { junk, hogs, accidental, projectedSavingsBytes };
+    const withDupes = projectedSavingsBytes + duplicates.reduce((sum, item) => sum + item.sizeBytes, 0);
+    return { junk, hogs, accidental, duplicates, projectedSavingsBytes: withDupes };
+  }
+
+  /**
+   * Redundant copies of near-duplicate shots. The new-upload-app scenario:
+   * a re-exported JPEG keeps the same EXIF but has different bytes, so the
+   * content-hash dedup can't merge it. We group active assets that share an
+   * exact EXIF capture time + dimensions, confirm images are visually the same
+   * with CLIP (so a burst isn't mistaken for a dupe), keep the largest copy of
+   * each group, and flag the rest.
+   */
+  private async findDuplicates(): Promise<JunkSuggestion[]> {
+    const result = await this.db.execute<{
+      id: string;
+      file_name: string;
+      size_bytes: number;
+      media_type: string;
+      captured_at: string;
+      width: number;
+      height: number;
+      duration_ms: number | null;
+    }>(sql`
+      select a.id, f.file_name, f.size_bytes, a.media_type,
+             a.captured_at::text as captured_at, a.width, a.height, a.duration_ms
+      from asset a
+      join asset_file f on f.asset_id = a.id and f.state = 'present'
+      left join cleanup_dismissal d on d.asset_id = a.id
+      where a.status = 'active' and d.asset_id is null
+        and a.captured_at_source = 'exif' and a.width is not null
+        and a.captured_at in (
+          select captured_at from asset
+          where status = 'active' and captured_at_source = 'exif'
+          group by captured_at having count(*) > 1
+        )
+      order by a.captured_at
+      limit 4000
+    `);
+    // Group by exact capture time + dimensions + type.
+    const groups = new Map<string, typeof result.rows>();
+    for (const row of result.rows) {
+      const key = `${row.captured_at}|${row.width}|${row.height}|${row.media_type}`;
+      const list = groups.get(key) ?? [];
+      list.push(row);
+      groups.set(key, list);
+    }
+    const imageIds = result.rows.filter((row) => row.media_type === 'image').map((row) => row.id);
+    const embeddings = await this.loadEmbeddings(imageIds);
+    const flagged: JunkSuggestion[] = [];
+    for (const members of groups.values()) {
+      if (members.length < 2) {
+        continue;
+      }
+      // Keep the biggest file (usually the best quality); flag the rest.
+      const ordered = [...members].sort((a, b) => Number(b.size_bytes) - Number(a.size_bytes));
+      const keeper = ordered[0];
+      for (const other of ordered.slice(1)) {
+        if (other.media_type === 'image') {
+          const a = embeddings.get(keeper.id);
+          const b = embeddings.get(other.id);
+          // No CLIP → don't risk calling a burst frame a duplicate.
+          if (!a || !b || cosineDistance(a, b) > DUPLICATE_DISTANCE) {
+            continue;
+          }
+        } else if (other.duration_ms !== keeper.duration_ms) {
+          continue; // Videos: same length too, or it's not the same clip.
+        }
+        flagged.push({
+          assetId: other.id,
+          fileName: other.file_name,
+          sizeBytes: Number(other.size_bytes),
+          mediaType: other.media_type,
+          reason: 'Duplicate — same shot as another copy you already have',
+        });
+        if (flagged.length >= DUPLICATE_LIMIT) {
+          return flagged;
+        }
+      }
+    }
+    return flagged;
+  }
+
+  /** Loads CLIP vectors for the given assets as plain number arrays. */
+  private async loadEmbeddings(ids: string[]): Promise<Map<string, number[]>> {
+    const map = new Map<string, number[]>();
+    if (ids.length === 0) {
+      return map;
+    }
+    const result = await this.db.execute<{ asset_id: string; vec: string }>(sql`
+      select asset_id, embedding::text as vec
+      from asset_embedding
+      where asset_id = any(string_to_array(${ids.join(',')}, ',')::uuid[])
+    `);
+    for (const row of result.rows) {
+      try {
+        map.set(row.asset_id, JSON.parse(row.vec) as number[]);
+      } catch {
+        // Skip an unparseable vector.
+      }
+    }
+    return map;
   }
 
   /** Embed the prompt set once, caching the vectors for the process lifetime. */
@@ -545,4 +660,23 @@ export class CleanupService {
   async ensureDirs(): Promise<void> {
     await mkdir(this.convertedOriginalsDir, { recursive: true });
   }
+}
+
+/** Cosine distance (1 - cosine similarity) between two equal-length vectors. */
+function cosineDistance(a: number[], b: number[]): number {
+  if (a.length !== b.length || a.length === 0) {
+    return 1;
+  }
+  let dot = 0;
+  let magA = 0;
+  let magB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    magA += a[i] * a[i];
+    magB += b[i] * b[i];
+  }
+  if (magA === 0 || magB === 0) {
+    return 1;
+  }
+  return 1 - dot / (Math.sqrt(magA) * Math.sqrt(magB));
 }

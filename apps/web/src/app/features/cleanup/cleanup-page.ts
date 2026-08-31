@@ -64,6 +64,9 @@ export class CleanupPage implements OnInit, OnDestroy {
     for (const item of suggestions?.accidental ?? []) {
       items.push(toViewerAsset(item.assetId, item.mediaType === 'video' ? 'video' : 'image', placeholderDate));
     }
+    for (const item of suggestions?.duplicates ?? []) {
+      items.push(toViewerAsset(item.assetId, item.mediaType === 'video' ? 'video' : 'image', placeholderDate));
+    }
     for (const hog of suggestions?.hogs ?? []) {
       items.push(toViewerAsset(hog.assetId, hog.mediaType === 'video' ? 'video' : 'image', placeholderDate));
     }
@@ -165,6 +168,30 @@ export class CleanupPage implements OnInit, OnDestroy {
       message:
         'Everything flagged here goes to Trash together. The normal holding period applies — restore any time before it empties.',
       confirmLabel: `Trash all ${items.length}`,
+    });
+    if (!confirmed) {
+      return;
+    }
+    this.isBusy.set(true);
+    try {
+      await this.trashApi.trashAssets(items.map((item) => item.assetId));
+      await this.load();
+    } finally {
+      this.isBusy.set(false);
+    }
+  }
+
+  /** One tap clears every redundant duplicate copy (the best of each is kept). */
+  async trashAllDuplicates(): Promise<void> {
+    const items = this.data()?.duplicates ?? [];
+    if (items.length === 0) {
+      return;
+    }
+    const confirmed = await this.confirms.ask({
+      title: `Trash ${items.length} duplicate ${items.length === 1 ? 'copy' : 'copies'}?`,
+      message:
+        'The best copy of each photo is kept — only the extra copies move to Trash, with the normal holding period as undo.',
+      confirmLabel: `Trash ${items.length}`,
     });
     if (!confirmed) {
       return;
@@ -330,6 +357,7 @@ export class CleanupPage implements OnInit, OnDestroy {
         ...data,
         junk: data.junk.filter((item) => item.assetId !== assetId),
         accidental: data.accidental.filter((item) => item.assetId !== assetId),
+        duplicates: data.duplicates.filter((item) => item.assetId !== assetId),
       });
     }
   }

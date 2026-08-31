@@ -96,6 +96,46 @@
       </section>
     }
 
+    @if (suggestions.duplicates.length > 0) {
+      <section class="junk" aria-label="Possibly duplicates">
+        <div class="section-head">
+          <h2>Possibly duplicates ({{ suggestions.duplicates.length }})</h2>
+          <button type="button" class="outline danger" [disabled]="isBusy()" (click)="trashAllDuplicates()">
+            {{ isBusy() ? 'Working…' : 'Trash all' }}
+          </button>
+        </div>
+        <p class="hint">
+          Same shot as a copy you already have — re-exports that kept the photo
+          but changed the file, so they slipped past exact-match dedupe. The best
+          copy of each is kept; only the extras are listed. Tap to verify.
+        </p>
+        <div class="rows">
+          @for (item of suggestions.duplicates; track item.assetId) {
+            <div class="row">
+              <button type="button" class="thumb" aria-label="Open to verify" (click)="openViewer(item.assetId)">
+                <img [src]="thumbUrl(item.assetId)" alt="" loading="lazy" />
+              </button>
+              <div class="info">
+                <h3>{{ item.fileName }}</h3>
+                <p>{{ formatSize(item.sizeBytes) }} · {{ item.reason }}</p>
+              </div>
+              <div class="row-actions">
+                <button type="button" class="outline" (click)="dismissJunk(item)">Keep</button>
+                <button
+                  type="button"
+                  class="outline danger"
+                  [class.armed]="armedTrashId() === item.assetId"
+                  (click)="trashJunk(item)"
+                >
+                  {{ armedTrashId() === item.assetId ? 'Confirm?' : 'Trash' }}
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
     @if (suggestions.hogs.length > 0) {
       <section class="hogs" aria-label="Space hogs">
         <div class="section-head">
