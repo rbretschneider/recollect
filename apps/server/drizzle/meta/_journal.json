@@ -190,6 +190,13 @@
       "when": 1788000300000,
       "tag": "0026_notification_pref",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1788000400000,
+      "tag": "0027_notification_last_moments",
+      "breakpoints": true
     }
   ]
 }

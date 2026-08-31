@@ -99,6 +99,8 @@ export const notificationPref = pgTable('notification_pref', {
   timezone: text('timezone').notNull().default('UTC'),
   /** Local calendar date we last sent, so a day never double-fires. */
   lastSentOn: date('last_sent_on'),
+  /** Comma-joined moment keys from the last push, to skip an identical day. */
+  lastMomentKeys: text('last_moment_keys'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

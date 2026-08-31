@@ -70,12 +70,21 @@ export class DailyLookbackScheduler implements OnApplicationBootstrap, OnApplica
         if (moments.length === 0) {
           continue; // Nothing to relive today — skip the notification.
         }
+        // The ±3-day window overlaps day to day, so most mornings the moments
+        // are identical. Only buzz when at least one moment wasn't in the last
+        // push — otherwise it's the same look-back they already saw.
+        const keys = moments.map((moment) => moment.key).sort();
+        const lastKeys = new Set((candidate.lastMomentKeys ?? '').split(',').filter(Boolean));
+        if (keys.every((key) => lastKeys.has(key))) {
+          continue; // Same as before — stay quiet.
+        }
         const count = moments.length;
         await this.push.sendToUser(candidate.userId, {
           title: 'This week, years ago 📸',
           body: `${count} ${count === 1 ? 'moment' : 'moments'} from years past — tap to look back.`,
           url: '/lookback',
         });
+        await this.push.recordDailyPush(candidate.userId, keys.join(','));
       } catch (error) {
         this.logger.warn(`Daily look-back for ${candidate.userId} failed: ${(error as Error).message}`);
       }

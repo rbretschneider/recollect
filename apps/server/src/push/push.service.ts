@@ -139,15 +139,23 @@ export class PushService implements OnModuleInit {
 
   /** Enabled daily-look-back users who have at least one live subscription. */
   async dailyCandidates(): Promise<
-    Array<{ userId: string; dailyTime: string; timezone: string; lastSentOn: string | null }>
+    Array<{
+      userId: string;
+      dailyTime: string;
+      timezone: string;
+      lastSentOn: string | null;
+      lastMomentKeys: string | null;
+    }>
   > {
     const rows = await this.db.execute<{
       user_id: string;
       daily_time: string;
       timezone: string;
       last_sent_on: string | null;
+      last_moment_keys: string | null;
     }>(sql`
-      select p.user_id, p.daily_time, p.timezone, p.last_sent_on::text as last_sent_on
+      select p.user_id, p.daily_time, p.timezone,
+             p.last_sent_on::text as last_sent_on, p.last_moment_keys
       from notification_pref p
       where p.daily_enabled = true
         and exists (select 1 from push_subscription s where s.user_id = p.user_id)
@@ -157,6 +165,7 @@ export class PushService implements OnModuleInit {
       dailyTime: row.daily_time,
       timezone: row.timezone,
       lastSentOn: row.last_sent_on,
+      lastMomentKeys: row.last_moment_keys,
     }));
   }
 
@@ -165,6 +174,14 @@ export class PushService implements OnModuleInit {
     await this.db
       .update(notificationPref)
       .set({ lastSentOn: localDate })
+      .where(eq(notificationPref.userId, userId));
+  }
+
+  /** Remember the moment set we just pushed, to skip an identical day next time. */
+  async recordDailyPush(userId: string, momentKeys: string): Promise<void> {
+    await this.db
+      .update(notificationPref)
+      .set({ lastMomentKeys: momentKeys })
       .where(eq(notificationPref.userId, userId));
   }
 
