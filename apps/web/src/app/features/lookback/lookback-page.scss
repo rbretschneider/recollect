@@ -10,6 +10,10 @@
 }
 
 .hello {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
   padding: 0.5rem 0.25rem 1.25rem;
 
   h1 {
@@ -21,6 +25,94 @@
   p {
     margin: 0.2rem 0 0;
     color: var(--text-muted);
+  }
+
+  .share-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+    padding: 0.45rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 2rem;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--accent-contrast);
+    }
+  }
+}
+
+.share-sheet {
+  display: grid;
+  gap: 1.25rem;
+
+  .share-option {
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  .share-copy h3 {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0 0 0.2rem;
+    font-size: 0.95rem;
+  }
+
+  .share-copy p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .outline,
+  .primary {
+    justify-self: start;
+    min-height: 40px;
+    padding: 0 1rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .outline {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+  }
+
+  .primary {
+    border: none;
+    background: var(--accent);
+    color: var(--accent-contrast);
+
+    &:disabled {
+      opacity: 0.6;
+    }
+  }
+
+  .public-result {
+    display: flex;
+    gap: 0.5rem;
+
+    input {
+      flex: 1;
+      min-width: 0;
+      padding: 0.4rem 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      background: var(--surface-raised);
+      color: var(--text);
+      font-size: 0.8rem;
+    }
   }
 }
 

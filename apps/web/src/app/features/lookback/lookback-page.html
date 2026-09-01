@@ -2,8 +2,15 @@
 
 <main class="lookback">
   <header class="hello">
-    <h1>This week, years ago</h1>
-    <p>{{ todayLabel }}</p>
+    <div>
+      <h1>This week, years ago</h1>
+      <p>{{ todayLabel }}</p>
+    </div>
+    @if (moments().length > 0) {
+      <button type="button" class="share-btn" (click)="openShare()">
+        <app-icon name="share" [size]="18" aria-hidden="true" /> Share
+      </button>
+    }
   </header>
 
   @if (loading()) {
@@ -59,4 +66,41 @@
     [title]="slideshowTitle()"
     (closed)="closeSlideshow()"
   />
+}
+
+@if (shareOpen()) {
+  <app-sheet sheetTitle="Share this look-back" (closed)="shareOpen.set(false)">
+    <div class="share-sheet">
+      <div class="share-option">
+        <div class="share-copy">
+          <h3><app-icon name="user" [size]="16" aria-hidden="true" /> Share with family</h3>
+          <p>
+            A private link to this exact look-back. Anyone in the household opens
+            it, signs in if needed, and lands right here.
+          </p>
+        </div>
+        <button type="button" class="outline" (click)="copyInternal()">Copy link</button>
+      </div>
+
+      <div class="share-option">
+        <div class="share-copy">
+          <h3><app-icon name="share" [size]="16" aria-hidden="true" /> Anyone with the link</h3>
+          <p>
+            A public snapshot of these photos — no account needed. Expires in 30
+            days; revoke any time by deleting the “Look-back” album it creates.
+          </p>
+        </div>
+        @if (publicUrl(); as url) {
+          <div class="public-result">
+            <input type="text" readonly [value]="url" aria-label="Public link" />
+            <button type="button" class="outline" (click)="copyPublic()">Copy</button>
+          </div>
+        } @else {
+          <button type="button" class="primary" [disabled]="publicBusy()" (click)="makePublic()">
+            {{ publicBusy() ? 'Creating…' : 'Create public link' }}
+          </button>
+        }
+      </div>
+    </div>
+  </app-sheet>
 }

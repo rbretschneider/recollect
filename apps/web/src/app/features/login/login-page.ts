@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 
 /** Sign-in page. */
@@ -13,6 +13,7 @@ import { AuthStateService } from '../../core/auth/auth-state.service';
 export class LoginPage {
   private readonly auth = inject(AuthStateService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
@@ -26,9 +27,11 @@ export class LoginPage {
     try {
       await this.auth.login(this.email, this.password);
       // An admin-reset account must pick its own password before anything else.
-      await this.router.navigateByUrl(
-        this.auth.user()?.mustChangePassword ? '/change-password' : '/',
-      );
+      if (this.auth.user()?.mustChangePassword) {
+        await this.router.navigateByUrl('/change-password');
+      } else {
+        await this.router.navigateByUrl(this.safeReturnUrl());
+      }
     } catch (raw) {
       const status = (raw as { status?: number })?.status;
       const message = (raw as { error?: { message?: string } })?.error?.message;
@@ -38,5 +41,11 @@ export class LoginPage {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  /** Only ever a same-origin app path — never an open redirect off-site. */
+  private safeReturnUrl(): string {
+    const raw = this.route.snapshot.queryParamMap.get('returnUrl') ?? '';
+    return raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
   }
 }
