@@ -345,18 +345,23 @@
     }
 
     .date-edit-btn {
-      border: none;
-      background: none;
-      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+      background: var(--surface-raised);
+      color: var(--text);
       cursor: pointer;
-      font-size: 1rem;
+      font-size: 0.78rem;
+      font-weight: 600;
       line-height: 1;
-      padding: 0.2rem 0.35rem;
-      border-radius: 0.4rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 1rem;
 
       &:hover {
+        border-color: var(--accent);
         color: var(--accent);
-        background: var(--surface-raised);
       }
     }
   }
@@ -550,4 +555,23 @@
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+}
+
+.info-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+
+  .spinner {
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 2px solid rgb(255 255 255 / 25%);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+    flex-shrink: 0;
+  }
 }

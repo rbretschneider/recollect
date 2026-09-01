@@ -182,8 +182,8 @@
           <div class="date-header">
             <h3>{{ formatDate(displayCapturedAt(asset.capturedAt)) }}</h3>
             @if (canWrite) {
-              <button type="button" class="date-edit-btn" aria-label="Edit date" (click)="startEditDate()">
-                ✎
+              <button type="button" class="date-edit-btn" (click)="startEditDate()">
+                <app-icon name="pencil" [size]="13" aria-hidden="true" /> Edit date
               </button>
             }
           </div>
@@ -290,6 +290,11 @@
               </div>
             }
           </dl>
+        } @else if (detailLoading()) {
+          <div class="info-loading" role="status" aria-live="polite">
+            <span class="spinner" aria-hidden="true"></span>
+            <span>Loading details…</span>
+          </div>
         }
       </aside>
     }

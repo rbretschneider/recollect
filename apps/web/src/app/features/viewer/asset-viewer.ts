@@ -71,6 +71,8 @@ export class AssetViewer implements OnInit, OnDestroy {
   readonly index = signal(0);
   readonly showInfo = signal(false);
   readonly detail = signal<AssetDetail | null>(null);
+  /** True while the info panel's metadata is being fetched (show a spinner). */
+  readonly detailLoading = signal(false);
   /** True while the server is transcoding this video for playback. */
   readonly isPreparingVideo = signal(false);
   /** Reprocess retry state for the current item. */
@@ -759,6 +761,7 @@ export class AssetViewer implements OnInit, OnDestroy {
   }
 
   private async loadDetail(assetId: string): Promise<void> {
+    this.detailLoading.set(true);
     try {
       const detail = await firstValueFrom(
         this.http.get<AssetDetail>(`/api/v1/assets/${assetId}/detail`),
@@ -768,6 +771,10 @@ export class AssetViewer implements OnInit, OnDestroy {
       }
     } catch {
       // The info sheet simply stays empty when detail cannot load.
+    } finally {
+      if (this.current()?.id === assetId) {
+        this.detailLoading.set(false);
+      }
     }
   }
 }
