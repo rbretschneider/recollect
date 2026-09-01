@@ -35,3 +35,11 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 !.vscode/launch.json
+
+# Local demo/seed artifacts (not for the repo)
+.playwright-mcp/
+.seed-library/
+.seed-server.log
+.srv-out.log
+.srv-err.log
+.ng-serve.log
