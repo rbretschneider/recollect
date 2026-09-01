@@ -9,6 +9,7 @@ import {
   Param,
   ParseIntPipe,
   ParseUUIDPipe,
+  Patch,
   Post,
   Put,
   Query,
@@ -24,6 +25,7 @@ import { AssetMediaStreamer } from './asset-media-streamer';
 import { AssetsService, TimelinePage } from './assets.service';
 import type { AssetDetail, TimelineAsset } from './assets.service';
 import { AssetIdsRequestDto } from './dto/asset-ids-request.dto';
+import { SetCapturedAtRequestDto } from './dto/set-captured-at-request.dto';
 import { Body } from '@nestjs/common';
 
 /** Read endpoints for the photo timeline and thumbnails. */
@@ -84,6 +86,21 @@ export class AssetsController {
     @CurrentUser() user: UserProfile,
   ): Promise<void> {
     await this.assets.setFavorite(user.id, id, false);
+  }
+
+  /** Correct an item's capture date (write grant). Also rewrites the file's EXIF. */
+  @RequireGrant('write')
+  @Patch(':id/captured-at')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async setCapturedAt(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: SetCapturedAtRequestDto,
+  ): Promise<void> {
+    const capturedAt = new Date(body.capturedAt);
+    if (Number.isNaN(capturedAt.getTime())) {
+      throw new BadRequestException('capturedAt must be a valid date.');
+    }
+    await this.assets.setCapturedAt(id, capturedAt, body.tzOffsetMin);
   }
 
   /** Queues a re-run of metadata + thumbnails for one item (user retry). */

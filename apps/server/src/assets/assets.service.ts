@@ -15,6 +15,7 @@ import {
   person,
 } from '../database/schema';
 import { JobQueueService } from '../jobs/job-queue.service';
+import { toCapturedDay } from '../media/captured-day';
 import { MetadataExtractorService } from '../media/metadata-extractor.service';
 import { MotionPhotoService } from '../media/motion-photo.service';
 import { ThumbnailSize, ThumbnailStore } from '../media/thumbnail-store';
@@ -23,6 +24,9 @@ import { decodeTimelineCursor, encodeTimelineCursor } from './timeline-cursor';
 
 /** Job type: create an H.264 playback rendition for one asset. */
 export const TRANSCODE_PLAYBACK_JOB = 'transcode_playback';
+
+/** Job type: write a corrected capture date into the original file's metadata. */
+export const REWRITE_CAPTURE_DATE_JOB = 'rewrite_capture_date';
 
 /** How a video should reach the browser. */
 export type PlaybackResolution =
@@ -484,6 +488,34 @@ export class AssetsService {
       throw new NotFoundException('The original file is not available.');
     }
     return { path: resolve(join(row.rootPath, row.relPath)), mime: row.mime };
+  }
+
+  /**
+   * Correct an asset's capture date. The DB is updated immediately as a
+   * user-authoritative value (so it survives reprocessing and shows at once),
+   * and a background job writes the date into the original file's metadata so
+   * the correction is permanent on disk too.
+   */
+  async setCapturedAt(assetId: string, capturedAt: Date, tzOffsetMin: number): Promise<void> {
+    const [row] = await this.db.select({ id: asset.id }).from(asset).where(eq(asset.id, assetId));
+    if (!row) {
+      throw new NotFoundException('That item does not exist.');
+    }
+    await this.db
+      .update(asset)
+      .set({
+        capturedAt,
+        capturedTzOffsetMin: tzOffsetMin,
+        capturedAtSource: 'user',
+        capturedDay: toCapturedDay(capturedAt, tzOffsetMin),
+        updatedAt: new Date(),
+      })
+      .where(eq(asset.id, assetId));
+    await this.queue.enqueue(
+      REWRITE_CAPTURE_DATE_JOB,
+      { assetId, capturedAt: capturedAt.toISOString(), tzOffsetMin },
+      { dedupeKey: `${REWRITE_CAPTURE_DATE_JOB}:${assetId}`, priority: 40 },
+    );
   }
 
   /** Absolute path of the cached motion-photo clip, or 404 if there is none. */

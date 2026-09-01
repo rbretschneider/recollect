@@ -335,6 +335,75 @@
   border-radius: 1rem 1rem 0 0;
   transition: translate 0.22s ease;
 
+  .date-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    h3 {
+      margin: 0;
+    }
+
+    .date-edit-btn {
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0.2rem 0.35rem;
+      border-radius: 0.4rem;
+
+      &:hover {
+        color: var(--accent);
+        background: var(--surface-raised);
+      }
+    }
+  }
+
+  .date-edit {
+    display: grid;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+
+    input[type='datetime-local'] {
+      padding: 0.5rem 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      background: var(--surface-raised);
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+
+    .date-edit-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.6rem;
+
+      .ghost {
+        border: none;
+        background: none;
+        color: var(--text-muted);
+        cursor: pointer;
+      }
+
+      .primary {
+        min-height: 40px;
+        padding: 0 1rem;
+        border: none;
+        border-radius: 0.5rem;
+        background: var(--accent);
+        color: var(--accent-contrast);
+        font-weight: 600;
+        cursor: pointer;
+
+        &:disabled {
+          opacity: 0.6;
+        }
+      }
+    }
+  }
+
   @starting-style {
     translate: 0 100%;
   }

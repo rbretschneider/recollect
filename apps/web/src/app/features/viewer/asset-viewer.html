@@ -168,7 +168,26 @@
 
     @if (showInfo()) {
       <aside class="info" aria-label="Photo details">
-        <h3>{{ formatDate(asset.capturedAt) }}</h3>
+        @if (editingDate()) {
+          <form class="date-edit" (ngSubmit)="saveDate()">
+            <input type="datetime-local" name="capturedAt" [(ngModel)]="dateDraft" required />
+            <div class="date-edit-actions">
+              <button type="button" class="ghost" (click)="cancelEditDate()">Cancel</button>
+              <button type="submit" class="primary" [disabled]="savingDate()">
+                {{ savingDate() ? 'Saving…' : 'Save date' }}
+              </button>
+            </div>
+          </form>
+        } @else {
+          <div class="date-header">
+            <h3>{{ formatDate(displayCapturedAt(asset.capturedAt)) }}</h3>
+            @if (canWrite) {
+              <button type="button" class="date-edit-btn" aria-label="Edit date" (click)="startEditDate()">
+                ✎
+              </button>
+            }
+          </div>
+        }
         @if (detail(); as info) {
           @if (processingProblem(info); as problem) {
             <div class="problem" role="alert">

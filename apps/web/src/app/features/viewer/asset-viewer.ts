@@ -13,12 +13,14 @@ import { AssetDetail, TimelineAsset } from '../../core/api/api-models';
 import { inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ShareButton } from '../../shared/share-button';
 import { PhotosApiService } from '../../core/api/photos-api.service';
 import { TrashApiService } from '../../core/api/trash-api.service';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { ConfirmService } from '../../shared/confirm.service';
+import { ToastService } from '../../shared/toast.service';
 import { Icon } from '../../shared/icon';
 
 /** Minimum horizontal swipe distance (px) that counts as navigation. */
@@ -41,7 +43,7 @@ const VIDEO_CONTROLS_STRIP_PX = 72;
  */
 @Component({
   selector: 'app-asset-viewer',
-  imports: [Icon, RouterLink, ShareButton],
+  imports: [Icon, RouterLink, ShareButton, FormsModule],
   templateUrl: './asset-viewer.html',
   styleUrl: './asset-viewer.scss',
 })
@@ -51,6 +53,7 @@ export class AssetViewer implements OnInit, OnDestroy {
   private readonly photosApi = inject(PhotosApiService);
   private readonly trashApi = inject(TrashApiService);
   private readonly confirms = inject(ConfirmService);
+  private readonly toasts = inject(ToastService);
 
   /** The list being browsed and the index to start at. */
   readonly assets = input.required<TimelineAsset[]>();
@@ -215,6 +218,8 @@ export class AssetViewer implements OnInit, OnDestroy {
       this.isImageLoading.set(true);
       this.imageFailed.set(false);
       this.motionPlaying.set(false);
+      this.editingDate.set(false);
+      this.editedCapturedAt.set(null);
       this.resetZoom();
     });
   }
@@ -672,6 +677,62 @@ export class AssetViewer implements OnInit, OnDestroy {
     );
   }
 
+  // --- Capture-date correction (write grant) ---------------------------------
+
+  /** True while the info panel's date is being edited. */
+  readonly editingDate = signal(false);
+  readonly savingDate = signal(false);
+  /** A locally-applied corrected date, so the panel updates without a reload. */
+  readonly editedCapturedAt = signal<string | null>(null);
+  /** Bound to the datetime-local input, "YYYY-MM-DDTHH:MM". */
+  dateDraft = '';
+
+  /** The date to show — a just-saved correction wins over the loaded value. */
+  displayCapturedAt(iso: string): string {
+    return this.editedCapturedAt() ?? iso;
+  }
+
+  startEditDate(): void {
+    const asset = this.current();
+    if (!asset) {
+      return;
+    }
+    this.dateDraft = toLocalInputValue(this.editedCapturedAt() ?? asset.capturedAt);
+    this.editingDate.set(true);
+  }
+
+  cancelEditDate(): void {
+    this.editingDate.set(false);
+  }
+
+  async saveDate(): Promise<void> {
+    const asset = this.current();
+    if (!asset || this.savingDate() || !this.dateDraft) {
+      return;
+    }
+    const local = new Date(this.dateDraft);
+    if (Number.isNaN(local.getTime())) {
+      this.toasts.error('That date is not valid.');
+      return;
+    }
+    this.savingDate.set(true);
+    try {
+      await firstValueFrom(
+        this.http.patch(`/api/v1/assets/${asset.id}/captured-at`, {
+          capturedAt: local.toISOString(),
+          tzOffsetMin: -local.getTimezoneOffset(),
+        }),
+      );
+      this.editedCapturedAt.set(local.toISOString());
+      this.editingDate.set(false);
+      this.toasts.success('Date updated — saved to the file too.');
+    } catch {
+      this.toasts.error("Couldn't update the date.");
+    } finally {
+      this.savingDate.set(false);
+    }
+  }
+
   formatSize(bytes: number | null): string {
     if (bytes === null) {
       return '';
@@ -709,4 +770,14 @@ export class AssetViewer implements OnInit, OnDestroy {
       // The info sheet simply stays empty when detail cannot load.
     }
   }
+}
+
+/** ISO → "YYYY-MM-DDTHH:MM" in local time, for a datetime-local input. */
+function toLocalInputValue(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number): string => String(n).padStart(2, '0');
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  );
 }
