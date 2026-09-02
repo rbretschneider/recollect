@@ -38,6 +38,12 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@recollect.app}
+      # Where scheduled DB backups land. Point it at a library path so your own
+      # NAS backup covers them; blank uses the app-data volume.
+      BACKUP_DIR: ${BACKUP_DIR:-}
+      # Restoring replaces the live database and restarts the server, so it is
+      # opt-in. See docs/backup-restore.md.
+      RESTORE_ENABLED: ${RESTORE_ENABLED:-}
       TRASH_RETENTION_DAYS: ${TRASH_RETENTION_DAYS:-7}
       SCAN_INTERVAL_HOURS: ${SCAN_INTERVAL_HOURS:-24}
       # Set to 1 when a reverse proxy (nginx) fronts the app: real client IPs
