@@ -269,12 +269,7 @@
         </p>
       }
 
-      @if (bk.restore.status === 'running') {
-        <p class="hint" role="status">
-          Restoring — {{ bk.restore.step }}… Your current database is untouched until
-          the final step. The server restarts when it finishes.
-        </p>
-      } @else if (bk.restore.status === 'failed') {
+      @if (bk.restore.status === 'failed') {
         <p class="hint error" role="alert">
           Restore failed, and nothing changed: {{ bk.restore.message }}
         </p>
@@ -492,5 +487,36 @@
       </div>
     </form>
   </app-sheet>
+}
+
+@if (restorePhase() !== 'idle') {
+  <div class="restore-overlay" role="alertdialog" aria-modal="true" aria-labelledby="restore-title">
+    <div class="restore-card">
+      @if (restorePhase() === 'done') {
+        <h2 id="restore-title">Restore complete</h2>
+        <p class="restore-note">
+          Your library has been restored from the backup and the server is back
+          up. Your previous database was kept as a rollback copy.
+        </p>
+        <button type="button" class="primary" (click)="reloadAfterRestore()">Sign back in</button>
+      } @else {
+        <span class="restore-spinner" aria-hidden="true"></span>
+        <h2 id="restore-title">
+          {{ restorePhase() === 'restarting' ? 'Restarting the server…' : 'Restoring…' }}
+        </h2>
+        <p class="restore-step">{{ restoreStep() }}</p>
+        <p class="restore-note">
+          @if (restorePhase() === 'restarting') {
+            The database has been swapped in and the server is coming back. This
+            usually takes a few seconds — don’t close this tab.
+          } @else {
+            Restoring into a scratch database and checking it first. Nothing in your
+            library changes unless every step succeeds. This can take a minute or
+            two on a large library.
+          }
+        </p>
+      }
+    </div>
+  </div>
 }
 

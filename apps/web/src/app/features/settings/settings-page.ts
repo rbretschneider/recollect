@@ -42,6 +42,9 @@ export class SettingsPage implements OnInit {
   /** Scheduled-backup state (admin only). */
   readonly backup = signal<BackupStatus | null>(null);
   readonly backupBusy = signal(false);
+  /** Drives the blocking restore overlay: what it's doing, and whether it's done. */
+  readonly restorePhase = signal<'idle' | 'working' | 'restarting' | 'done'>('idle');
+  readonly restoreStep = signal('');
   readonly weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   formatBytes(bytes: number): string {
@@ -130,29 +133,58 @@ export class SettingsPage implements OnInit {
     if (!confirmed) {
       return;
     }
+    this.restoreStep.set('starting');
+    this.restorePhase.set('working');
     try {
       await this.backupApi.restore(name);
-      this.toasts.success('Restoring — the server will restart when it finishes.');
-      // Poll until the server goes away (the swap) or reports a failure.
-      const startedAt = Date.now();
-      const poll = setInterval(() => {
-        void (async () => {
-          const status = await this.backupApi.status().catch(() => null);
-          if (status) {
-            this.backup.set(status);
-            if (status.restore.status === 'failed') {
-              clearInterval(poll);
-              this.toasts.error(`Restore failed — nothing changed. ${status.restore.message ?? ''}`);
-            }
-          }
-          if (Date.now() - startedAt > 300_000) {
-            clearInterval(poll);
-          }
-        })();
-      }, 3000);
     } catch (error) {
+      this.restorePhase.set('idle');
       this.toasts.error(this.messageFrom(error, "Couldn't start the restore."));
+      return;
     }
+    // The server exits after the swap, so the poll has to expect it to vanish
+    // and come back — a request failing here is progress, not an error.
+    const startedAt = Date.now();
+    let sawServerGoAway = false;
+    const poll = setInterval(() => {
+      void (async () => {
+        if (Date.now() - startedAt > 600_000) {
+          clearInterval(poll);
+          this.restorePhase.set('idle');
+          this.toasts.error('Restore is taking unusually long — check the server logs.');
+          return;
+        }
+        const status = await this.backupApi.status().catch(() => null);
+        if (!status) {
+          // Unreachable: either the swap is happening or it's restarting.
+          sawServerGoAway = true;
+          this.restorePhase.set('restarting');
+          this.restoreStep.set('restarting the server');
+          return;
+        }
+        if (status.restore.status === 'failed') {
+          clearInterval(poll);
+          this.backup.set(status);
+          this.restorePhase.set('idle');
+          this.toasts.error(`Restore failed — nothing changed. ${status.restore.message ?? ''}`);
+          return;
+        }
+        if (sawServerGoAway) {
+          // It went away and answered again: the restore landed.
+          clearInterval(poll);
+          this.backup.set(status);
+          this.restorePhase.set('done');
+          return;
+        }
+        this.backup.set(status);
+        this.restoreStep.set(status.restore.step ?? 'working');
+      })();
+    }, 2000);
+  }
+
+  /** Reloads onto the restored database — the session is gone, so start clean. */
+  reloadAfterRestore(): void {
+    window.location.href = '/';
   }
 
   async deleteBackup(name: string): Promise<void> {

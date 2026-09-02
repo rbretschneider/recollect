@@ -309,3 +309,83 @@ a.outline {
   gap: 0.5rem;
   flex-shrink: 0;
 }
+
+// Restore is destructive and restarts the server, so it blocks the page: a
+// status line in a card is not enough feedback for "your database is being
+// replaced right now".
+.restore-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: var(--scrim, rgb(0 0 0 / 70%));
+  backdrop-filter: blur(3px);
+}
+
+.restore-card {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  max-width: 24rem;
+  padding: 2rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+  text-align: center;
+
+  h2 {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+
+  .restore-step {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--accent);
+    // Steps arrive from the server; never let one blow out the card.
+    overflow-wrap: anywhere;
+  }
+
+  .restore-note {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+
+  .primary {
+    margin-top: 0.5rem;
+    min-height: 44px;
+    padding: 0 1.2rem;
+    border: none;
+    border-radius: 0.6rem;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-weight: 600;
+    cursor: pointer;
+  }
+}
+
+.restore-spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: restore-spin 0.9s linear infinite;
+}
+
+@keyframes restore-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .restore-spinner {
+    animation-duration: 2.5s;
+  }
+}
