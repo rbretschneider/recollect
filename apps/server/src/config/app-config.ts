@@ -63,6 +63,8 @@ const configSchema = z.object({
   vapidPrivateKey: z.string().default(''),
   /** Contact URI web-push sends to push services (mailto: or https:). */
   vapidSubject: z.string().default('mailto:admin@recollect.app'),
+  /** Where scheduled database backups are written (override in Settings). */
+  backupDir: z.string().default(''),
   /** Comma-separated bases the library folder picker may browse (mounted volumes). */
   libraryBrowseBases: z
     .string()
@@ -105,6 +107,7 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     vapidPublicKey: env.VAPID_PUBLIC_KEY,
     vapidPrivateKey: env.VAPID_PRIVATE_KEY,
     vapidSubject: env.VAPID_SUBJECT,
+    backupDir: env.BACKUP_DIR,
     libraryBrowseBases: env.LIBRARY_BROWSE_BASES,
     mlUrl: env.RECOLLECT_ML_URL,
     faceClusterDistance: env.FACE_CLUSTER_DISTANCE,

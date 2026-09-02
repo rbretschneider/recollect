@@ -18,8 +18,18 @@ RUN npm run build --workspace @recollect/server \
 
 FROM node:22-bookworm-slim
 # perl: exiftool-vendored's exiftool is a perl program.
+# postgresql-client-16: pg_dump for scheduled backups. It must match the server's
+# major version (pgvector/pgvector:pg16) — bookworm ships 15, which refuses to
+# dump a newer server — so it comes from the PGDG repo.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends perl curl \
+  && apt-get install -y --no-install-recommends perl curl ca-certificates gnupg \
+  && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+     | gpg --dearmor -o /usr/share/keyrings/pgdg.gpg \
+  && echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" \
+     > /etc/apt/sources.list.d/pgdg.list \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends postgresql-client-16 \
+  && apt-get purge -y gnupg && apt-get autoremove -y \
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV NODE_ENV=production \

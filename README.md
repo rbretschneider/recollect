@@ -47,11 +47,16 @@ search, places, and safe file management (delete/move with a holding period) fro
 - **Safe by default.** Originals live on the NAS and are only ever modified on purpose. Delete goes
   to **Trash** with a holding period; multi-user access is cumulative grants (read ⊂ write ⊂ delete)
   plus an admin flag.
+- **Backups that protect what you wrote.** Your photos are safe in your library folder, but the
+  memories, journals, quotes, and names on faces exist only in the database — so Recollect backs
+  them up on a schedule you set, as a `pg_dump` archive plus a plain-JSON export with no lock-in.
+  See [backup & restore](docs/backup-restore.md).
 
 ## Documentation
 
 | Doc | What's in it |
 |---|---|
+| [docs/backup-restore.md](docs/backup-restore.md) | Scheduled backups and the tested restore path |
 | [docs/frd.md](docs/frd.md) | Functional requirements — vision, principles, architecture, stack |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | What's next, in order — the living short-list |
 | [docs/plan.md](docs/plan.md) | Feature plan — epics & stories with acceptance criteria, phased |

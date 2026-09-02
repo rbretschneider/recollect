@@ -17,6 +17,7 @@ import { BackButton } from '../../shared/back-button';
 import { Sheet } from '../../shared/sheet';
 import { ToastService } from '../../shared/toast.service';
 import { PushNotificationsService } from '../../core/push-notifications.service';
+import { BackupApiService, BackupStatus } from '../../core/api/backup-api.service';
 
 /** Admin settings: cameras and household members. The library has its own page. */
 @Component({
@@ -36,6 +37,102 @@ export class SettingsPage implements OnInit {
   private readonly router = inject(Router);
   private readonly toasts = inject(ToastService);
   readonly push = inject(PushNotificationsService);
+  private readonly backupApi = inject(BackupApiService);
+
+  /** Scheduled-backup state (admin only). */
+  readonly backup = signal<BackupStatus | null>(null);
+  readonly backupBusy = signal(false);
+  readonly weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+  formatBytes(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    const units = ['KB', 'MB', 'GB', 'TB'];
+    let value = bytes / 1024;
+    let unit = 0;
+    while (value >= 1024 && unit < units.length - 1) {
+      value /= 1024;
+      unit++;
+    }
+    return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unit]}`;
+  }
+
+  formatWhen(iso: string): string {
+    return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  backupDownloadUrl(name: string): string {
+    return this.backupApi.downloadUrl(name);
+  }
+
+  /** Every control saves immediately — no separate Save button to forget. */
+  async saveBackupSettings(): Promise<void> {
+    const status = this.backup();
+    if (!status) {
+      return;
+    }
+    try {
+      const { settings } = await this.backupApi.saveSettings(status.settings);
+      this.backup.set({ ...status, settings });
+      this.toasts.success('Backup settings saved.');
+      await this.reloadBackup();
+    } catch (error) {
+      this.toasts.error(this.messageFrom(error, "Couldn't save the backup settings."));
+      await this.reloadBackup();
+    }
+  }
+
+  /** Runs a backup now; it's a background job, so poll until it lands. */
+  async runBackupNow(): Promise<void> {
+    if (this.backupBusy()) {
+      return;
+    }
+    this.backupBusy.set(true);
+    const before = this.backup()?.lastRun?.at ?? '';
+    try {
+      await this.backupApi.runNow();
+      this.toasts.success('Backing up — this runs in the background.');
+      const startedAt = Date.now();
+      const poll = setInterval(() => {
+        void (async () => {
+          await this.reloadBackup();
+          const run = this.backup()?.lastRun;
+          if ((run && run.at !== before) || Date.now() - startedAt > 120_000) {
+            clearInterval(poll);
+            this.backupBusy.set(false);
+            if (run && run.at !== before) {
+              run.ok
+                ? this.toasts.success('Backup complete.')
+                : this.toasts.error(`Backup failed: ${run.message ?? 'unknown error'}`);
+            }
+          }
+        })();
+      }, 3000);
+    } catch (error) {
+      this.backupBusy.set(false);
+      this.toasts.error(this.messageFrom(error, "Couldn't start the backup."));
+    }
+  }
+
+  async deleteBackup(name: string): Promise<void> {
+    const confirmed = await this.confirms.ask({
+      title: 'Delete this backup?',
+      message: 'The file is removed from the backup folder. This cannot be undone.',
+      confirmLabel: 'Delete',
+    });
+    if (!confirmed) {
+      return;
+    }
+    try {
+      await this.backupApi.remove(name);
+      await this.reloadBackup();
+    } catch {
+      this.toasts.error("Couldn't delete that backup.");
+    }
+  }
+
+  private async reloadBackup(): Promise<void> {
+    this.backup.set(await this.backupApi.status().catch(() => null));
+  }
 
   readonly users = signal<UserProfile[]>([]);
   /** The member whose password is being reset (drives the sheet). */
@@ -321,6 +418,7 @@ export class SettingsPage implements OnInit {
           this.http.get<{ enabled: boolean; host: string; from: string }>('/api/v1/mail/status'),
         ).catch(() => null),
       );
+      await this.reloadBackup();
     }
     for (const device of devicesResult.devices) {
       this.deviceDrafts[this.deviceKey(device)] = device.personId ?? '';

@@ -286,3 +286,24 @@ a.outline {
   font-size: 0.75rem;
   color: var(--text-muted);
 }
+
+.keep-input {
+  width: 5rem;
+  text-align: center;
+}
+
+.hint.error {
+  color: var(--danger);
+}
+
+.card.row code {
+  font-size: 0.78rem;
+  word-break: break-all;
+}
+
+.backup-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}

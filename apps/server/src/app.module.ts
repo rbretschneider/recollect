@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AlbumsModule } from './albums/albums.module';
 import { AssetsModule } from './assets/assets.module';
+import { BackupModule } from './backup/backup.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from './config/config.module';
 import { CleanupModule } from './cleanup/cleanup.module';
@@ -33,6 +34,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     LibraryModule,
     AssetsModule,
+    BackupModule,
     DevicesModule,
     FoldersModule,
     MemoriesModule,

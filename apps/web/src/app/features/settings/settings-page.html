@@ -162,6 +162,133 @@
     </section>
   }
 
+  @if (isAdmin && backup(); as bk) {
+    <section aria-label="Backups">
+      <div class="section-head">
+        <h2>Backups</h2>
+        <button type="button" class="outline" [disabled]="backupBusy()" (click)="runBackupNow()">
+          {{ backupBusy() ? 'Backing up…' : 'Back up now' }}
+        </button>
+      </div>
+      <p class="hint">
+        Your photos are safe in your library folder — but everything you’ve
+        <em>written</em> (memories, journals, quotes, captions, the names on faces)
+        lives only in the database. This copies it out on a schedule.
+      </p>
+
+      <div class="card row">
+        <div class="info">
+          <h3>Schedule</h3>
+          <p class="muted">Backups are written to <code>{{ bk.directory }}</code></p>
+        </div>
+        <div class="daily-controls">
+          <select name="backupMode" [(ngModel)]="bk.settings.mode" (ngModelChange)="saveBackupSettings()">
+            <option value="off">Off</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+          </select>
+          @if (bk.settings.mode === 'weekly') {
+            <select name="backupWeekday" [(ngModel)]="bk.settings.weekday" (ngModelChange)="saveBackupSettings()">
+              @for (day of weekdayNames; track day; let i = $index) {
+                <option [ngValue]="i">{{ day }}</option>
+              }
+            </select>
+          }
+          @if (bk.settings.mode !== 'off') {
+            <input
+              type="time"
+              name="backupTime"
+              [(ngModel)]="bk.settings.time"
+              (ngModelChange)="saveBackupSettings()"
+              aria-label="Backup time"
+            />
+          }
+        </div>
+      </div>
+
+      <div class="card row">
+        <div class="info">
+          <h3>Folder</h3>
+          <p class="muted">
+            Put this on your NAS so your own backups cover it. Leave blank for the
+            app’s data folder.
+          </p>
+        </div>
+        <input
+          class="owner-input"
+          name="backupDir"
+          [(ngModel)]="bk.settings.directory"
+          (change)="saveBackupSettings()"
+          placeholder="/library/Backups"
+          aria-label="Backup folder"
+        />
+      </div>
+
+      <div class="card row">
+        <div class="info">
+          <h3>Keep</h3>
+          <p class="muted">Older backups beyond this count are pruned automatically.</p>
+        </div>
+        <input
+          type="number"
+          class="owner-input keep-input"
+          name="backupKeep"
+          min="1"
+          max="60"
+          [(ngModel)]="bk.settings.keep"
+          (change)="saveBackupSettings()"
+          aria-label="How many backups to keep"
+        />
+      </div>
+
+      <div class="card row">
+        <div class="info">
+          <h3>Include AI data</h3>
+          <p class="muted">
+            Face and search vectors re-derive from your photos, so they’re skipped
+            by default to keep backups small. Everything you wrote is always included.
+          </p>
+        </div>
+        <label class="check">
+          <input
+            type="checkbox"
+            name="backupMl"
+            [(ngModel)]="bk.settings.includeMlData"
+            (ngModelChange)="saveBackupSettings()"
+          />
+        </label>
+      </div>
+
+      @if (bk.lastRun; as run) {
+        <p class="hint" [class.error]="!run.ok">
+          @if (run.ok) {
+            Last backup {{ formatWhen(run.at) }} · {{ formatBytes(run.sizeBytes ?? 0) }}
+          } @else {
+            Last backup failed {{ formatWhen(run.at) }} — {{ run.message }}
+          }
+        </p>
+      }
+
+      @if (bk.backups.length > 0) {
+        <div class="section-head">
+          <h2>Saved backups</h2>
+        </div>
+        @for (file of bk.backups; track file.name) {
+          <div class="card row">
+            <div class="info">
+              <h3>{{ file.kind === 'dump' ? 'Database' : 'Memories (JSON)' }}</h3>
+              <p class="muted">{{ formatWhen(file.createdAt) }} · {{ formatBytes(file.sizeBytes) }}</p>
+            </div>
+            <div class="backup-actions">
+              <a class="outline" [href]="backupDownloadUrl(file.name)" download>Download</a>
+              <button type="button" class="outline danger" (click)="deleteBackup(file.name)">Delete</button>
+            </div>
+          </div>
+        }
+      }
+    </section>
+  }
+
   @if (isAdmin) {
     <section aria-label="System">
       <div class="section-head">
