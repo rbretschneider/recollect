@@ -1,25 +1,39 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 
 /** Sign-in page. */
 @Component({
   selector: 'app-login-page',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   templateUrl: './login-page.html',
   styleUrl: '../setup/setup-page.scss',
 })
-export class LoginPage {
+export class LoginPage implements OnInit {
   private readonly auth = inject(AuthStateService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
+  private readonly http = inject(HttpClient);
+
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
+  /** Self-service reset needs SMTP; hide the link when the server can't email. */
+  readonly canResetPassword = signal(false);
 
   email = '';
   password = '';
+
+  ngOnInit(): void {
+    void firstValueFrom(
+      this.http.get<{ available: boolean }>('/api/v1/auth/password/forgot'),
+    )
+      .then((result) => this.canResetPassword.set(result.available))
+      .catch(() => this.canResetPassword.set(false));
+  }
 
   async signIn(): Promise<void> {
     this.error.set(null);

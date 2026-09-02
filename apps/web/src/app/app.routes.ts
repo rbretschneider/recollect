@@ -11,6 +11,17 @@ export const routes: Routes = [
     loadComponent: () => import('./features/login/login-page').then((m) => m.LoginPage),
   },
   {
+    // Public: you cannot sign in to ask for a reset.
+    path: 'forgot-password',
+    loadComponent: () =>
+      import('./features/login/forgot-password-page').then((m) => m.ForgotPasswordPage),
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () =>
+      import('./features/login/reset-password-page').then((m) => m.ResetPasswordPage),
+  },
+  {
     // Home: the dashboard — on this day, suggestions, recent memories.
     path: '',
     canActivate: [authGuard],

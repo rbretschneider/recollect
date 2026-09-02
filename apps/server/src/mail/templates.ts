@@ -65,3 +65,30 @@ export function memberInviteEmail(input: {
     text: `Hi ${input.displayName} — ${input.inviterName} added you to the family's photo library.\n\nSign in at ${input.origin} with ${input.email} and the password they gave you.`,
   };
 }
+
+export function passwordResetEmail(input: {
+  displayName: string;
+  link: string;
+  origin: string;
+}): { subject: string; html: string; text: string } {
+  const body = `
+    <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#3c3c48;">
+      Hi ${input.displayName} — someone asked to reset the password for your
+      Recollect account. Use the button below to choose a new one.
+    </p>
+    <p style="margin:0 0 22px;font-size:15px;line-height:1.6;color:#3c3c48;">
+      This link works once and expires in an hour. If you didn't ask for it you
+      can ignore this email — your password stays as it is.
+    </p>
+    <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:10px;background:${ACCENT};">
+      <a href="${input.link}" style="display:inline-block;padding:12px 26px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">Choose a new password</a>
+    </td></tr></table>`;
+  return {
+    subject: 'Reset your Recollect password',
+    html: shell('Reset your password', body, input.origin),
+    text:
+      `Hi ${input.displayName} — someone asked to reset the password for your Recollect account.\n\n` +
+      `Choose a new one here (works once, expires in an hour):\n${input.link}\n\n` +
+      `If you didn't ask for this, ignore this email — your password stays as it is.`,
+  };
+}

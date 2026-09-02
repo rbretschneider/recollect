@@ -20,6 +20,11 @@ import { Public } from './decorators/public.decorator';
 import { ChangePasswordRequestDto } from './dto/change-password-request.dto';
 import { LoginRequestDto } from './dto/login-request.dto';
 import { LoginThrottleService } from './login-throttle.service';
+import {
+  CompletePasswordResetDto,
+  ForgotPasswordRequestDto,
+} from './dto/password-reset-request.dto';
+import { PasswordResetService } from './password-reset.service';
 import { RequireAdmin } from './decorators/require-admin.decorator';
 import { ResetPasswordRequestDto } from '../users/dto/reset-password-request.dto';
 
@@ -29,7 +34,49 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly throttle: LoginThrottleService,
+    private readonly passwordReset: PasswordResetService,
   ) {}
+
+  /** Whether the login page should offer "Forgot password" (needs SMTP). */
+  @Public()
+  @Get('password/forgot')
+  forgotAvailable(): { available: boolean } {
+    return { available: this.passwordReset.isAvailable };
+  }
+
+  /**
+   * Requests a reset link. Always reports success: a different answer for a
+   * real address would make this an account-directory oracle.
+   */
+  @Public()
+  @Post('password/forgot')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(
+    @Body() body: ForgotPasswordRequestDto,
+    @Req() req: Request,
+  ): Promise<{ sent: true }> {
+    const ip = req.ip ?? 'unknown';
+    this.throttle.assertAllowed(ip);
+    // Counts toward the same per-IP backoff as login, so this can't be used to
+    // hammer the mail server or enumerate addresses at speed.
+    this.throttle.recordFailure(ip, body.email);
+    const origin = `${req.protocol}://${req.get('host') ?? ''}`;
+    await this.passwordReset.request(body.email, origin);
+    return { sent: true };
+  }
+
+  /** Consumes a reset token and sets the new password. */
+  @Public()
+  @Post('password/reset')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(
+    @Body() body: CompletePasswordResetDto,
+    @Req() req: Request,
+  ): Promise<{ reset: true }> {
+    this.throttle.assertAllowed(req.ip ?? 'unknown');
+    await this.passwordReset.complete(body.token, body.password);
+    return { reset: true };
+  }
 
   @Public()
   @Post('login')

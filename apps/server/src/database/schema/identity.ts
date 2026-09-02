@@ -89,6 +89,23 @@ export const pushSubscription = pgTable(
   (table) => [index('push_subscription_user_id_idx').on(table.userId)],
 );
 
+/**
+ * A single-use, expiring password-reset grant. Only the SHA-256 of the token is
+ * stored — a leaked database row cannot be turned back into a working link.
+ */
+export const passwordReset = pgTable(
+  'password_reset',
+  {
+    id: uuid('id').primaryKey(),
+    userId: uuid('user_id').notNull(),
+    tokenHash: text('token_hash').notNull().unique(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('password_reset_user_id_idx').on(table.userId)],
+);
+
 /** Per-user notification settings (the daily "years ago" look-back push). */
 export const notificationPref = pgTable('notification_pref', {
   userId: uuid('user_id').primaryKey(),
