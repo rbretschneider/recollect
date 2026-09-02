@@ -2,7 +2,7 @@ import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common'
 import { execFile } from 'child_process';
 import { sql } from 'drizzle-orm';
 import { mkdir, readdir, rm, stat, writeFile } from 'fs/promises';
-import { join, resolve } from 'path';
+import { join, resolve, sep } from 'path';
 import { promisify } from 'util';
 import { APP_CONFIG } from '../config/app-config';
 import type { AppConfig } from '../config/app-config';
@@ -56,6 +56,19 @@ export interface BackupFile {
   createdAt: string;
   /** 'dump' restores with pg_restore; 'json' is the portable memories export. */
   kind: 'dump' | 'json';
+}
+
+/**
+ * A name this service itself produced: `recollect-<ISO stamp>.dump|json`. The
+ * stamp comes from toISOString() with `:` and `.` swapped for `-`, so it keeps
+ * the `T` separator *and* the trailing `Z` — both must be allowed here, and
+ * anything that could walk out of the backup directory must not be.
+ */
+export function isBackupFileName(name: string): boolean {
+  if (name.includes('/') || name.includes('\\') || name.includes('..')) {
+    return false;
+  }
+  return /^recollect-[0-9A-Za-z._-]+\.(dump|json)$/.test(name);
 }
 
 const DEFAULT_SETTINGS: BackupSettings = {
@@ -143,12 +156,14 @@ export class BackupService {
 
   /** Absolute path of one backup, guarded against traversal (for download). */
   async pathForBackup(name: string): Promise<string> {
-    if (!/^recollect-[0-9T:_.-]+\.(dump|json)$/.test(name)) {
+    if (!isBackupFileName(name)) {
       throw new BadRequestException('Not a backup file.');
     }
-    const directory = await this.resolveDirectory();
+    const directory = resolve(await this.resolveDirectory());
     const path = resolve(join(directory, name));
-    if (!path.startsWith(resolve(directory))) {
+    // Compare against the directory plus a separator: a bare startsWith would
+    // also accept a sibling like "/library/Backups-elsewhere/x.dump".
+    if (path !== join(directory, name) || !path.startsWith(directory + sep)) {
       throw new BadRequestException('Not a backup file.');
     }
     return path;

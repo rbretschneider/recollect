@@ -187,9 +187,9 @@
       margin: 0.1rem 0 0;
       font-size: 0.8rem;
       color: var(--text);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      // Descriptions wrap instead of clipping — see settings-page.scss.
+      line-height: 1.45;
+      overflow-wrap: anywhere;
     }
 
     .muted {

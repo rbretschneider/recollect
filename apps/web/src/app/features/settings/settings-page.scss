@@ -71,9 +71,11 @@
       margin: 0.1rem 0 0;
       font-size: 0.8rem;
       color: var(--text);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      // Descriptions WRAP rather than clip: half a sentence ending in "…"
+      // tells the reader nothing. Long unbroken tokens (paths, addresses)
+      // may break mid-word so they can't force the card wider than the card.
+      line-height: 1.45;
+      overflow-wrap: anywhere;
     }
 
     .muted {
