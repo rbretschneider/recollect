@@ -38,6 +38,12 @@ Two files per run, named by timestamp:
   **content hash + library-relative path**. Readable forever, with or without
   this app. No lock-in.
 
+The background **job queue is deliberately excluded**. It is transient
+operational state rather than anything you authored, it is usually the largest
+table in the database (completed history), and restoring it resurrects stale
+work — including the backup job that was running at the moment of the dump,
+which would then run a fresh backup right after every restore.
+
 ## Restoring from the app (opt-in)
 
 Set `RESTORE_ENABLED=true` in `.env` and restart. A **Restore** button then

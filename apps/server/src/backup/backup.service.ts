@@ -185,6 +185,14 @@ export class BackupService {
       await mkdir(directory, { recursive: true });
       const dumpPath = join(directory, `recollect-${stamp}.dump`);
       const args = ['--format=custom', '--no-owner', '--no-privileges', '--file', dumpPath];
+      // The job queue is transient operational state, never user content, and
+      // restoring it actively causes harm: the dump necessarily captures the
+      // very backup job that is running it, frozen as 'running', so a restore
+      // resurrects that row and the stale-lease reclaim runs the backup again.
+      // Queued rows are equally stale by the time anyone restores. It is also
+      // the single biggest table (completed history), so dropping it keeps
+      // archives far smaller.
+      args.push('--exclude-table-data=job');
       if (!settings.includeMlData) {
         // CLIP vectors are the bulk of the archive and re-derive from the photos.
         // Face rows are always kept: they carry the person assignments a human made.
