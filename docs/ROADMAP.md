@@ -86,7 +86,43 @@ left drawer. Details in git history.)
   button that names files from tags + original name (yearly family book flow)
 - Smarter clustering, year-in-review
 - Housekeeping: hawaii doc (`hawaii/docs/recollect.md`), delete unused
-  `production` GitHub environment, fix red CI (Linux lockfile / `npm ci`)
+  `production` GitHub environment. (CI is green as of 2026-09-01 — the old
+  lockfile / `npm ci` failure is fixed.)
+
+## Shipped 2026-09-01: Backups (was plan.md S11.5, the biggest gap)
+
+Scheduled DB backups — the photos are safe in the library, but memories,
+journals, quotes, captions, and the names on faces existed only in Postgres.
+Settings → Backups: off/daily/weekly, configurable folder (guarded to the
+mounted volumes), retention, and an "include AI data" toggle (off by default;
+vectors re-derive). Each run writes a `pg_dump` custom archive **and** a plain
+JSON export of the memory layer (no lock-in). Restore documented and verified
+in [backup-restore.md](backup-restore.md).
+
+## Still missing (assessed 2026-09-01)
+
+1. **LICENSE** — the repo has none and `apps/server/package.json` says
+   `UNLICENSED`, so it is legally all-rights-reserved. Blocks the FOSS plan
+   entirely; AGPL-3.0 recommended (matches Immich/PhotoPrism).
+2. **FOSS scaffolding** — no CONTRIBUTING / SECURITY / CODE_OF_CONDUCT /
+   issue+PR templates / CHANGELOG, and no API docs (no Swagger).
+3. **Versioned releases** — only `:latest` is published; self-hosters can't pin
+   or read what changed before upgrading.
+4. **Thin tests** — 8 spec files against ~270 source files, all pure functions.
+   No API/integration or web tests. Matters much more with outside PRs.
+5. **RAW support is partial** — `.dng` + HEIC/HEIF only; no `.cr2`/`.nef`/`.arw`.
+6. **No first-run onboarding** beyond "No folders yet".
+7. **Sync app lives in a separate repo** (sambaloader) — see below.
+
+## Companion: sambaloader (separate repo)
+
+Android/Kotlin auto-upload app. Despite the name it does **not** speak SMB:
+phone → mTLS HTTPS (:443, nginx) → its own Go `uploadd` service → writes plain
+files into a NAS library directory. Auth is mutual TLS against a private CA —
+no passwords or tokens; enrollment is a QR + CSR flow with CRL revocation.
+**It composes with Recollect with zero integration work**: point `uploadd`'s
+library directory at a Recollect library root and the normal scan/ingest picks
+the files up. Merging the repos is optional, not required.
 
 ## Last, deliberately
 
