@@ -38,10 +38,43 @@ Two files per run, named by timestamp:
   **content hash + library-relative path**. Readable forever, with or without
   this app. No lock-in.
 
-## Restoring
+## Restoring from the app (opt-in)
 
-Restore into an **empty** database — `pg_restore` will not merge into a
-populated one.
+Set `RESTORE_ENABLED=true` in `.env` and restart. A **Restore** button then
+appears on every `.dump` in Settings → Backups.
+
+It never writes into the live database. The app holds a connection pool to its
+own database, and Postgres refuses to drop or rename a database that has
+connections — so restoring in place would mean pulling tables out from under a
+running app, leaving a half-restored database if anything failed. Instead:
+
+1. **Stage** — restore into a scratch `recollect_restore` database. Production
+   is not touched at all in this step.
+2. **Verify** — the archive must contain the core tables and at least one user
+   account, or the restore stops here.
+3. **Swap** — block new connections to the live database, terminate the
+   existing ones, then rename: `recollect` → `recollect_old_<timestamp>` and
+   `recollect_restore` → `recollect`. This is the only destructive moment and
+   it takes milliseconds.
+4. **Restart** — the server exits and the container's restart policy brings it
+   back on the restored database. You'll be signed out.
+
+**If any step fails, nothing changed** — the scratch database is dropped and
+production carries on untouched. After a successful restore your previous
+database is retained as `recollect_old_<timestamp>`; drop it once you're happy:
+
+```bash
+docker compose exec -T db psql -U recollect -d postgres \
+  -c 'drop database "recollect_old_20260901120000";'
+```
+
+Then **rescan your library** (Settings → Library → Scan now) so assets re-link
+to their files by content hash.
+
+## Restoring by hand
+
+Also fine, and the only option with `RESTORE_ENABLED` off. Restore into an
+**empty** database — `pg_restore` will not merge into a populated one.
 
 ```bash
 # 1. Stop the app (leave the database running).

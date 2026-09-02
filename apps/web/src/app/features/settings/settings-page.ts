@@ -113,6 +113,48 @@ export class SettingsPage implements OnInit {
     }
   }
 
+  /**
+   * Restores a backup. Typed confirmation, because this replaces the live
+   * database and restarts the server.
+   */
+  async restoreBackup(name: string): Promise<void> {
+    const confirmed = await this.confirms.ask({
+      title: 'Restore this backup?',
+      message:
+        'Everything in the library right now — memories, journals, names — is replaced by ' +
+        'what was in this backup. It is restored to a scratch database and checked first, ' +
+        'so a bad backup changes nothing; your current database is kept as a rollback copy. ' +
+        'The server restarts at the end and you will be signed out.',
+      confirmLabel: 'Restore and restart',
+    });
+    if (!confirmed) {
+      return;
+    }
+    try {
+      await this.backupApi.restore(name);
+      this.toasts.success('Restoring — the server will restart when it finishes.');
+      // Poll until the server goes away (the swap) or reports a failure.
+      const startedAt = Date.now();
+      const poll = setInterval(() => {
+        void (async () => {
+          const status = await this.backupApi.status().catch(() => null);
+          if (status) {
+            this.backup.set(status);
+            if (status.restore.status === 'failed') {
+              clearInterval(poll);
+              this.toasts.error(`Restore failed — nothing changed. ${status.restore.message ?? ''}`);
+            }
+          }
+          if (Date.now() - startedAt > 300_000) {
+            clearInterval(poll);
+          }
+        })();
+      }, 3000);
+    } catch (error) {
+      this.toasts.error(this.messageFrom(error, "Couldn't start the restore."));
+    }
+  }
+
   async deleteBackup(name: string): Promise<void> {
     const confirmed = await this.confirms.ask({
       title: 'Delete this backup?',

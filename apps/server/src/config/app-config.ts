@@ -65,6 +65,14 @@ const configSchema = z.object({
   vapidSubject: z.string().default('mailto:admin@recollect.app'),
   /** Where scheduled database backups are written (override in Settings). */
   backupDir: z.string().default(''),
+  /**
+   * Allows restoring a backup from the UI. Off by default: it replaces the live
+   * database and restarts the server, so an operator has to opt in on purpose.
+   */
+  restoreEnabled: z
+    .string()
+    .default('')
+    .transform((value) => value === '1' || value.toLowerCase() === 'true'),
   /** Comma-separated bases the library folder picker may browse (mounted volumes). */
   libraryBrowseBases: z
     .string()
@@ -108,6 +116,7 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     vapidPrivateKey: env.VAPID_PRIVATE_KEY,
     vapidSubject: env.VAPID_SUBJECT,
     backupDir: env.BACKUP_DIR,
+    restoreEnabled: env.RESTORE_ENABLED,
     libraryBrowseBases: env.LIBRARY_BROWSE_BASES,
     mlUrl: env.RECOLLECT_ML_URL,
     faceClusterDistance: env.FACE_CLUSTER_DISTANCE,

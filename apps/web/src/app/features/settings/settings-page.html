@@ -269,10 +269,27 @@
         </p>
       }
 
+      @if (bk.restore.status === 'running') {
+        <p class="hint" role="status">
+          Restoring — {{ bk.restore.step }}… Your current database is untouched until
+          the final step. The server restarts when it finishes.
+        </p>
+      } @else if (bk.restore.status === 'failed') {
+        <p class="hint error" role="alert">
+          Restore failed, and nothing changed: {{ bk.restore.message }}
+        </p>
+      }
+
       @if (bk.backups.length > 0) {
         <div class="section-head">
           <h2>Saved backups</h2>
         </div>
+        @if (!bk.restoreEnabled) {
+          <p class="hint">
+            Restoring from here is off. Set <code>RESTORE_ENABLED=true</code> on the
+            server to turn it on, or follow the manual steps in the backup docs.
+          </p>
+        }
         @for (file of bk.backups; track file.name) {
           <div class="card row">
             <div class="info">
@@ -281,6 +298,16 @@
             </div>
             <div class="backup-actions">
               <a class="outline" [href]="backupDownloadUrl(file.name)" download>Download</a>
+              @if (bk.restoreEnabled && file.kind === 'dump') {
+                <button
+                  type="button"
+                  class="outline"
+                  [disabled]="bk.restore.status === 'running'"
+                  (click)="restoreBackup(file.name)"
+                >
+                  Restore
+                </button>
+              }
               <button type="button" class="outline danger" (click)="deleteBackup(file.name)">Delete</button>
             </div>
           </div>

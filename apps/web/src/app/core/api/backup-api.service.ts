@@ -26,12 +26,22 @@ export interface BackupFile {
   kind: 'dump' | 'json';
 }
 
+export interface RestoreState {
+  status: 'idle' | 'running' | 'failed' | 'swapped';
+  step?: string;
+  message?: string;
+  at?: string;
+}
+
 export interface BackupStatus {
   settings: BackupSettings;
   /** The directory actually in use, after settings/env/default fallback. */
   directory: string;
   lastRun: BackupLastRun | null;
   backups: BackupFile[];
+  /** Restore is opt-in on the server (RESTORE_ENABLED). */
+  restoreEnabled: boolean;
+  restore: RestoreState;
 }
 
 /** Raw HTTP calls for scheduled database backups (admin only). */
@@ -55,6 +65,15 @@ export class BackupApiService {
 
   downloadUrl(name: string): string {
     return `/api/v1/backup/file/${encodeURIComponent(name)}`;
+  }
+
+  restore(name: string): Promise<{ accepted: true }> {
+    return firstValueFrom(
+      this.http.post<{ accepted: true }>(
+        `/api/v1/backup/restore/${encodeURIComponent(name)}`,
+        {},
+      ),
+    );
   }
 
   remove(name: string): Promise<void> {

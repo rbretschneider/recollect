@@ -20,6 +20,7 @@ import {
   BackupService,
   BackupSettings,
 } from './backup.service';
+import { RestoreService, RestoreState } from './restore.service';
 
 /** Body for the backup schedule + destination. */
 export class BackupSettingsDto {
@@ -56,6 +57,7 @@ export class BackupSettingsDto {
 export class BackupController {
   constructor(
     private readonly backup: BackupService,
+    private readonly restore: RestoreService,
     private readonly queue: JobQueueService,
   ) {}
 
@@ -65,6 +67,8 @@ export class BackupController {
     directory: string;
     lastRun: BackupLastRun | null;
     backups: BackupFile[];
+    restoreEnabled: boolean;
+    restore: RestoreState;
   }> {
     const [settings, directory, lastRun, backups] = await Promise.all([
       this.backup.getSettings(),
@@ -72,7 +76,26 @@ export class BackupController {
       this.backup.getLastRun(),
       this.backup.listBackups(),
     ]);
-    return { settings, directory, lastRun, backups };
+    return {
+      settings,
+      directory,
+      lastRun,
+      backups,
+      restoreEnabled: this.restore.isEnabled,
+      restore: this.restore.getState(),
+    };
+  }
+
+  /**
+   * Restores a backup: staged into a scratch database, verified, then swapped
+   * in by rename — after which the server exits so the container restarts onto
+   * it. Production is untouched unless every step succeeds.
+   */
+  @Post('restore/:name')
+  @HttpCode(HttpStatus.ACCEPTED)
+  restoreBackup(@Param('name') name: string): { accepted: true } {
+    this.restore.start(name);
+    return { accepted: true };
   }
 
   @Post('settings')
