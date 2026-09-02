@@ -1,9 +1,10 @@
 import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
 import { execFile } from 'child_process';
-import { Client } from 'pg';
+import { Client, Pool } from 'pg';
 import { promisify } from 'util';
 import { APP_CONFIG } from '../config/app-config';
 import type { AppConfig } from '../config/app-config';
+import { PG_POOL } from '../database/database.module';
 import { BackupService } from './backup.service';
 
 const execFileAsync = promisify(execFile);
@@ -39,8 +40,17 @@ export class RestoreService {
 
   constructor(
     @Inject(APP_CONFIG) private readonly config: AppConfig,
+    @Inject(PG_POOL) private readonly pool: Pool,
     private readonly backup: BackupService,
   ) {}
+
+  /**
+   * Drops the app's own connections before the swap, so terminating backends
+   * can't kill a client out from under us mid-rename.
+   */
+  private async closeAppPool(): Promise<void> {
+    await this.pool.end().catch(() => undefined);
+  }
 
   get isEnabled(): boolean {
     return this.config.restoreEnabled;
@@ -98,9 +108,12 @@ export class RestoreService {
       this.step('verifying the restored data');
       await this.verify(names.staging);
 
-      // 4. Swap. Block new connections first so the app's pool cannot
-      //    reconnect between the terminate and the rename.
+      // 4. Swap. Close our OWN pool first: the terminate below would otherwise
+      //    kill our idle clients mid-swap, and a dropped client can take the
+      //    process down before the second rename runs — which would leave no
+      //    live database at all. We're exiting straight after this anyway.
       this.step('swapping databases');
+      await this.closeAppPool();
       await admin.query(`alter database "${names.live}" with allow_connections false`);
       await admin.query(
         `select pg_terminate_backend(pid) from pg_stat_activity
@@ -108,8 +121,19 @@ export class RestoreService {
         [names.live],
       );
       await admin.query(`alter database "${names.live}" rename to "${names.retired}"`);
-      await admin.query(`alter database "${names.staging}" rename to "${names.live}"`);
-      // The retired copy stays as the undo; let an operator connect to it.
+      try {
+        await admin.query(`alter database "${names.staging}" rename to "${names.live}"`);
+      } catch (error) {
+        // Half-swapped is the one truly bad state: no database under the live
+        // name. Put the original back before giving up.
+        await admin.query(`alter database "${names.retired}" rename to "${names.live}"`);
+        await admin.query(`alter database "${names.live}" with allow_connections true`);
+        throw error;
+      }
+      // allow_connections travels with a rename, so the promoted database is
+      // still blocked at this point — and the retired copy needs to be
+      // reachable to serve as the undo.
+      await admin.query(`alter database "${names.live}" with allow_connections true`);
       await admin.query(`alter database "${names.retired}" with allow_connections true`);
 
       this.state = {

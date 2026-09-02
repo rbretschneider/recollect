@@ -1,4 +1,4 @@
-import { Global, Inject, Module, OnApplicationShutdown } from '@nestjs/common';
+import { Global, Inject, Logger, Module, OnApplicationShutdown } from '@nestjs/common';
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { APP_CONFIG, AppConfig } from '../config/app-config';
@@ -19,8 +19,8 @@ export const PG_POOL = Symbol('PG_POOL');
     {
       provide: PG_POOL,
       inject: [APP_CONFIG],
-      useFactory: (config: AppConfig): Pool =>
-        new Pool({
+      useFactory: (config: AppConfig): Pool => {
+        const pool = new Pool({
           connectionString: config.databaseUrl,
           max: 16,
           idleTimeoutMillis: 30_000,
@@ -29,7 +29,18 @@ export const PG_POOL = Symbol('PG_POOL');
           keepAlive: true,
           statement_timeout: 15_000,
           application_name: 'recollect',
-        }),
+        });
+        // An IDLE client that dies takes the whole process with it otherwise:
+        // node-postgres emits 'error' on the pool, and an unhandled 'error'
+        // event is a hard crash in Node. That happens on any server-side
+        // disconnect — a database restart, a failover, an admin terminating
+        // backends — none of which should kill the app. The pool discards the
+        // broken client and hands out a fresh one on the next query.
+        pool.on('error', (error) => {
+          new Logger('DatabasePool').warn(`Idle client dropped: ${error.message}`);
+        });
+        return pool;
+      },
     },
     {
       provide: DATABASE,

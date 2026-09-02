@@ -60,7 +60,33 @@ running app, leaving a half-restored database if anything failed. Instead:
    back on the restored database. You'll be signed out.
 
 **If any step fails, nothing changed** — the scratch database is dropped and
-production carries on untouched. After a successful restore your previous
+production carries on untouched. If the *second* rename fails, the original is
+renamed straight back, so there is never a moment with no live database.
+
+### If the server won't start after a restore
+
+Two recoverable states, both fixed with SQL from the `db` container. Check what
+exists first:
+
+```bash
+docker compose exec -T db psql -U recollect -d postgres \
+  -c "select datname, datallowconn from pg_database where datname like 'recollect%';"
+```
+
+- **No `recollect`, but `recollect_restore` or `recollect_old_<ts>` exists** — a
+  swap was interrupted. Promote one back (`_old_` is your original data,
+  `_restore` is the backup you were restoring):
+  ```bash
+  docker compose exec -T db psql -U recollect -d postgres \
+    -c 'alter database recollect_old_20260101120000 rename to recollect;'
+  ```
+- **`recollect` exists but `datallowconn` is `f`** — the "block connections"
+  step is still in effect; `allow_connections` follows a database through a
+  rename. The server will crash-loop on `FATAL 55000`. Re-enable it:
+  ```bash
+  docker compose exec -T db psql -U recollect -d postgres \
+    -c 'alter database recollect with allow_connections true;'
+  ``` After a successful restore your previous
 database is retained as `recollect_old_<timestamp>`; drop it once you're happy:
 
 ```bash
