@@ -81,8 +81,12 @@
 // them the same width whatever they contain, so the pill lands on the true
 // centre of the bar.
 .topbar-side {
+  // Basis 0 + equal grow is what makes the two flanks the same width, and so
+  // the pill exactly centred. min-content is the floor: with `min-width: 0`
+  // the flanks collapse to nothing on a narrow screen and the brand and avatar
+  // spill out underneath the pill.
   flex: 1 1 0;
-  min-width: 0;
+  min-width: min-content;
   display: flex;
   align-items: center;
   gap: 0.75rem;
