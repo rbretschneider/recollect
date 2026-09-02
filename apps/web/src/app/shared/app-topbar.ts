@@ -15,14 +15,18 @@ import { Icon } from './icon';
   imports: [AccountBadge, ActivitySpinner, Brand, Icon, RouterLink],
   template: `
     <header class="topbar">
-      <app-brand />
-      <app-activity-spinner />
+      <div class="topbar-side">
+        <app-brand />
+        <app-activity-spinner />
+      </div>
       <a class="search-pill" routerLink="/search" aria-label="Search">
         <app-icon name="search" [size]="17" />
         <span>Search</span>
       </a>
-      <ng-content />
-      <app-account-badge />
+      <div class="topbar-side end">
+        <ng-content />
+        <app-account-badge />
+      </div>
     </header>
   `,
   // .topbar is styled globally (styles.scss) so every page header — this bar

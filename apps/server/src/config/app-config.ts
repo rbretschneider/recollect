@@ -63,6 +63,11 @@ const configSchema = z.object({
   vapidPrivateKey: z.string().default(''),
   /** Contact URI web-push sends to push services (mailto: or https:). */
   vapidSubject: z.string().default('mailto:admin@recollect.app'),
+  /**
+   * How long finished jobs are kept before pruning. Recent history is useful
+   * for diagnosing a failed import; older rows are pure bloat. 0 disables.
+   */
+  jobRetentionDays: z.coerce.number().int().min(0).default(7),
   /** Where scheduled database backups are written (override in Settings). */
   backupDir: z.string().default(''),
   /**
@@ -115,6 +120,7 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     vapidPublicKey: env.VAPID_PUBLIC_KEY,
     vapidPrivateKey: env.VAPID_PRIVATE_KEY,
     vapidSubject: env.VAPID_SUBJECT,
+    jobRetentionDays: env.JOB_RETENTION_DAYS,
     backupDir: env.BACKUP_DIR,
     restoreEnabled: env.RESTORE_ENABLED,
     libraryBrowseBases: env.LIBRARY_BROWSE_BASES,

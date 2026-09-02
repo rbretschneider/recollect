@@ -74,12 +74,30 @@
   }
 }
 
+// Equal-width flanks around the search pill. `margin: 0 auto` alone only
+// centres the pill in whatever space the side items leave over, so an
+// asymmetric header (wide brand on the left, small avatar on the right) pushes
+// it off-centre by half the difference. Giving both flanks `flex: 1 1 0` makes
+// them the same width whatever they contain, so the pill lands on the true
+// centre of the bar.
+.topbar-side {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  &.end {
+    justify-content: flex-end;
+  }
+}
+
 // The topbar's tap-to-search pill — shared by every top-level page header.
 .search-pill {
-  flex: 1;
+  flex: 0 1 26rem;
   min-width: 0;
   max-width: 26rem;
-  margin: 0 auto;
+  margin: 0;
   display: flex;
   align-items: center;
   justify-content: center;
