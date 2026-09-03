@@ -41,6 +41,9 @@ search, places, and safe file management (delete/move with a holding period) fro
 - **A real photo app.** Justified/mosaic/large grid grouped by day, a fast full-screen viewer
   (pinch-zoom, swipe, motion-photo playback), text **and** CLIP **semantic search** ("looks like
   'beach'"), folder browsing, favorites, and correct-the-date editing that writes back to the file.
+- **Phone uploads.** Pair it with [sambaloader](https://github.com/rbretschneider/sambaloader) and
+  an Android camera roll backs itself up to your NAS over mutual TLS — no cloud account, and no
+  integration work: Recollect just indexes the folder it lands in.
 - **Cleanup advisor.** Reclaim space safely — flags junk, oversized/bloated videos (one-tap
   re-encode), probably-accidental shots (floor/blur/pocket), and **near-duplicate re-exports** —
   all tap-to-verify, nothing ever auto-deleted.
@@ -94,6 +97,20 @@ starts automatically. New files are picked up on a schedule you choose in **Sett
 - **Daily look-back push notifications:** generate a VAPID keypair and set `VAPID_PUBLIC_KEY` /
   `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` in `.env`, then enable it per device in
   **Settings → Notifications**.
+
+## Getting photos off an Android phone
+
+Recollect indexes a folder; it doesn't upload for you. To get a phone's camera roll into that
+folder automatically, pair it with **[sambaloader](https://github.com/rbretschneider/sambaloader)**
+— an Android app plus a small self-hosted server that backs up new photos and videos to your NAS
+over mutual TLS, with no cloud account in the middle.
+
+The two need **no integration work**: point sambaloader's library directory at a folder Recollect
+indexes, and new uploads are picked up by the normal scan. Set **Settings → Library** to
+*every few minutes* and photos show up shortly after they're taken.
+
+> Despite the name it doesn't speak SMB — the phone talks HTTPS to its own small service, which
+> writes plain files into the directory your existing Samba share already serves.
 
 ## Development
 
