@@ -8,18 +8,21 @@ import { AuthService } from './auth.service';
 import { AuthGuard } from './guards/auth.guard';
 import { GrantsGuard } from './guards/grants.guard';
 import { LoginThrottleService } from './login-throttle.service';
+import { OidcController } from './oidc/oidc.controller';
+import { OidcService } from './oidc/oidc.service';
 import { PasswordResetService } from './password-reset.service';
 import { SetupController } from './setup.controller';
 import { TokenService } from './token.service';
 
 @Module({
   imports: [JwtModule.register({}), UsersModule, MailModule],
-  controllers: [SetupController, AuthController],
+  controllers: [SetupController, AuthController, OidcController],
   providers: [
     AuthService,
     TokenService,
     LoginThrottleService,
     PasswordResetService,
+    OidcService,
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: GrantsGuard },
   ],

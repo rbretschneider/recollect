@@ -70,6 +70,16 @@ export class AuthService {
   }
 
   /**
+   * Issues a session for an account whose identity was verified outside the
+   * password path (OIDC). The credential check was the IdP's; everything from
+   * here — cookies, rotation, revocation, tokenVersion — is identical to a
+   * password login.
+   */
+  async issueSessionFor(user: UserProfile, deviceLabel?: string): Promise<IssuedTokens> {
+    return this.issueTokens(user, deviceLabel);
+  }
+
+  /**
    * Rotates the refresh token and issues a fresh access token. Presenting the
    * PREVIOUS token of a session is reuse — the stolen-cookie signature (two
    * parties holding one session) — and kills the session for both.

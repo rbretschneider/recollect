@@ -204,6 +204,13 @@
       "when": 1788000500000,
       "tag": "0028_password_reset",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1788467005106,
+      "tag": "0029_identity_link",
+      "breakpoints": true
     }
   ]
 }

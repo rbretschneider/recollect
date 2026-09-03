@@ -35,6 +35,32 @@ services:
       # and semantic search. Empty = ML fully off; everything else works.
       RECOLLECT_ML_URL: ${RECOLLECT_ML_URL:-}
       TZ: ${TZ:-America/New_York}
+      # Set to 1 when a reverse proxy (nginx) fronts the app: real client IPs
+      # for rate limiting, and Secure session cookies over its HTTPS.
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-0}
+      # Where approved guest uploads land as ORIGINALS; empty = app-data volume.
+      GUEST_LIBRARY_DIR: ${GUEST_LIBRARY_DIR:-}
+      # Web Push (VAPID). Empty = notifications disabled.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@recollect.app}
+      # Scheduled DB backups; blank BACKUP_DIR uses the app-data volume.
+      # Restore replaces the live database, so it stays opt-in.
+      BACKUP_DIR: ${BACKUP_DIR:-}
+      RESTORE_ENABLED: ${RESTORE_ENABLED:-}
+      # Outgoing mail (invites, password reset). Empty host = mail off.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      # OIDC single sign-on against a self-hosted IdP (authentik). Empty issuer
+      # = no SSO button, feature fully dormant. authentik's issuer URL is
+      # per-application: https://auth.example.com/application/o/<slug>/
+      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_BUTTON_LABEL: ${OIDC_BUTTON_LABEL:-}
     volumes:
       - app-data:/app/data
       # The in-app folder picker browses everything under /library. One volume:

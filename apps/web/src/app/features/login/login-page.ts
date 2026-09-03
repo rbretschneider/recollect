@@ -23,6 +23,8 @@ export class LoginPage implements OnInit {
   readonly error = signal<string | null>(null);
   /** Self-service reset needs SMTP; hide the link when the server can't email. */
   readonly canResetPassword = signal(false);
+  /** SSO button label; null hides the button (server has no IdP configured). */
+  readonly ssoLabel = signal<string | null>(null);
 
   email = '';
   password = '';
@@ -33,6 +35,15 @@ export class LoginPage implements OnInit {
     )
       .then((result) => this.canResetPassword.set(result.available))
       .catch(() => this.canResetPassword.set(false));
+    void firstValueFrom(this.http.get<{ available: boolean; label: string }>('/api/v1/auth/oidc'))
+      .then((result) => this.ssoLabel.set(result.available ? result.label : null))
+      .catch(() => this.ssoLabel.set(null));
+    this.showSsoErrorIfPresent();
+  }
+
+  /** Full-page navigation into the OIDC round-trip, preserving returnUrl. */
+  ssoStartUrl(): string {
+    return `/api/v1/auth/oidc/start?returnUrl=${encodeURIComponent(this.safeReturnUrl())}`;
   }
 
   async signIn(): Promise<void> {
@@ -61,5 +72,20 @@ export class LoginPage implements OnInit {
   private safeReturnUrl(): string {
     const raw = this.route.snapshot.queryParamMap.get('returnUrl') ?? '';
     return raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
+  }
+
+  /** A failed SSO round-trip lands back here with ?ssoError=<code>. */
+  private showSsoErrorIfPresent(): void {
+    const code = this.route.snapshot.queryParamMap.get('ssoError');
+    if (!code) {
+      return;
+    }
+    const messages: Record<string, string> = {
+      sso_no_account:
+        'No Recollect account matches that identity. Ask your admin to create one first.',
+      sso_email_unverified:
+        'Your identity provider has not verified your email address, so it cannot be matched to an account.',
+    };
+    this.error.set(messages[code] ?? 'Single sign-on did not complete. Try again or use your password.');
   }
 }

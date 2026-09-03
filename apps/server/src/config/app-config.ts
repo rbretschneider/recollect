@@ -83,7 +83,27 @@ const configSchema = z.object({
     .string()
     .default('/library')
     .transform((value) => value.split(',').map((base) => base.trim()).filter((base) => base.length > 0)),
-});
+  /**
+   * OIDC single sign-on against a self-hosted IdP (authentik). Empty issuer =
+   * the whole feature is dormant and the login page shows no SSO button. The
+   * IdP answers "who is this?" only — sessions, grants, and revocation stay
+   * entirely in-app, so the IdP being down degrades to password login.
+   * NOTE: authentik issuers are per-application:
+   * https://auth.example.com/application/o/<slug>/
+   */
+  oidcIssuerUrl: z.string().default(''),
+  oidcClientId: z.string().default(''),
+  oidcClientSecret: z.string().default(''),
+  /** Text on the login page's SSO button. */
+  oidcButtonLabel: z.string().default('Sign in with SSO'),
+}).refine(
+  (config) =>
+    config.oidcIssuerUrl === '' || (config.oidcClientId !== '' && config.oidcClientSecret !== ''),
+  {
+    message: 'OIDC_ISSUER_URL requires OIDC_CLIENT_ID and OIDC_CLIENT_SECRET to be set too',
+    path: ['oidcIssuerUrl'],
+  },
+);
 
 /** Validated application configuration, loaded once from the environment at startup. */
 export type AppConfig = z.infer<typeof configSchema>;
@@ -128,6 +148,10 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     faceClusterDistance: env.FACE_CLUSTER_DISTANCE,
     faceMinClusterScore: env.FACE_MIN_CLUSTER_SCORE,
     geocodeEnabled: env.RECOLLECT_GEOCODE,
+    oidcIssuerUrl: env.OIDC_ISSUER_URL,
+    oidcClientId: env.OIDC_CLIENT_ID,
+    oidcClientSecret: env.OIDC_CLIENT_SECRET,
+    oidcButtonLabel: env.OIDC_BUTTON_LABEL,
   });
   if (!parsed.success) {
     throw new Error(`Invalid configuration: ${parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ')}`);

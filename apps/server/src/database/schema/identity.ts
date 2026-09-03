@@ -72,6 +72,34 @@ export const session = pgTable(
   (table) => [index('session_user_id_idx').on(table.userId)],
 );
 
+/**
+ * Ties a login account to an external OIDC identity. Keyed on (issuer, subject)
+ * — never email — because emails get reused and reassigned at the IdP; `sub` is
+ * the one claim the spec guarantees stable. One row per IdP identity; a user
+ * may hold links from more than one issuer (e.g. an IdP migration).
+ */
+export const identityLink = pgTable(
+  'identity_link',
+  {
+    id: uuid('id').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => userAccount.id, { onDelete: 'cascade' }),
+    /** The IdP's issuer URL exactly as presented in the ID token's `iss`. */
+    issuer: text('issuer').notNull(),
+    /** The IdP's permanent identifier for this person (`sub` claim). */
+    subject: text('subject').notNull(),
+    /** Email seen at link time — informational only, never used for lookups. */
+    email: text('email'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    lastLoginAt: timestamp('last_login_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('identity_link_issuer_subject_unique').on(table.issuer, table.subject),
+    index('identity_link_user_id_idx').on(table.userId),
+  ],
+);
+
 /** A browser's Web Push subscription (one row per installed PWA/device). */
 export const pushSubscription = pgTable(
   'push_subscription',
