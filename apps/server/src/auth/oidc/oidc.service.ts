@@ -128,7 +128,14 @@ export class OidcService {
     } catch (error) {
       // Log here because the browser only ever sees a generic error code —
       // the details (state mismatch, IdP rejection) matter to the operator.
-      this.logger.warn(`OIDC code exchange failed: ${String(error)}`);
+      // openid-client's response errors carry the actual OAuth error code
+      // (e.g. authentik's "invalid_request" for a misconfigured provider);
+      // surfacing it here saves a trip into the IdP's own logs.
+      const oauth = error as { error?: string; error_description?: string };
+      const detail = oauth.error
+        ? ` [${oauth.error}${oauth.error_description ? `: ${oauth.error_description}` : ''}]`
+        : '';
+      this.logger.warn(`OIDC code exchange failed: ${String(error)}${detail}`);
       throw new OidcLoginError('sso_failed', 'The identity provider rejected the login.', {
         cause: error,
       });
