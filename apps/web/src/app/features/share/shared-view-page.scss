@@ -325,3 +325,47 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+// A single shared photo is the whole page: no chrome to work through, the
+// picture is the content. Tapping opens the zoomable viewer.
+.shared.single {
+  // Wider than the reading column above: this page is one picture, not prose.
+  max-width: 64rem;
+  min-height: 100dvh;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem;
+
+  .single-photo {
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: zoom-in;
+    line-height: 0;
+    max-width: 100%;
+
+    img {
+      display: block;
+      max-width: 100%;
+      max-height: 78dvh;
+      width: auto;
+      height: auto;
+      border-radius: 0.6rem;
+      box-shadow: 0 10px 40px rgb(0 0 0 / 45%);
+    }
+  }
+
+  .single-meta {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+
+  footer {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+}

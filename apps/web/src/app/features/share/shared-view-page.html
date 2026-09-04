@@ -14,6 +14,23 @@
 }
 
 @if (view(); as shared) {
+  @if (shared.targetType === 'asset') {
+    <!-- One photo shared on its own: show the photo, immediately. Routing it
+         through the collection layout below buried it in a polaroid stack you
+         had to tap, which is not what "here's a photo" should feel like. -->
+    <main class="shared single">
+      <button
+        type="button"
+        class="single-photo"
+        aria-label="Open photo"
+        (click)="openViewerForAsset(shared.assetIds[0])"
+      >
+        <img [src]="thumbUrl(shared.assetIds[0], 1440)" [alt]="shared.title" />
+      </button>
+      <p class="single-meta">{{ shared.title }}</p>
+      <footer>Shared with Recollect</footer>
+    </main>
+  } @else {
   <main class="shared">
     <header>
       <h1>{{ shared.title }}</h1>
@@ -112,6 +129,7 @@
 
     <footer>Shared with Recollect</footer>
   </main>
+  }
 }
 
 @if (showSlideshow()) {
