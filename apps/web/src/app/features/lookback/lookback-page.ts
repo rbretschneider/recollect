@@ -11,7 +11,7 @@ import { LoadError } from '../../shared/load-error';
 import { Icon } from '../../shared/icon';
 import { Sheet } from '../../shared/sheet';
 import { ToastService } from '../../shared/toast.service';
-import { SlideshowOverlay, SlideItem } from '../dashboard/slideshow-overlay';
+import { SlideshowOverlay, SlideItem, SlideshowCollection } from '../dashboard/slideshow-overlay';
 
 interface OnThisDayMoment {
   key: string;
@@ -88,9 +88,18 @@ export class LookbackPage implements OnInit {
     return moment.items.slice(0, 4);
   }
 
+  /** The moment on screen, so the slideshow can offer to share it. */
+  readonly slideshowCollection = signal<SlideshowCollection | null>(null);
+
   openSlideshow(moment: OnThisDayMoment): void {
     this.slideshowTitle.set(`${moment.title} · ${this.yearsAgo(moment.year)}`);
     this.slideshowItems.set(moment.items);
+    this.slideshowCollection.set({
+      title: `${moment.title}, ${moment.year}`,
+      kind: moment.kind,
+      memoryId: moment.memoryId,
+      assetIds: moment.items.map((item) => item.id),
+    });
   }
 
   closeSlideshow(): void {

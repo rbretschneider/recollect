@@ -13,7 +13,7 @@ import { LoadError } from '../../shared/load-error';
 import { ToastService } from '../../shared/toast.service';
 import { Icon } from '../../shared/icon';
 import { AssetViewer } from '../viewer/asset-viewer';
-import { SlideshowOverlay, SlideItem } from './slideshow-overlay';
+import { SlideshowOverlay, SlideItem, SlideshowCollection } from './slideshow-overlay';
 
 interface OnThisDayMoment {
   key: string;
@@ -105,9 +105,18 @@ export class DashboardPage implements OnInit {
   readonly slideshowItems = signal<SlideItem[] | null>(null);
   readonly slideshowTitle = signal('');
 
+  /** The moment on screen, so the slideshow can offer to share it. */
+  readonly slideshowCollection = signal<SlideshowCollection | null>(null);
+
   openSlideshow(moment: OnThisDayMoment): void {
     this.slideshowTitle.set(`${moment.title} · ${this.yearsAgo(moment.year)}`);
     this.slideshowItems.set(moment.items);
+    this.slideshowCollection.set({
+      title: `${moment.title}, ${moment.year}`,
+      kind: moment.kind,
+      memoryId: moment.memoryId,
+      assetIds: moment.items.map((item) => item.id),
+    });
   }
 
   closeSlideshow(): void {

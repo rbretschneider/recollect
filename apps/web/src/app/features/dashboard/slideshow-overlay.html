@@ -12,10 +12,57 @@
     >
       ♫
     </button>
+    @if (collection(); as coll) {
+      <button type="button" class="chrome" aria-label="Share" (click)="openShareChoice()">
+        <app-icon name="share" [size]="18" />
+      </button>
+    }
     <button type="button" class="chrome" aria-label="Close slideshow" (click)="close()">
       <app-icon name="close" />
     </button>
   </header>
+
+  <!-- Scope first: from inside a look-back "share" is ambiguous, so ask what
+       before asking how. Each choice hands off to the normal share panel. -->
+  @if (shareChoiceOpen()) {
+    <app-sheet sheetTitle="What do you want to share?" (closed)="shareChoiceOpen.set(false)">
+      <div class="share-choice">
+        <button type="button" class="choice" (click)="shareCurrentPhoto()">
+          <span class="choice-title">Just this photo</span>
+          <span class="choice-sub">A link to the one photo on screen.</span>
+        </button>
+        <button
+          type="button"
+          class="choice"
+          [disabled]="resolvingCollection()"
+          (click)="shareWholeCollection()"
+        >
+          <span class="choice-title">
+            {{ resolvingCollection() ? 'Preparing…' : 'The whole ' + collectionNoun() }}
+          </span>
+          <span class="choice-sub">
+            All {{ items().length }} photos, as one shared page.
+          </span>
+        </button>
+      </div>
+    </app-sheet>
+  }
+
+  <!-- Hidden: opened programmatically so the expiry / copy / revoke panel is
+       the same one used everywhere else, not a second implementation. -->
+  <div class="share-hosts">
+    @if (currentAssetId(); as assetId) {
+      <app-share-button #photoShare variant="icon" targetType="asset" [targetId]="assetId" />
+    }
+    @if (collectionTarget(); as target) {
+      <app-share-button
+        #collectionShare
+        variant="icon"
+        [targetType]="target.targetType"
+        [targetId]="target.targetId"
+      />
+    }
+  </div>
 
   <div
     class="stage"

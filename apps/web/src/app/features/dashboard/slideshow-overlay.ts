@@ -1,5 +1,9 @@
-import { Component, computed, DestroyRef, effect, HostListener, inject, input, OnDestroy, output, signal } from '@angular/core';
+import { Component, computed, DestroyRef, effect, HostListener, inject, input, OnDestroy, output, signal, viewChild } from '@angular/core';
+import { AlbumsApiService } from '../../core/api/albums-api.service';
 import { Icon } from '../../shared/icon';
+import { Sheet } from '../../shared/sheet';
+import { ShareButton } from '../../shared/share-button';
+import { ToastService } from '../../shared/toast.service';
 import { closeOnBrowserBack } from '../../shared/close-on-back';
 
 /** One slide. */
@@ -8,6 +12,16 @@ export interface SlideItem {
   mediaType: 'image' | 'video';
   /** Optional scrapbook caption, shown over the foot of the slide. */
   caption?: string;
+}
+
+/** The shareable thing a slideshow is playing, when there is one. */
+export interface SlideshowCollection {
+  /** Used as the album name if this has to be materialised to be shared. */
+  title: string;
+  kind: 'memory' | 'place' | 'person';
+  /** Set for memory moments — shared directly, no album needed. */
+  memoryId: string | null;
+  assetIds: string[];
 }
 
 /** How long each photo holds the screen. Videos hold until they finish. */
@@ -53,7 +67,7 @@ const MUSIC_VOLUME = 0.35;
  */
 @Component({
   selector: 'app-slideshow-overlay',
-  imports: [Icon],
+  imports: [Icon, Sheet, ShareButton],
   templateUrl: './slideshow-overlay.html',
   styleUrl: './slideshow-overlay.scss',
 })
@@ -62,7 +76,72 @@ export class SlideshowOverlay implements OnDestroy {
   readonly title = input<string>('');
   /** Base URL for media routes; public pages point this at their token scope. */
   readonly mediaBase = input<string>('/api/v1/assets');
+  /**
+   * What this show is OF, when it's something shareable. Set it and a share
+   * button appears; leave it null (public pages, ad-hoc strips) and it doesn't.
+   */
+  readonly collection = input<SlideshowCollection | null>(null);
   readonly closed = output<void>();
+
+  private readonly albums = inject(AlbumsApiService);
+  private readonly toasts = inject(ToastService);
+  private readonly photoShare = viewChild<ShareButton>('photoShare');
+  private readonly collectionShare = viewChild<ShareButton>('collectionShare');
+
+  readonly shareChoiceOpen = signal(false);
+  readonly resolvingCollection = signal(false);
+  /** Resolved lazily — a place/person moment only becomes an album if asked. */
+  readonly collectionTarget = signal<{ targetType: 'memory' | 'album'; targetId: string } | null>(
+    null,
+  );
+
+  readonly currentAssetId = computed<string | null>(() => this.current()?.id ?? null);
+  readonly collectionNoun = computed<string>(() =>
+    this.collection()?.kind === 'memory' ? 'memory' : 'look-back',
+  );
+
+  openShareChoice(): void {
+    this.isPaused.set(true); // Don't let slides advance under the sheet.
+    this.shareChoiceOpen.set(true);
+  }
+
+  async shareCurrentPhoto(): Promise<void> {
+    this.shareChoiceOpen.set(false);
+    await this.photoShare()?.open();
+  }
+
+  /**
+   * A look-back is computed, not stored, so it needs a real target to share.
+   * A memory moment already is one; anything else is materialised as an album
+   * the first time — which also gives the household something to manage later.
+   */
+  async shareWholeCollection(): Promise<void> {
+    const coll = this.collection();
+    if (!coll || this.resolvingCollection()) {
+      return;
+    }
+    if (!this.collectionTarget()) {
+      this.resolvingCollection.set(true);
+      try {
+        if (coll.kind === 'memory' && coll.memoryId) {
+          this.collectionTarget.set({ targetType: 'memory', targetId: coll.memoryId });
+        } else {
+          const { albumId } = await this.albums.create(coll.title, coll.assetIds);
+          this.collectionTarget.set({ targetType: 'album', targetId: albumId });
+        }
+      } catch {
+        this.toasts.error("Couldn't prepare that for sharing.");
+        return;
+      } finally {
+        this.resolvingCollection.set(false);
+      }
+    }
+    this.shareChoiceOpen.set(false);
+    // The share button only exists once its target input is set, so let the
+    // template render before reaching for it.
+    await Promise.resolve();
+    await this.collectionShare()?.open();
+  }
 
   readonly index = signal(0);
   readonly isPaused = signal(false);

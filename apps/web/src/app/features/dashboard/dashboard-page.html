@@ -157,5 +157,10 @@
 }
 
 @if (slideshowItems(); as items) {
-  <app-slideshow-overlay [items]="items" [title]="slideshowTitle()" (closed)="closeSlideshow()" />
+  <app-slideshow-overlay
+    [items]="items"
+    [title]="slideshowTitle()"
+    [collection]="slideshowCollection()"
+    (closed)="closeSlideshow()"
+  />
 }
