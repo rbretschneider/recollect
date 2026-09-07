@@ -279,8 +279,14 @@
     right: 0.5rem;
   }
 
-  @media (max-width: 767px) {
-    display: none; // Touch users swipe.
+  // Shown on touch too. Swiping works, but nothing on screen says so, which
+  // leaves a first-time user with no visible way to move between photos.
+  // Slightly smaller and dimmer on a phone so they never fight the picture.
+  @media (width < 48rem) {
+    min-width: 40px;
+    min-height: 56px;
+    font-size: 1.7rem;
+    background: rgb(0 0 0 / 22%);
   }
 }
 

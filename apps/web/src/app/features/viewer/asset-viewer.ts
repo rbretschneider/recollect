@@ -226,7 +226,6 @@ export class AssetViewer implements OnInit, OnDestroy {
       this.motionPlaying.set(false);
       this.editingDate.set(false);
       this.editedCapturedAt.set(null);
-      this.previewTurns.set(0);
       this.resetZoom();
     });
   }
@@ -253,7 +252,9 @@ export class AssetViewer implements OnInit, OnDestroy {
   imageUrl(assetId: string): string {
     // Busted by the asset version so a rotate shows immediately rather than
     // being served from the year-long immutable cache.
-    const version = this.assets().find((item) => item.id === assetId)?.updatedAt;
+    const version =
+      this.localVersions().get(assetId) ??
+      this.assets().find((item) => item.id === assetId)?.updatedAt;
     const bust = version ? `?v=${encodeURIComponent(version)}` : '';
     return `${this.mediaBase()}/${assetId}/thumb/1440${bust}`;
   }
@@ -617,9 +618,18 @@ export class AssetViewer implements OnInit, OnDestroy {
     );
   }
 
-  readonly rotating = signal(false);
-  /** Quarter-turns applied locally, so the photo turns before the server answers. */
-  readonly previewTurns = signal(0);
+  /** Quarter-turns applied locally per asset, so a photo turns instantly and
+   *  stays turned while its save is still in flight. */
+  private readonly rotationTurns = signal<ReadonlyMap<string, number>>(new Map());
+  /** Cache-bust stamps for photos rotated in this session. */
+  private readonly localVersions = signal<ReadonlyMap<string, string>>(new Map());
+  /** Serialises writes to a given file without ever blocking the click. */
+  private rotateQueue: Promise<unknown> = Promise.resolve();
+
+  readonly previewTurns = computed<number>(() => {
+    const asset = this.current();
+    return asset ? (this.rotationTurns().get(asset.id) ?? 0) : 0;
+  });
 
   /**
    * Turns the photo a quarter turn and persists it.
@@ -628,28 +638,57 @@ export class AssetViewer implements OnInit, OnDestroy {
    * is in flight — the write itself is lossless (only the EXIF orientation tag
    * changes) but it still has to cross the network and regenerate thumbnails.
    */
-  async rotateCurrent(direction: 'cw' | 'ccw'): Promise<void> {
+  rotateCurrent(direction: 'cw' | 'ccw'): void {
     const asset = this.current();
-    if (!asset || this.rotating()) {
+    if (!asset) {
       return;
     }
-    this.rotating.set(true);
-    this.previewTurns.update((turns) => turns + (direction === 'cw' ? 1 : -1));
-    try {
-      await firstValueFrom(
-        this.http.post(`/api/v1/assets/${asset.id}/rotate`, { direction }),
-      );
-      // The server rewrote the file and its thumbnails; re-fetch under the new
-      // version so the real rotated image replaces the CSS-turned one.
-      this.rotated.emit(asset.id);
-      this.previewTurns.set(0);
-      this.isImageLoading.set(true);
-      await this.loadDetail(asset.id);
-    } catch {
-      this.previewTurns.update((turns) => turns - (direction === 'cw' ? 1 : -1));
-      this.toasts.error("Couldn't rotate that photo.");
-    } finally {
-      this.rotating.set(false);
+    const id = asset.id;
+    const delta = direction === 'cw' ? 1 : -1;
+    // Turn it on screen NOW. The save is a background detail; making someone
+    // watch a spinner to see their own photo turn is the wrong trade.
+    this.turnBy(id, delta);
+    // Writes to one file must not overlap (exiftool rewrites it in place), so
+    // they queue — but the queue is never awaited by the click handler.
+    this.rotateQueue = this.rotateQueue
+      .then(() => firstValueFrom(this.http.post(`/api/v1/assets/${id}/rotate`, { direction })))
+      .then(() => {
+        // Point the <img> at the freshly rotated file. The optimistic turn is
+        // held until that actually loads, so nothing flashes back upright.
+        this.localVersions.update((map) => new Map(map).set(id, Date.now().toString()));
+        this.rotated.emit(id);
+      })
+      .catch(() => {
+        this.turnBy(id, -delta);
+        this.toasts.error("Couldn't save that rotation.");
+      });
+  }
+
+  private turnBy(assetId: string, delta: number): void {
+    this.rotationTurns.update((map) => {
+      const next = new Map(map);
+      const turns = (next.get(assetId) ?? 0) + delta;
+      if (turns % 4 === 0) {
+        next.delete(assetId);
+      } else {
+        next.set(assetId, turns);
+      }
+      return next;
+    });
+  }
+
+  /**
+   * Clears the optimistic turn once the re-fetched file is on screen — and only
+   * then, so a plain navigation back to the photo doesn't drop it early.
+   */
+  onImageLoaded(assetId: string): void {
+    this.isImageLoading.set(false);
+    if (this.localVersions().has(assetId)) {
+      this.rotationTurns.update((map) => {
+        const next = new Map(map);
+        next.delete(assetId);
+        return next;
+      });
     }
   }
 

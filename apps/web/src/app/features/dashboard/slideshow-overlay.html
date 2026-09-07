@@ -102,6 +102,29 @@
     }
   </div>
 
+  <!-- stopPropagation: the stage toggles pause on tap, and stepping through
+       photos should not also pause the show. -->
+  @if (index() > 0) {
+    <button
+      type="button"
+      class="nav prev"
+      aria-label="Previous photo"
+      (click)="previous(); $event.stopPropagation()"
+    >
+      ‹
+    </button>
+  }
+  @if (index() < items().length - 1) {
+    <button
+      type="button"
+      class="nav next"
+      aria-label="Next photo"
+      (click)="next(); $event.stopPropagation()"
+    >
+      ›
+    </button>
+  }
+
   <div class="progress" aria-hidden="true">
     @for (item of items(); track item.id; let dotIndex = $index) {
       <span class="dot" [class.done]="dotIndex <= index()"></span>

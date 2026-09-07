@@ -219,3 +219,37 @@
   overflow: hidden;
   clip-path: inset(50%);
 }
+
+// Stepping controls. The show advances itself, but with only a tap-to-pause
+// stage there was nothing on screen saying you could move between photos.
+// Sit above the progress dots and clear of the stage's own tap handling.
+.nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  min-width: 44px;
+  min-height: 64px;
+  border: none;
+  border-radius: 0.5rem;
+  background: rgb(0 0 0 / 30%);
+  color: white;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+
+  &.prev {
+    left: 0.5rem;
+  }
+
+  &.next {
+    right: 0.5rem;
+  }
+
+  @media (width < 48rem) {
+    min-width: 40px;
+    min-height: 56px;
+    font-size: 1.7rem;
+    background: rgb(0 0 0 / 22%);
+  }
+}

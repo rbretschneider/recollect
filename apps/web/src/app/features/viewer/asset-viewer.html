@@ -29,7 +29,6 @@
         class="icon rotate-btn"
         aria-label="Rotate left"
         title="Rotate left"
-        [disabled]="rotating()"
         (click)="rotateCurrent('ccw')"
       >
         ↺
@@ -39,7 +38,6 @@
         class="icon rotate-btn"
         aria-label="Rotate right"
         title="Rotate right"
-        [disabled]="rotating()"
         (click)="rotateCurrent('cw')"
       >
         ↻
@@ -119,7 +117,7 @@
             [style.transform]="mediaTransform()"
             [class.loading]="isImageLoading()"
             draggable="false"
-            (load)="isImageLoading.set(false)"
+            (load)="onImageLoaded(media.id)"
             (error)="isImageLoading.set(false); imageFailed.set(true)"
           />
           @if (imageFailed()) {
