@@ -293,7 +293,13 @@ export class DashboardService {
       join asset_file f on f.asset_id = a.id and f.state = 'present'
       left join geocode_cache g on g.cell_key = a.geocode_cell_key
       where a.status = 'active'
-        and to_char(a.captured_day, 'MM-DD') = any(string_to_array(${days.join(',')}, ','))
+        -- Matched as a number, not as text: to_char() is locale-dependent and
+        -- so cannot be indexed, which left this walking the whole timeline and
+        -- discarding 28,231 rows to find 349. asset_day_of_year_idx indexes
+        -- exactly this expression, so the same window is a range lookup.
+        and (extract(month from a.captured_day) * 100
+             + extract(day from a.captured_day))::int
+            = any(string_to_array(${days.map(dayNumber).join(',')}, ',')::int[])
       order by a.captured_at asc
       limit ${CANDIDATE_LIMIT}
     `);
@@ -393,6 +399,12 @@ function windowDays(day: string, radius: number): string[] {
     );
   }
   return out;
+}
+
+/** "09-07" as the 907 that asset_day_of_year_idx stores. */
+function dayNumber(mmdd: string): number {
+  const [month, day] = mmdd.split('-').map(Number);
+  return month * 100 + day;
 }
 
 function toItem(candidate: Candidate): { id: string; mediaType: MediaType } {

@@ -92,6 +92,14 @@ export const asset = pgTable(
     // (added in 0016) covers it as an index-only scan. An unpartitioned twin
     // here earned 17 scans in the table's lifetime and was dropped in 0030.
     index('asset_captured_day_idx').on(table.capturedDay),
+    // "On this day" matches the month/day across every year. Indexed as the
+    // number the query computes, because to_char() is locale-dependent and
+    // Postgres refuses to index it.
+    index('asset_day_of_year_idx')
+      .on(
+        sql`((extract(month from ${table.capturedDay}) * 100 + extract(day from ${table.capturedDay}))::int)`,
+      )
+      .where(sql`${table.status} = 'active'`),
     check('asset_media_type_check', sql`${table.mediaType} in ('image', 'video')`),
     check(
       'asset_captured_at_source_check',
