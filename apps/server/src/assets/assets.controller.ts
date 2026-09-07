@@ -102,7 +102,7 @@ export class AssetsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: RotateRequestDto,
   ): Promise<{ orientation: number }> {
-    return this.rotateService.rotate(id, body.direction);
+    return this.rotateService.rotate(id, body.turns);
   }
 
   /** Correct an item's capture date (write grant). Also rewrites the file's EXIF. */

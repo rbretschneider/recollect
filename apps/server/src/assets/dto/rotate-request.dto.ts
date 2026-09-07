@@ -1,7 +1,11 @@
-import { IsIn } from 'class-validator';
+import { IsInt } from 'class-validator';
 
-/** Body for rotating a photo a quarter turn. */
+/**
+ * Quarter turns to apply, signed and unbounded: the client debounces a burst of
+ * taps and sends the net result, so one save lands however many times the user
+ * pressed the button.
+ */
 export class RotateRequestDto {
-  @IsIn(['cw', 'ccw'])
-  direction!: 'cw' | 'ccw';
+  @IsInt()
+  turns!: number;
 }

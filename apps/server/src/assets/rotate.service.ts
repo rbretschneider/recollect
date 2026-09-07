@@ -1,4 +1,11 @@
-import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { createHash } from 'crypto';
 import { and, eq } from 'drizzle-orm';
 import { exiftool } from 'exiftool-vendored';
@@ -10,7 +17,7 @@ import type { Database } from '../database/database.module';
 import { asset, assetFile, libraryRoot } from '../database/schema';
 import { ThumbnailService } from '../media/thumbnail.service';
 
-export type RotateDirection = 'cw' | 'ccw';
+
 
 /**
  * EXIF orientation under a 90° clockwise turn. Values 1-4 are the unmirrored
@@ -18,10 +25,6 @@ export type RotateDirection = 'cw' | 'ccw';
  * never between them.
  */
 const ROTATE_CW: Record<number, number> = { 1: 6, 6: 3, 3: 8, 8: 1, 2: 7, 7: 4, 4: 5, 5: 2 };
-const ROTATE_CCW: Record<number, number> = Object.fromEntries(
-  Object.entries(ROTATE_CW).map(([from, to]) => [to, Number(from)]),
-);
-
 /** Orientations 5-8 present the image turned, so stored w/h read swapped. */
 const TURNED = new Set([5, 6, 7, 8]);
 
@@ -48,7 +51,21 @@ export class RotateService {
     private readonly thumbnails: ThumbnailService,
   ) {}
 
-  async rotate(assetId: string, direction: RotateDirection): Promise<{ orientation: number }> {
+  async rotate(assetId: string, turns: number): Promise<{ orientation: number }> {
+    // DISABLED 2026-09-07 after this destroyed an original.
+    //
+    // exiftool -overwrite_original writes a sidecar temp file and renames it
+    // over the original. On the CIFS library mount that rename failed
+    // ("Error renaming temporary file to …") and the original did not survive
+    // it — the photo is simply gone, while the database still lists it present.
+    //
+    // Nothing may write to a file in the library again until the write path is
+    // proven safe on this filesystem: stage the rewrite on local disk, verify
+    // the result decodes and is the expected size, and only then put it back.
+    throw new ServiceUnavailableException(
+      'Rotating is turned off while a problem with saving to the library is fixed.',
+    );
+    // eslint-disable-next-line no-unreachable
     const [row] = await this.db
       .select({
         mime: asset.mime,
@@ -73,7 +90,15 @@ export class RotateService {
     }
 
     const from = normalizeOrientation(row.orientation);
-    const to = (direction === 'cw' ? ROTATE_CW : ROTATE_CCW)[from] ?? from;
+    // Any integer, in either direction, collapses to 0-3 quarter turns clockwise.
+    const quarters = (((Math.trunc(turns) % 4) + 4) % 4);
+    let to = from;
+    for (let i = 0; i < quarters; i++) {
+      to = ROTATE_CW[to] ?? to;
+    }
+    if (to === from) {
+      return { orientation: from };
+    }
     const path = resolve(join(row.rootPath, row.relPath));
 
     // `-n` writes the raw numeric value; without it exiftool expects the
@@ -107,7 +132,7 @@ export class RotateService {
         `Rotated ${assetId} but could not regenerate thumbnails: ${(error as Error).message}`,
       );
     }
-    this.logger.log(`Rotated ${assetId} ${direction}: orientation ${from} -> ${to}.`);
+    this.logger.log(`Rotated ${assetId} by ${quarters} quarter turn(s): orientation ${from} -> ${to}.`);
     return { orientation: to };
   }
 }

@@ -670,20 +670,51 @@ export class AssetViewer implements OnInit, OnDestroy {
     // Turn it on screen NOW. The save is a background detail; making someone
     // watch a spinner to see their own photo turn is the wrong trade.
     this.turnBy(id, delta);
+    this.pendingTurns.set(id, (this.pendingTurns.get(id) ?? 0) + delta);
+    // Getting somewhere usually takes two or three taps — and overshooting then
+    // coming back is normal. Saving each tap would rewrite the file, rehash it
+    // and rebuild its thumbnails every time; instead wait for the turning to
+    // stop and save the net result once.
+    if (this.rotateTimer !== null) {
+      clearTimeout(this.rotateTimer);
+    }
+    this.rotateTimer = setTimeout(() => this.flushRotation(id), ROTATE_SETTLE_MS);
+  }
+
+  /** Saves the net rotation for one photo, if it ended up anywhere new. */
+  private flushRotation(assetId: string): void {
+    this.rotateTimer = null;
+    const turns = this.pendingTurns.get(assetId) ?? 0;
+    this.pendingTurns.delete(assetId);
+    if (turns % 4 === 0) {
+      return; // Turned full circle (or back where it started): nothing to save.
+    }
     // Writes to one file must not overlap (exiftool rewrites it in place), so
     // they queue — but the queue is never awaited by the click handler.
     this.rotateQueue = this.rotateQueue
-      .then(() => firstValueFrom(this.http.post(`/api/v1/assets/${id}/rotate`, { direction })))
+      .then(() => firstValueFrom(this.http.post(`/api/v1/assets/${assetId}/rotate`, { turns })))
       .then(() => {
         // Point the <img> at the freshly rotated file. The optimistic turn is
         // held until that actually loads, so nothing flashes back upright.
-        this.localVersions.update((map) => new Map(map).set(id, Date.now().toString()));
-        this.rotated.emit(id);
+        this.localVersions.update((map) => new Map(map).set(assetId, Date.now().toString()));
+        this.rotated.emit(assetId);
       })
       .catch((error: { error?: { message?: string } }) => {
-        this.turnBy(id, -delta);
+        this.turnBy(assetId, -turns);
         this.toasts.error(error?.error?.message ?? "Couldn't save that rotation.");
       });
+  }
+
+  /** Commits any un-saved turning immediately (navigating away, closing). */
+  private flushPendingRotation(): void {
+    if (this.rotateTimer === null) {
+      return;
+    }
+    clearTimeout(this.rotateTimer);
+    this.rotateTimer = null;
+    for (const assetId of [...this.pendingTurns.keys()]) {
+      this.flushRotation(assetId);
+    }
   }
 
   private turnBy(assetId: string, delta: number): void {
