@@ -38,6 +38,9 @@ const DRAG_THRESHOLD_PX = 8;
 /** Bottom band of the stage reserved for the native video seek bar. */
 const VIDEO_CONTROLS_STRIP_PX = 72;
 
+/** How long the turning has to stop before the net rotation is saved. */
+const ROTATE_SETTLE_MS = 900;
+
 /**
  * Fullscreen media viewer (FRD story S4.3): swipe/arrow navigation, video
  * playback, and an info sheet. Rendered as an overlay above the current page.
@@ -225,6 +228,7 @@ export class AssetViewer implements OnInit, OnDestroy {
       this.isImageLoading.set(true);
       this.imageFailed.set(false);
       this.motionPlaying.set(false);
+      this.flushPendingRotation();
       this.editingDate.set(false);
       this.editedCapturedAt.set(null);
       this.resetZoom();
@@ -239,6 +243,7 @@ export class AssetViewer implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.flushPendingRotation();
     this.stopPreparePolling();
     window.removeEventListener('popstate', this.onPopState);
     // Closed by other means (X, Escape)? Consume our history entry so the
@@ -647,6 +652,9 @@ export class AssetViewer implements OnInit, OnDestroy {
   private readonly localVersions = signal<ReadonlyMap<string, string>>(new Map());
   /** Serialises writes to a given file without ever blocking the click. */
   private rotateQueue: Promise<unknown> = Promise.resolve();
+  /** Un-saved net quarter turns per asset, flushed once the tapping stops. */
+  private readonly pendingTurns = new Map<string, number>();
+  private rotateTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly previewTurns = computed<number>(() => {
     const asset = this.current();
