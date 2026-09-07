@@ -610,12 +610,16 @@ export class AssetViewer implements OnInit, OnDestroy {
   /** Rotation is only offered for stills that carry an orientation tag. */
   get canRotate(): boolean {
     const asset = this.current();
-    return (
-      this.canWrite &&
-      this.allowInfo() &&
-      asset?.mediaType === 'image' &&
-      /^image\/(jpeg|heic|heif|tiff|avif)$/i.test(asset.mime ?? '')
-    );
+    if (!this.canWrite || !this.allowInfo() || asset?.mediaType !== 'image') {
+      return false;
+    }
+    // mime is absent whenever the viewer was opened from a synthetic list
+    // (toViewerAsset fills only id/mediaType) — which is most of the app, so
+    // testing it directly hid the buttons everywhere but the photo grid.
+    // Hide only when we positively know the format can't hold an orientation
+    // tag; otherwise show and let the server be the judge.
+    const mime = asset.mime ?? this.detail()?.mime;
+    return mime === undefined || /^image\/(jpeg|heic|heif|tiff|avif)$/i.test(mime);
   }
 
   /** Quarter-turns applied locally per asset, so a photo turns instantly and
@@ -658,9 +662,9 @@ export class AssetViewer implements OnInit, OnDestroy {
         this.localVersions.update((map) => new Map(map).set(id, Date.now().toString()));
         this.rotated.emit(id);
       })
-      .catch(() => {
+      .catch((error: { error?: { message?: string } }) => {
         this.turnBy(id, -delta);
-        this.toasts.error("Couldn't save that rotation.");
+        this.toasts.error(error?.error?.message ?? "Couldn't save that rotation.");
       });
   }
 
