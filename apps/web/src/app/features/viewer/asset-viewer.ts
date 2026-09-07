@@ -791,9 +791,32 @@ export class AssetViewer implements OnInit, OnDestroy {
   }
 
   formatDate(iso: string): string {
-    return new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeStyle: 'short' }).format(
-      new Date(iso),
-    );
+    // Intl THROWS on an invalid date, and lists built by toViewerAsset() carry
+    // an empty capturedAt — which took the whole date heading down with it.
+    const date = new Date(iso);
+    if (!iso || Number.isNaN(date.getTime())) {
+      return 'Date unknown';
+    }
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: 'full',
+      timeStyle: 'short',
+    }).format(date);
+  }
+
+  /** Plain-language provenance for the capture date. */
+  capturedSourceLabel(source: string | undefined): string {
+    switch (source) {
+      case 'exif':
+        return 'from the camera';
+      case 'filename':
+        return 'read from the file name';
+      case 'file_mtime':
+        return 'from the file date — may not be when it was taken';
+      case 'user':
+        return 'set by you';
+      default:
+        return '';
+    }
   }
 
   // --- Capture-date correction (write grant) ---------------------------------
@@ -808,7 +831,9 @@ export class AssetViewer implements OnInit, OnDestroy {
 
   /** The date to show — a just-saved correction wins over the loaded value. */
   displayCapturedAt(iso: string): string {
-    return this.editedCapturedAt() ?? iso;
+    // The detail payload is authoritative; the timeline copy is a stub when the
+    // viewer was opened from a synthetic list (dashboard, album, person page).
+    return this.editedCapturedAt() ?? this.detail()?.capturedAt ?? iso;
   }
 
   startEditDate(): void {

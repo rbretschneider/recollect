@@ -126,6 +126,12 @@
           </button>
         </div>
       }
+      <!-- When the grouping is simply wrong — a toddler and an adult filed as
+           one person — picking out strays one by one is hopeless. This throws
+           the whole grouping away and lets every face re-sort from scratch. -->
+      <button type="button" class="regroup-link" [disabled]="regrouping()" (click)="regroupPerson()">
+        {{ regrouping() ? 'Re-sorting…' : "These aren't all the same person — start over" }}
+      </button>
       <!-- Strangers and photobombers: the one quiet destructive-ish escape hatch. -->
       <button type="button" class="danger-link" (click)="hidePerson()">
         Hide this person from People

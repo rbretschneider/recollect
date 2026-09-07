@@ -233,6 +233,42 @@ export class PersonPage implements OnInit {
     }
   }
 
+  readonly regrouping = signal(false);
+
+  /**
+   * Throws this grouping away: every auto-assigned face is detached and
+   * re-clustered on its own, so faces that never belonged together stop being
+   * one person. Faces someone named or moved by hand are left alone.
+   */
+  async regroupPerson(): Promise<void> {
+    const person = this.person();
+    if (!person || this.regrouping()) {
+      return;
+    }
+    const confirmed = await this.confirms.ask({
+      title: 'Start this person over?',
+      message:
+        'Every face here gets re-sorted from scratch, so ones that were grouped by ' +
+        'mistake can land with the right person. No photos are changed or removed.',
+      confirmLabel: 'Re-sort these faces',
+    });
+    if (!confirmed) {
+      return;
+    }
+    this.regrouping.set(true);
+    try {
+      const { reclustered } = await this.api.disband(person.id);
+      this.toasts.success(
+        `Re-sorted ${reclustered} ${reclustered === 1 ? 'face' : 'faces'}. Check People for the new groups.`,
+      );
+      await this.router.navigate(['/people']);
+    } catch {
+      this.toasts.error("Couldn't re-sort those faces.");
+    } finally {
+      this.regrouping.set(false);
+    }
+  }
+
   async hidePerson(): Promise<void> {
     const person = this.person();
     if (!person) {

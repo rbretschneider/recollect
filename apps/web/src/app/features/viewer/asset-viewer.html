@@ -235,6 +235,17 @@
             </button>
           }
           <dl>
+            <!-- Always first, always present: when a photo was taken is the one
+                 fact people come to the info panel for. -->
+            <div>
+              <dt>Date taken</dt>
+              <dd>
+                {{ formatDate(displayCapturedAt(info.capturedAt)) }}
+                @if (capturedSourceLabel(info.capturedAtSource); as provenance) {
+                  <span class="sub-note">{{ provenance }}</span>
+                }
+              </dd>
+            </div>
             @if (info.takenBy) {
               <div>
                 <dt>Taken by</dt>

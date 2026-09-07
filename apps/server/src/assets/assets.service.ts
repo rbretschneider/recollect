@@ -81,6 +81,8 @@ export interface AssetDetail {
   id: string;
   /** Bumped on every edit; busts the immutable thumbnail cache. */
   updatedAt: string;
+  /** Where the capture date came from: exif | filename | file_mtime | user. */
+  capturedAtSource: string;
   mediaType: 'image' | 'video';
   mime: string;
   capturedAt: string;
@@ -199,7 +201,7 @@ export class AssetsService {
           height: row.height,
           durationMs: row.durationMs,
           hasThumbnail: row.stageThumbsAt !== null,
-      updatedAt: row.updatedAt.toISOString(),
+          updatedAt: row.updatedAt.toISOString(),
           damaged: (row.stageErrors as Record<string, string> | null)?.['playback'] != null,
           motionPhoto: row.motionPhoto,
           isFavorite: row.favoritedAt !== null,
@@ -331,6 +333,7 @@ export class AssetsService {
       mediaType: row.mediaType as 'image' | 'video',
       mime: row.mime,
       capturedAt: row.capturedAt.toISOString(),
+      capturedAtSource: row.capturedAtSource,
       width: row.width,
       height: row.height,
       durationMs: row.durationMs,

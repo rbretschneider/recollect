@@ -635,3 +635,11 @@
     text-align: center;
   }
 }
+
+// Provenance under a metadata value ("from the camera", "set by you").
+.info dd .sub-note {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}

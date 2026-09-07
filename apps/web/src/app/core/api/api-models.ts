@@ -88,6 +88,8 @@ export interface LibraryRootView {
 
 /** Mirrors the server's AssetDetail. */
 export interface AssetDetail {
+  /** Where the capture date came from: exif | filename | file_mtime | user. */
+  capturedAtSource?: string;
   id: string;
   mediaType: 'image' | 'video';
   mime: string;
