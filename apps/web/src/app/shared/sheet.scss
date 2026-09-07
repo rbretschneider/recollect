@@ -9,6 +9,13 @@
   @starting-style {
     opacity: 0;
   }
+
+  // Still catches the tap that closes the sheet; just stops hiding the thing
+  // the sheet is about to change.
+  &.see-through {
+    background: transparent;
+    backdrop-filter: none;
+  }
 }
 
 .sheet {

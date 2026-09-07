@@ -338,7 +338,7 @@
 </div>
 
 @if (actionsOpen()) {
-  <app-sheet sheetTitle="Photo actions" (closed)="actionsOpen.set(false)">
+  <app-sheet sheetTitle="Photo actions" [seeThrough]="true" (closed)="actionsOpen.set(false)">
     <div class="photo-actions">
       @if (canRotate) {
         <button type="button" class="action" (click)="runAction('ccw')">

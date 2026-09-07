@@ -642,11 +642,15 @@ export class AssetViewer implements OnInit, OnDestroy {
 
   /** Runs an overflow action and closes the sheet behind it. */
   runAction(action: 'cw' | 'ccw' | 'trash'): void {
-    this.actionsOpen.set(false);
     if (action === 'trash') {
+      this.actionsOpen.set(false);
       void this.deleteCurrent();
       return;
     }
+    // Landing on the right orientation often takes two or three taps - if the
+    // first guess was the wrong way round it takes three. Closing the sheet on
+    // every tap made the common case the expensive one, so it stays open until
+    // it is dismissed; the turns debounce into one save either way.
     this.rotateCurrent(action);
   }
 

@@ -15,7 +15,7 @@ let sheetSeq = 0;
   selector: 'app-sheet',
   imports: [Icon, OverlayFocus],
   template: `
-    <div class="scrim" (click)="closed.emit()"></div>
+    <div class="scrim" [class.see-through]="seeThrough()" (click)="closed.emit()"></div>
     <div
       class="sheet"
       [class.danger]="danger()"
@@ -49,6 +49,12 @@ export class Sheet implements OnInit {
   readonly danger = input(false);
   /** Widens the panel for grid content (e.g. the photo picker). */
   readonly wide = input(false);
+  /**
+   * Drops the scrim's dimming for sheets whose controls act on what is behind
+   * them — rotating a photo you can only see through 55% black and a blur is
+   * guesswork. The scrim element stays put, so tapping off still closes.
+   */
+  readonly seeThrough = input(false);
   readonly closed = output<void>();
 
   /** Stable id so the panel's aria-labelledby points at its own heading. */
