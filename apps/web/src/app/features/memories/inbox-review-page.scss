@@ -25,17 +25,32 @@
 }
 
 .review {
-  max-width: 60rem;
+  // Wider than a reading column: two suggestion cards side by side need room
+  // for their previews to be judgeable at a glance.
+  max-width: 72rem;
   margin: 0 auto;
   padding: 1rem;
+
+  // Phones give the single card every pixel they can spare.
+  @media (width < 30rem) {
+    padding: 0.75rem;
+  }
 }
 
-// Several suggestions at once: 1 column on phones, more as width allows.
+// Deciding "is this a memory?" needs to be possible from the previews alone, so
+// cap the row at two even on a wide screen. auto-fill used to pack in three or
+// more, which shrank each preview thumbnail to the point of uselessness.
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  grid-template-columns: 1fr;
   gap: 1rem;
   align-items: start;
+
+  // Only split into two once each card still beats a full-width one. Splitting
+  // at tablet width made both columns phone-sized and the previews no bigger.
+  @media (width >= 62rem) {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .empty {
