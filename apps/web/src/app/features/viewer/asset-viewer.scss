@@ -592,11 +592,10 @@
   }
 }
 
-// The optimistic turn animates so the photo visibly swings a quarter turn
-// rather than snapping, which reads as a redraw.
-.stage .media {
-  transition: transform 0.18s ease;
-}
+// NO transform transition here on purpose. The optimistic turn and the swap to
+// the saved file both change this transform, and animating either one reads as
+// the photo swinging twice for a single tap. Snapping is both clearer and what
+// "instant" is supposed to feel like.
 
 // Overflow actions: labelled rows, not another wall of glyphs. Rotate and
 // delete are rare and consequential enough to deserve words.

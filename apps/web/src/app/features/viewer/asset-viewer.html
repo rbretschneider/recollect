@@ -105,6 +105,7 @@
             [src]="imageUrl(media.id)"
             [alt]="'Photo taken ' + formatDate(media.capturedAt)"
             [style.transform]="mediaTransform()"
+            [style.rotate]="mediaRotate()"
             [class.loading]="isImageLoading()"
             draggable="false"
             (load)="onImageLoaded(media.id)"

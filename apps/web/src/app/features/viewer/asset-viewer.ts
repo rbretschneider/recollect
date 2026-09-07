@@ -140,10 +140,17 @@ export class AssetViewer implements OnInit, OnDestroy {
   readonly isGestureActive = signal(false);
 
   readonly mediaTransform = computed(
-    () =>
-      `translate(${this.panX()}px, ${this.panY()}px) scale(${this.zoom()}) ` +
-      `rotate(${this.previewTurns() * 90}deg)`,
+    () => `translate(${this.panX()}px, ${this.panY()}px) scale(${this.zoom()})`,
   );
+
+  /**
+   * The optimistic turn rides the INDEPENDENT rotate property, not transform.
+   * transform is transitioned for zoom/pan smoothing, so animating a quarter
+   * turn through it made one tap read as the photo swinging twice — once for
+   * the turn, once when the saved file swapped in. rotate is not in that
+   * transition list, so it snaps.
+   */
+  readonly mediaRotate = computed(() => `${this.previewTurns() * 90}deg`);
 
   private readonly activePointers = new Map<number, { x: number; y: number }>();
   private gestureStart: {
@@ -261,8 +268,20 @@ export class AssetViewer implements OnInit, OnDestroy {
     const version =
       this.localVersions().get(assetId) ??
       this.assets().find((item) => item.id === assetId)?.updatedAt;
+    return this.thumbUrlFor(assetId, version);
+  }
+
+  private thumbUrlFor(assetId: string, version: string | undefined): string {
     const bust = version ? `?v=${encodeURIComponent(version)}` : '';
     return `${this.mediaBase()}/${assetId}/thumb/1440${bust}`;
+  }
+
+  private clearTurn(assetId: string): void {
+    this.rotationTurns.update((map) => {
+      const next = new Map(map);
+      next.delete(assetId);
+      return next;
+    });
   }
 
   originalUrl(assetId: string): string {
@@ -702,9 +721,21 @@ export class AssetViewer implements OnInit, OnDestroy {
     this.rotateQueue = this.rotateQueue
       .then(() => firstValueFrom(this.http.post(`/api/v1/assets/${assetId}/rotate`, { turns })))
       .then(() => {
-        // Point the <img> at the freshly rotated file. The optimistic turn is
-        // held until that actually loads, so nothing flashes back upright.
-        this.localVersions.update((map) => new Map(map).set(assetId, Date.now().toString()));
+        // The saved file now carries the rotation in its EXIF, so the browser
+        // will orient it itself. Swapping the src while the optimistic CSS turn
+        // is still applied stacks the two — the photo visibly swings to double
+        // the angle and back. Preload first, then change the src and drop the
+        // turn in the same tick, so the two never overlap by even a frame.
+        const version = Date.now().toString();
+        const preload = new Image();
+        preload.onload = () => {
+          this.localVersions.update((map) => new Map(map).set(assetId, version));
+          this.clearTurn(assetId);
+        };
+        // If it can't be fetched, keep the CSS turn: the file saved fine, and a
+        // turned-by-CSS photo beats one that snaps back to looking unrotated.
+        preload.onerror = () => undefined;
+        preload.src = this.thumbUrlFor(assetId, version);
         this.rotated.emit(assetId);
       })
       .catch((error: { error?: { message?: string } }) => {
@@ -742,15 +773,8 @@ export class AssetViewer implements OnInit, OnDestroy {
    * Clears the optimistic turn once the re-fetched file is on screen — and only
    * then, so a plain navigation back to the photo doesn't drop it early.
    */
-  onImageLoaded(assetId: string): void {
+  onImageLoaded(_assetId: string): void {
     this.isImageLoading.set(false);
-    if (this.localVersions().has(assetId)) {
-      this.rotationTurns.update((map) => {
-        const next = new Map(map);
-        next.delete(assetId);
-        return next;
-      });
-    }
   }
 
   /** Saves the original with its friendly server-assigned name. */
