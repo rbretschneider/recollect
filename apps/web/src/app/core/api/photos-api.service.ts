@@ -12,6 +12,8 @@ export class PhotosApiService {
     cursor: string | null,
     limit: number,
     favoritesOnly = false,
+    /** Card view is the only grid that renders EXIF, place and filename. */
+    withCardDetail = false,
   ): Promise<TimelinePage> {
     let params = new HttpParams().set('limit', limit);
     if (cursor) {
@@ -19,6 +21,9 @@ export class PhotosApiService {
     }
     if (favoritesOnly) {
       params = params.set('favorites', '1');
+    }
+    if (withCardDetail) {
+      params = params.set('cards', '1');
     }
     return firstValueFrom(this.http.get<TimelinePage>('/api/v1/assets', { params }));
   }

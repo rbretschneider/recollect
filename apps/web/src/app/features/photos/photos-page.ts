@@ -3,15 +3,16 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   OnDestroy,
   signal,
   viewChild,
 } from '@angular/core';
-import { LibraryApiService } from '../../core/api/library-api.service';
+import { ActivityService } from '../../core/activity.service';
 import { PhotosApiService } from '../../core/api/photos-api.service';
-import { LibraryStatus, TimelineAsset } from '../../core/api/api-models';
+import { TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { TrashApiService } from '../../core/api/trash-api.service';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
@@ -55,7 +56,6 @@ function loadViewMode(): GridViewMode {
 }
 
 const PAGE_SIZE = 100;
-const STATUS_POLL_MS = 4000;
 
 /** The main photo timeline: grid grouped by day with infinite scroll. */
 @Component({
@@ -77,7 +77,7 @@ const STATUS_POLL_MS = 4000;
 })
 export class PhotosPage implements AfterViewInit, OnDestroy {
   private readonly photosApi = inject(PhotosApiService);
-  private readonly libraryApi = inject(LibraryApiService);
+  private readonly activity = inject(ActivityService);
   private readonly trashApi = inject(TrashApiService);
   private readonly albumsApi = inject(AlbumsApiService);
   private readonly memoriesApi = inject(MemoriesApiService);
@@ -90,7 +90,6 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
 
   private readonly sentinel = viewChild.required<ElementRef<HTMLElement>>('sentinel');
   private observer: IntersectionObserver | null = null;
-  private statusTimer: ReturnType<typeof setInterval> | null = null;
   private nextCursor: string | null = null;
   private hasLoadedFirstPage = false;
 
@@ -106,13 +105,29 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
   readonly undoIds = signal<string[]>([]);
   readonly isLoading = signal(false);
   readonly isComplete = signal(false);
-  readonly status = signal<LibraryStatus | null>(null);
   readonly userName = computed(() => this.auth.user()?.displayName ?? '');
 
   readonly groups = computed<DayGroup[]>(() => this.groupByDay(this.items()));
-  readonly pendingCount = computed(() => {
-    const status = this.status();
-    return status ? status.queuedJobs + status.runningJobs : 0;
+  /**
+   * Read from the one app-wide poller rather than a second timer of its own.
+   * This page used to run a 4s poll on top of the global 3s one, so simply
+   * being on the timeline doubled the queue traffic.
+   */
+  readonly pendingCount = this.activity.pendingCount;
+
+  /**
+   * Indexing just drained, so photos that were not in the library when this
+   * page loaded are now. Watching the shared count fall to zero replaces the
+   * page's old private poll.
+   */
+  private previousPending = 0;
+  private readonly refreshWhenIndexingEnds = effect(() => {
+    const pending = this.pendingCount();
+    const finished = this.previousPending > 0 && pending === 0;
+    this.previousPending = pending;
+    if (finished && this.hasLoadedFirstPage) {
+      void this.refreshFromStart();
+    }
   });
 
   ngAfterViewInit(): void {
@@ -124,18 +139,12 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
       }
     });
     this.observer.observe(this.sentinel().nativeElement);
-    void this.pollStatus();
-    this.statusTimer = setInterval(() => void this.pollStatus(), STATUS_POLL_MS);
     this.destroyRef.onDestroy(() => this.ngOnDestroy());
   }
 
   ngOnDestroy(): void {
     this.observer?.disconnect();
     this.observer = null;
-    if (this.statusTimer !== null) {
-      clearInterval(this.statusTimer);
-      this.statusTimer = null;
-    }
   }
 
   thumbUrl(asset: TimelineAsset): string {
@@ -349,11 +358,18 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
   }
 
   setViewMode(mode: GridViewMode): void {
+    const wasCards = this.viewMode() === 'cards';
     this.viewMode.set(mode);
     try {
       localStorage.setItem(VIEW_MODE_KEY, mode);
     } catch {
       // Per-viewer convenience only; losing it is harmless.
+    }
+    // The loaded pages only carry EXIF/place/filename if they were fetched for
+    // card view. Turning it on has to go back for them; turning it off keeps
+    // what is already in hand rather than spending a request to send less.
+    if (mode === 'cards' && !wasCards) {
+      void this.refreshFromStart();
     }
   }
 
@@ -469,6 +485,7 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
         this.nextCursor,
         PAGE_SIZE,
         this.favoritesOnly(),
+        this.viewMode() === 'cards',
       );
       this.items.update((existing) => [...existing, ...page.items]);
       this.nextCursor = page.nextCursor;
@@ -497,17 +514,6 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
     );
   }
 
-  private async pollStatus(): Promise<void> {
-    try {
-      const previousPending = this.pendingCount();
-      this.status.set(await this.libraryApi.getStatus());
-      if (previousPending > 0 && this.pendingCount() === 0) {
-        await this.refreshFromStart();
-      }
-    } catch {
-      // Status is a nicety; keep the grid usable when polling fails.
-    }
-  }
 
   /** Reloads the first page after indexing finishes so fresh photos appear. */
   private async refreshFromStart(): Promise<void> {

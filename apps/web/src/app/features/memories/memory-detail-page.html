@@ -169,7 +169,14 @@
                 <div class="story-images">
                   @for (assetId of item.assetIds; track assetId) {
                     <button type="button" aria-label="Open photo" (click)="openViewer(assetId)">
-                      <img [src]="thumbUrl(assetId, 1440)" alt="" loading="lazy" />
+                      <img
+                        [src]="thumbUrl(assetId, 720)"
+                        [srcset]="storySrcset(assetId)"
+                        sizes="(max-width: 45rem) 100vw, 45rem"
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                      />
                     </button>
                   }
                 </div>

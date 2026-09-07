@@ -33,7 +33,16 @@ export const job = pgTable(
     finishedAt: timestamp('finished_at', { withTimezone: true }),
   },
   (table) => [
-    index('job_claim_idx').on(table.status, table.runAt, table.priority),
+    // Only live rows are ever claimed. Covering finished jobs too made this
+    // 59MB against 1.3M dead rows and re-indexed every job that completed.
+    index('job_claim_idx')
+      .on(table.status, table.runAt, table.priority)
+      .where(sql`${table.status} in ('queued', 'running')`),
+    // Retention sweeps by age over finished rows; without this each nightly
+    // batch seq-scanned the whole table.
+    index('job_retention_idx')
+      .on(sql`coalesce(${table.finishedAt}, ${table.createdAt})`)
+      .where(sql`${table.status} in ('done', 'failed')`),
     // Dedupe applies only to live jobs; finished work may be enqueued again.
     uniqueIndex('job_dedupe_live_unique')
       .on(table.dedupeKey)

@@ -306,6 +306,15 @@ export class MemoryDetailPage implements OnInit {
     return assetThumbUrl(assetId, size);
   }
 
+  /**
+   * Story images fill the column, which is at most ~700px and on a phone is
+   * narrower still. Offering both tiers lets the browser take the 60kB one
+   * where the 209kB one would only be thrown away on the way to the screen.
+   */
+  storySrcset(assetId: string): string {
+    return `${assetThumbUrl(assetId, 720)} 720w, ${assetThumbUrl(assetId, 1440)} 1440w`;
+  }
+
   cropUrl(faceId: string): string {
     return this.peopleApi.faceCropUrl(faceId);
   }

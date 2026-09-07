@@ -60,9 +60,18 @@ export interface LibraryStatus {
   byType: Array<{ type: string; queued: number; running: number }>;
 }
 
+/**
+ * How long one activity snapshot is served to everyone. Shorter than the
+ * client's fastest poll, so nobody ever sees a reading go backwards.
+ */
+const STATUS_CACHE_MS = 1500;
+
 /** Manages library roots and kicks off scans. */
 @Injectable()
 export class LibraryService {
+  private statusCache: { at: number; value: LibraryStatus } | null = null;
+  private statusInFlight: Promise<LibraryStatus> | null = null;
+
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
@@ -137,37 +146,79 @@ export class LibraryService {
     );
   }
 
+  /**
+   * Live activity, as cheaply as it can be had.
+   *
+   * Every client polls this continuously, so it is the single most-executed
+   * query in the app and its cost is multiplied by everyone connected. Two
+   * things keep it honest:
+   *
+   * - **Never aggregate over the whole job table.** The counts used to be
+   *   `count(case when status = 'queued' ...)` with no WHERE, which no index
+   *   can answer: measured at 72ms of parallel seq scan over 1.3M rows, twenty
+   *   times a minute, per client. The same numbers fall out of the `byType`
+   *   breakdown, which is already restricted to live rows and uses the partial
+   *   claim index. One index scan now serves all of it.
+   * - **Share one result across clients.** The numbers are a progress readout,
+   *   not a ledger; a second of staleness is invisible, and it collapses a
+   *   household of pollers into one query.
+   */
   async getStatus(): Promise<LibraryStatus> {
-    const [assets] = await this.db
-      .select({
-        totalAssets: count(),
-        thumbnailed: count(sql`case when ${asset.stageThumbsAt} is not null then 1 end`),
-        failedStages: count(sql`case when ${asset.stageErrors} is not null then 1 end`),
-      })
-      .from(asset);
-    const [jobs] = await this.db
-      .select({
-        queuedJobs: count(sql`case when ${job.status} = 'queued' then 1 end`),
-        runningJobs: count(sql`case when ${job.status} = 'running' then 1 end`),
-        ingestPending: count(
-          sql`case when ${job.status} in ('queued', 'running') and ${job.type} = 'ingest_file' then 1 end`,
-        ),
-      })
-      .from(job);
-    const [batch] = await this.db
-      .select({ batchTotal: sql<number>`coalesce(sum(${libraryRoot.lastScanEnqueued}), 0)::int` })
-      .from(libraryRoot);
-    const byType = await this.db
-      .select({
-        type: job.type,
-        queued: count(sql`case when ${job.status} = 'queued' then 1 end`),
-        running: count(sql`case when ${job.status} = 'running' then 1 end`),
-      })
-      .from(job)
-      .where(sql`${job.status} in ('queued', 'running')`)
-      .groupBy(job.type)
-      .orderBy(sql`count(*) desc`);
-    return { ...assets, ...jobs, batchTotal: batch.batchTotal, byType };
+    const now = Date.now();
+    if (this.statusCache && now - this.statusCache.at < STATUS_CACHE_MS) {
+      return this.statusCache.value;
+    }
+    // In flight already? Wait on that one rather than starting a second.
+    this.statusInFlight ??= this.computeStatus().finally(() => {
+      this.statusInFlight = null;
+    });
+    const value = await this.statusInFlight;
+    this.statusCache = { at: Date.now(), value };
+    return value;
+  }
+
+  private async computeStatus(): Promise<LibraryStatus> {
+    const [[assets], [batch], byType] = await Promise.all([
+      this.db
+        .select({
+          totalAssets: count(),
+          thumbnailed: count(sql`case when ${asset.stageThumbsAt} is not null then 1 end`),
+          failedStages: count(sql`case when ${asset.stageErrors} is not null then 1 end`),
+        })
+        .from(asset),
+      this.db
+        .select({ batchTotal: sql<number>`coalesce(sum(${libraryRoot.lastScanEnqueued}), 0)::int` })
+        .from(libraryRoot),
+      this.db
+        .select({
+          type: job.type,
+          queued: count(sql`case when ${job.status} = 'queued' then 1 end`),
+          running: count(sql`case when ${job.status} = 'running' then 1 end`),
+        })
+        .from(job)
+        .where(sql`${job.status} in ('queued', 'running')`)
+        .groupBy(job.type)
+        .orderBy(sql`count(*) desc`),
+    ]);
+    // The totals are just the breakdown summed - no second pass over the table.
+    let queuedJobs = 0;
+    let runningJobs = 0;
+    let ingestPending = 0;
+    for (const row of byType) {
+      queuedJobs += row.queued;
+      runningJobs += row.running;
+      if (row.type === 'ingest_file') {
+        ingestPending += row.queued + row.running;
+      }
+    }
+    return {
+      ...assets,
+      queuedJobs,
+      runningJobs,
+      ingestPending,
+      batchTotal: batch.batchTotal,
+      byType,
+    };
   }
 
   /**

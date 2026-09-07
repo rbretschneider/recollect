@@ -88,7 +88,9 @@ export const asset = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index('asset_timeline_idx').on(table.capturedAt.desc(), table.id.desc()),
+    // The timeline reads active assets only, and asset_timeline_active_idx
+    // (added in 0016) covers it as an index-only scan. An unpartitioned twin
+    // here earned 17 scans in the table's lifetime and was dropped in 0030.
     index('asset_captured_day_idx').on(table.capturedDay),
     check('asset_media_type_check', sql`${table.mediaType} in ('image', 'video')`),
     check(

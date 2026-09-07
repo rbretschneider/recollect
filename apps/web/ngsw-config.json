@@ -31,5 +31,36 @@
         "files": ["/**/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"]
       }
     }
+  ],
+  "dataGroups": [
+    {
+      "name": "content",
+      "urls": [
+        "/api/v1/assets",
+        "/api/v1/assets?**",
+        "/api/v1/assets/*/detail",
+        "/api/v1/dashboard/on-this-day",
+        "/api/v1/dashboard/on-this-day?**",
+        "/api/v1/dashboard/recently-added",
+        "/api/v1/dashboard/recently-added?**",
+        "/api/v1/albums",
+        "/api/v1/albums/*",
+        "/api/v1/memories",
+        "/api/v1/memories/*",
+        "/api/v1/people",
+        "/api/v1/people?**",
+        "/api/v1/people/*/assets",
+        "/api/v1/people/*/assets?**",
+        "/api/v1/places",
+        "/api/v1/places/assets",
+        "/api/v1/places/assets?**"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "timeout": "2s",
+        "maxSize": 400,
+        "maxAge": "7d"
+      }
+    }
   ]
 }
