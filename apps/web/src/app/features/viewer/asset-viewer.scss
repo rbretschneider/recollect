@@ -597,3 +597,41 @@
 .stage .media {
   transition: transform 0.18s ease;
 }
+
+// Overflow actions: labelled rows, not another wall of glyphs. Rotate and
+// delete are rare and consequential enough to deserve words.
+.photo-actions {
+  display: grid;
+  gap: 0.5rem;
+
+  .action {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 48px;
+    padding: 0 1rem;
+    border: 1px solid var(--border);
+    border-radius: 0.7rem;
+    background: var(--surface-raised);
+    color: var(--text);
+    font-size: 0.95rem;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      border-color: var(--accent);
+    }
+
+    &.danger {
+      color: var(--danger);
+      border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+    }
+  }
+
+  .glyph {
+    font-size: 1.25rem;
+    line-height: 1;
+    width: 18px;
+    text-align: center;
+  }
+}

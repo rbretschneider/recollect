@@ -23,34 +23,24 @@
         <app-share-button variant="overlay" targetType="asset" [targetId]="sharedAsset.id" />
       }
     }
-    @if (canRotate) {
-      <button
-        type="button"
-        class="icon rotate-btn"
-        aria-label="Rotate left"
-        title="Rotate left"
-        (click)="rotateCurrent('ccw')"
-      >
-        ↺
-      </button>
-      <button
-        type="button"
-        class="icon rotate-btn"
-        aria-label="Rotate right"
-        title="Rotate right"
-        (click)="rotateCurrent('cw')"
-      >
-        ↻
-      </button>
-    }
     @if (allowInfo()) {
       <button type="button" class="icon" aria-label="Download" (click)="downloadCurrent()">
         <app-icon name="download" />
       </button>
     }
-    @if (canDelete) {
-      <button type="button" class="icon" aria-label="Move to Trash" (click)="deleteCurrent()">
-        <app-icon name="trash" />
+    <!-- Everything past favourite / share / download lives here. The bar was
+         eight controls wide and starting to run off a phone screen; the rarer,
+         more consequential actions are the ones to move, and they read better
+         with words than as another glyph. -->
+    @if (hasMoreActions) {
+      <button
+        type="button"
+        class="icon"
+        aria-label="More actions"
+        title="More actions"
+        (click)="actionsOpen.set(true)"
+      >
+        ⋯
       </button>
     }
     @if (allowInfo()) {
@@ -334,3 +324,23 @@
     </div>
   }
 </div>
+
+@if (actionsOpen()) {
+  <app-sheet sheetTitle="Photo actions" (closed)="actionsOpen.set(false)">
+    <div class="photo-actions">
+      @if (canRotate) {
+        <button type="button" class="action" (click)="runAction('ccw')">
+          <span class="glyph" aria-hidden="true">↺</span> Rotate left
+        </button>
+        <button type="button" class="action" (click)="runAction('cw')">
+          <span class="glyph" aria-hidden="true">↻</span> Rotate right
+        </button>
+      }
+      @if (canDelete) {
+        <button type="button" class="action danger" (click)="runAction('trash')">
+          <app-icon name="trash" [size]="18" aria-hidden="true" /> Move to Trash
+        </button>
+      }
+    </div>
+  </app-sheet>
+}

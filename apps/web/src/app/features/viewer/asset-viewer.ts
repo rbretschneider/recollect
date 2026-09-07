@@ -22,6 +22,7 @@ import { AuthStateService } from '../../core/auth/auth-state.service';
 import { ConfirmService } from '../../shared/confirm.service';
 import { ToastService } from '../../shared/toast.service';
 import { Icon } from '../../shared/icon';
+import { Sheet } from '../../shared/sheet';
 
 /** Minimum horizontal swipe distance (px) that counts as navigation. */
 const SWIPE_THRESHOLD_PX = 60;
@@ -43,7 +44,7 @@ const VIDEO_CONTROLS_STRIP_PX = 72;
  */
 @Component({
   selector: 'app-asset-viewer',
-  imports: [Icon, RouterLink, ShareButton, FormsModule],
+  imports: [Icon, RouterLink, ShareButton, FormsModule, Sheet],
   templateUrl: './asset-viewer.html',
   styleUrl: './asset-viewer.scss',
 })
@@ -608,6 +609,23 @@ export class AssetViewer implements OnInit, OnDestroy {
   }
 
   /** Rotation is only offered for stills that carry an orientation tag. */
+  readonly actionsOpen = signal(false);
+
+  /** Only offer the overflow when it would actually hold something. */
+  get hasMoreActions(): boolean {
+    return this.canRotate || this.canDelete;
+  }
+
+  /** Runs an overflow action and closes the sheet behind it. */
+  runAction(action: 'cw' | 'ccw' | 'trash'): void {
+    this.actionsOpen.set(false);
+    if (action === 'trash') {
+      void this.deleteCurrent();
+      return;
+    }
+    this.rotateCurrent(action);
+  }
+
   get canRotate(): boolean {
     const asset = this.current();
     if (!this.canWrite || !this.allowInfo() || asset?.mediaType !== 'image') {
