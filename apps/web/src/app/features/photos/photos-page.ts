@@ -140,7 +140,11 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
 
   thumbUrl(asset: TimelineAsset): string {
     // Wide cards deserve the sharper tier; dense grids stay light.
-    return this.photosApi.thumbnailUrl(asset.id, this.viewMode() === 'cards' ? 720 : 240);
+    return this.photosApi.thumbnailUrl(
+      asset.id,
+      this.viewMode() === 'cards' ? 720 : 240,
+      asset.updatedAt,
+    );
   }
 
   openViewer(asset: TimelineAsset): void {

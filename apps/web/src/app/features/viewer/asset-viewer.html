@@ -23,6 +23,28 @@
         <app-share-button variant="overlay" targetType="asset" [targetId]="sharedAsset.id" />
       }
     }
+    @if (canRotate) {
+      <button
+        type="button"
+        class="icon rotate-btn"
+        aria-label="Rotate left"
+        title="Rotate left"
+        [disabled]="rotating()"
+        (click)="rotateCurrent('ccw')"
+      >
+        ↺
+      </button>
+      <button
+        type="button"
+        class="icon rotate-btn"
+        aria-label="Rotate right"
+        title="Rotate right"
+        [disabled]="rotating()"
+        (click)="rotateCurrent('cw')"
+      >
+        ↻
+      </button>
+    }
     @if (allowInfo()) {
       <button type="button" class="icon" aria-label="Download" (click)="downloadCurrent()">
         <app-icon name="download" />

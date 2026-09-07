@@ -37,13 +37,21 @@ export class PhotosApiService {
   }
 
   /** URL for an asset thumbnail at a generated size (240 | 720 | 1440). */
-  thumbnailUrl(assetId: string, size: 240 | 720 | 1440): string {
-    return `/api/v1/assets/${assetId}/thumb/${size}`;
+  thumbnailUrl(assetId: string, size: 240 | 720 | 1440, version?: string): string {
+    return assetThumbUrl(assetId, size, version);
   }
 }
 
 /** Standalone thumbnail-URL builder for template helpers that don't hold the
  *  service — one definition to change if the route ever versions. */
-export function assetThumbUrl(assetId: string, size: 240 | 720 | 1440 = 240): string {
-  return `/api/v1/assets/${assetId}/thumb/${size}`;
+export function assetThumbUrl(
+  assetId: string,
+  size: 240 | 720 | 1440 = 240,
+  version?: string,
+): string {
+  // Thumbnails are served immutable for a year, so an edit that regenerates one
+  // (a rotate) would otherwise stay invisible. The asset's updatedAt makes the
+  // URL change exactly when the image did.
+  const bust = version ? `?v=${encodeURIComponent(version)}` : '';
+  return `/api/v1/assets/${assetId}/thumb/${size}${bust}`;
 }

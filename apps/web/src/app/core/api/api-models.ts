@@ -21,6 +21,8 @@ export interface TimelineAsset {
   height: number | null;
   durationMs: number | null;
   hasThumbnail: boolean;
+  /** Bumped on every edit; used to bust the immutable thumbnail cache. */
+  updatedAt?: string;
   /** The file is unplayable/undisplayable — incomplete or corrupt on disk. */
   damaged?: boolean;
   /** A still carrying an embedded motion clip (playable on hold in the viewer). */

@@ -26,6 +26,8 @@ import { AssetsService, TimelinePage } from './assets.service';
 import type { AssetDetail, TimelineAsset } from './assets.service';
 import { AssetIdsRequestDto } from './dto/asset-ids-request.dto';
 import { SetCapturedAtRequestDto } from './dto/set-captured-at-request.dto';
+import { RotateRequestDto } from './dto/rotate-request.dto';
+import { RotateService } from './rotate.service';
 import { Body } from '@nestjs/common';
 
 /** Read endpoints for the photo timeline and thumbnails. */
@@ -35,6 +37,7 @@ export class AssetsController {
     private readonly assets: AssetsService,
     private readonly media: AssetMediaStreamer,
     private readonly queue: JobQueueService,
+    private readonly rotateService: RotateService,
   ) {}
 
   @Get()
@@ -86,6 +89,20 @@ export class AssetsController {
     @CurrentUser() user: UserProfile,
   ): Promise<void> {
     await this.assets.setFavorite(user.id, id, false);
+  }
+
+  /**
+   * Turns a photo a quarter turn and persists it before returning — lossless,
+   * since only the EXIF orientation tag changes.
+   */
+  @RequireGrant('write')
+  @Post(':id/rotate')
+  @HttpCode(HttpStatus.OK)
+  async rotate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: RotateRequestDto,
+  ): Promise<{ orientation: number }> {
+    return this.rotateService.rotate(id, body.direction);
   }
 
   /** Correct an item's capture date (write grant). Also rewrites the file's EXIF. */

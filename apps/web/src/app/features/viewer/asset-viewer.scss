@@ -575,3 +575,19 @@
     flex-shrink: 0;
   }
 }
+
+// Glyph buttons (no rotate icon in the set); sized to match the icon buttons.
+.rotate-btn {
+  font-size: 1.35rem;
+  line-height: 1;
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
+// The optimistic turn animates so the photo visibly swings a quarter turn
+// rather than snapping, which reads as a redraw.
+.stage .media {
+  transition: transform 0.18s ease;
+}

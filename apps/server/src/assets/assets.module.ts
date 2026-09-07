@@ -4,6 +4,7 @@ import { AssetMediaStreamer } from './asset-media-streamer';
 import { AssetsController } from './assets.controller';
 import { AssetsService } from './assets.service';
 import { RewriteCaptureDateHandler } from './handlers/rewrite-capture-date.handler';
+import { RotateService } from './rotate.service';
 import { TranscodeBackfillHandler } from './handlers/transcode-backfill.handler';
 import { TranscodePlaybackHandler } from './handlers/transcode-playback.handler';
 
@@ -13,6 +14,7 @@ import { TranscodePlaybackHandler } from './handlers/transcode-playback.handler'
   providers: [
     AssetsService,
     AssetMediaStreamer,
+    RotateService,
     RewriteCaptureDateHandler,
     TranscodeBackfillHandler,
     TranscodePlaybackHandler,

@@ -43,6 +43,8 @@ export interface TimelineAsset {
   height: number | null;
   durationMs: number | null;
   hasThumbnail: boolean;
+  /** Bumped on every edit; used to bust the immutable thumbnail cache. */
+  updatedAt: string;
   /** The file is unplayable/undisplayable — incomplete or corrupt on disk. */
   damaged?: boolean;
   /** A still that carries an embedded motion clip (playable on hold). */
@@ -77,6 +79,8 @@ export interface TimelinePage {
 /** Full detail for a single asset (viewer info sheet). */
 export interface AssetDetail {
   id: string;
+  /** Bumped on every edit; busts the immutable thumbnail cache. */
+  updatedAt: string;
   mediaType: 'image' | 'video';
   mime: string;
   capturedAt: string;
@@ -149,6 +153,7 @@ export class AssetsService {
         durationMs: asset.durationMs,
         motionPhoto: asset.motionPhoto,
         stageThumbsAt: asset.stageThumbsAt,
+        updatedAt: asset.updatedAt,
         stageErrors: asset.stageErrors,
         favoritedAt: favorite.createdAt,
         mime: asset.mime,
@@ -194,6 +199,7 @@ export class AssetsService {
           height: row.height,
           durationMs: row.durationMs,
           hasThumbnail: row.stageThumbsAt !== null,
+      updatedAt: row.updatedAt.toISOString(),
           damaged: (row.stageErrors as Record<string, string> | null)?.['playback'] != null,
           motionPhoto: row.motionPhoto,
           isFavorite: row.favoritedAt !== null,
@@ -342,6 +348,7 @@ export class AssetsService {
       rootId: file?.rootId ?? null,
       sizeBytes: file?.sizeBytes ?? null,
       hasThumbnail: row.stageThumbsAt !== null,
+          updatedAt: row.updatedAt.toISOString(),
       isFavorite: heart !== undefined,
       stageErrors: row.stageErrors as Record<string, string> | null,
     };
@@ -363,6 +370,7 @@ export class AssetsService {
         durationMs: asset.durationMs,
         motionPhoto: asset.motionPhoto,
         stageThumbsAt: asset.stageThumbsAt,
+        updatedAt: asset.updatedAt,
         stageErrors: asset.stageErrors,
         favoritedAt: favorite.createdAt,
         mime: asset.mime,
@@ -387,6 +395,7 @@ export class AssetsService {
           height: row.height,
           durationMs: row.durationMs,
           hasThumbnail: row.stageThumbsAt !== null,
+          updatedAt: row.updatedAt.toISOString(),
           damaged: (row.stageErrors as Record<string, string> | null)?.['playback'] != null,
           motionPhoto: row.motionPhoto,
           isFavorite: row.favoritedAt !== null,

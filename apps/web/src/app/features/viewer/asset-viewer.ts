@@ -67,6 +67,8 @@ export class AssetViewer implements OnInit, OnDestroy {
   readonly closed = output<void>();
   /** Emitted after the current photo is moved to Trash from the viewer. */
   readonly deleted = output<string>();
+  /** Emitted after a rotate lands, so the parent can refresh its copy. */
+  readonly rotated = output<string>();
 
   readonly index = signal(0);
   readonly showInfo = signal(false);
@@ -134,7 +136,9 @@ export class AssetViewer implements OnInit, OnDestroy {
   readonly isGestureActive = signal(false);
 
   readonly mediaTransform = computed(
-    () => `translate(${this.panX()}px, ${this.panY()}px) scale(${this.zoom()})`,
+    () =>
+      `translate(${this.panX()}px, ${this.panY()}px) scale(${this.zoom()}) ` +
+      `rotate(${this.previewTurns() * 90}deg)`,
   );
 
   private readonly activePointers = new Map<number, { x: number; y: number }>();
@@ -222,6 +226,7 @@ export class AssetViewer implements OnInit, OnDestroy {
       this.motionPlaying.set(false);
       this.editingDate.set(false);
       this.editedCapturedAt.set(null);
+      this.previewTurns.set(0);
       this.resetZoom();
     });
   }
@@ -246,7 +251,11 @@ export class AssetViewer implements OnInit, OnDestroy {
   }
 
   imageUrl(assetId: string): string {
-    return `${this.mediaBase()}/${assetId}/thumb/1440`;
+    // Busted by the asset version so a rotate shows immediately rather than
+    // being served from the year-long immutable cache.
+    const version = this.assets().find((item) => item.id === assetId)?.updatedAt;
+    const bust = version ? `?v=${encodeURIComponent(version)}` : '';
+    return `${this.mediaBase()}/${assetId}/thumb/1440${bust}`;
   }
 
   originalUrl(assetId: string): string {
@@ -594,6 +603,53 @@ export class AssetViewer implements OnInit, OnDestroy {
       await this.photosApi.setFavorite(asset.id, next);
     } catch {
       this.favoriteOverrides.update((map) => new Map(map).set(asset.id, !next));
+    }
+  }
+
+  /** Rotation is only offered for stills that carry an orientation tag. */
+  get canRotate(): boolean {
+    const asset = this.current();
+    return (
+      this.canWrite &&
+      this.allowInfo() &&
+      asset?.mediaType === 'image' &&
+      /^image\/(jpeg|heic|heif|tiff|avif)$/i.test(asset.mime ?? '')
+    );
+  }
+
+  readonly rotating = signal(false);
+  /** Quarter-turns applied locally, so the photo turns before the server answers. */
+  readonly previewTurns = signal(0);
+
+  /**
+   * Turns the photo a quarter turn and persists it.
+   *
+   * The on-screen image turns immediately via a CSS transform while the request
+   * is in flight — the write itself is lossless (only the EXIF orientation tag
+   * changes) but it still has to cross the network and regenerate thumbnails.
+   */
+  async rotateCurrent(direction: 'cw' | 'ccw'): Promise<void> {
+    const asset = this.current();
+    if (!asset || this.rotating()) {
+      return;
+    }
+    this.rotating.set(true);
+    this.previewTurns.update((turns) => turns + (direction === 'cw' ? 1 : -1));
+    try {
+      await firstValueFrom(
+        this.http.post(`/api/v1/assets/${asset.id}/rotate`, { direction }),
+      );
+      // The server rewrote the file and its thumbnails; re-fetch under the new
+      // version so the real rotated image replaces the CSS-turned one.
+      this.rotated.emit(asset.id);
+      this.previewTurns.set(0);
+      this.isImageLoading.set(true);
+      await this.loadDetail(asset.id);
+    } catch {
+      this.previewTurns.update((turns) => turns - (direction === 'cw' ? 1 : -1));
+      this.toasts.error("Couldn't rotate that photo.");
+    } finally {
+      this.rotating.set(false);
     }
   }
 
