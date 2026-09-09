@@ -1,7 +1,7 @@
 <div class="slideshow" role="dialog" aria-label="Slideshow">
   <header class="bar">
     <span class="title">{{ title() }}</span>
-    <span class="counter">{{ index() + 1 }} / {{ items().length }}</span>
+    <span class="counter">{{ index() + 1 }} / {{ slides().length }}</span>
     <button
       type="button"
       class="chrome"
@@ -17,10 +17,45 @@
         <app-icon name="share" [size]="18" />
       </button>
     }
+    @if (showActions) {
+      <button
+        type="button"
+        class="chrome"
+        aria-label="Photo actions"
+        title="Photo actions"
+        (click)="openActions()"
+      >
+        ⋯
+      </button>
+    }
     <button type="button" class="chrome" aria-label="Close slideshow" (click)="close()">
       <app-icon name="close" />
     </button>
   </header>
+
+  <!-- Acting on the photo you can see: the scrim stays clear and the show is
+       already paused by openActions(). -->
+  @if (actionsOpen()) {
+    <app-sheet sheetTitle="Photo actions" [seeThrough]="true" (closed)="closeActions()">
+      <div class="photo-actions">
+        @if (canDelete) {
+          <button
+            type="button"
+            class="action danger"
+            [disabled]="isTrashing()"
+            (click)="trashCurrent()"
+          >
+            <app-icon name="trash" [size]="18" aria-hidden="true" />
+            {{ isTrashing() ? 'Moving…' : 'Move to Trash' }}
+          </button>
+        } @else {
+          <p class="no-permission">
+            Deleting photos needs delete permission — ask whoever runs this library.
+          </p>
+        }
+      </div>
+    </app-sheet>
+  }
 
   <!-- Scope first: from inside a look-back "share" is ambiguous, so ask what
        before asking how. Each choice hands off to the normal share panel. -->
@@ -41,7 +76,7 @@
             {{ resolvingCollection() ? 'Preparing…' : 'The whole ' + collectionNoun() }}
           </span>
           <span class="choice-sub">
-            All {{ items().length }} photos, as one shared page.
+            All {{ slides().length }} photos, as one shared page.
           </span>
         </button>
       </div>
@@ -114,7 +149,7 @@
       ‹
     </button>
   }
-  @if (index() < items().length - 1) {
+  @if (index() < slides().length - 1) {
     <button
       type="button"
       class="nav next"
@@ -126,7 +161,7 @@
   }
 
   <div class="progress" aria-hidden="true">
-    @for (item of items(); track item.id; let dotIndex = $index) {
+    @for (item of slides(); track item.id; let dotIndex = $index) {
       <span class="dot" [class.done]="dotIndex <= index()"></span>
     }
   </div>

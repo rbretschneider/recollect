@@ -253,3 +253,46 @@
     background: rgb(0 0 0 / 22%);
   }
 }
+
+// Per-photo actions, matching the viewer's sheet so the same action looks the
+// same wherever it is reached from.
+.photo-actions {
+  display: grid;
+  gap: 0.5rem;
+
+  .action {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 48px;
+    padding: 0 1rem;
+    border: 1px solid var(--border);
+    border-radius: 0.7rem;
+    background: var(--surface-raised);
+    color: var(--text);
+    font-size: 0.95rem;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      border-color: var(--accent);
+    }
+
+    &.danger {
+      color: var(--danger);
+      border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+  }
+
+  .no-permission {
+    margin: 0;
+    padding: 0.25rem 0.15rem 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+}

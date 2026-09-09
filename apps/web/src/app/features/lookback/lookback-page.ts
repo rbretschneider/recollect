@@ -106,6 +106,23 @@ export class LookbackPage implements OnInit {
     this.slideshowItems.set(null);
   }
 
+  /**
+   * A photo was trashed from inside the show. The overlay has already dropped
+   * it from the slides; take it out of the stack behind them too, so closing
+   * the show doesn't reveal the photo you just deleted still sitting in the fan.
+   */
+  onSlideDeleted(assetId: string): void {
+    this.moments.update((moments) =>
+      moments
+        .map((moment) => ({
+          ...moment,
+          items: moment.items.filter((item) => item.id !== assetId),
+        }))
+        // A moment that was only that photo is not a moment any more.
+        .filter((moment) => moment.items.length > 0),
+    );
+  }
+
   // --- Sharing ---------------------------------------------------------------
 
   openShare(): void {

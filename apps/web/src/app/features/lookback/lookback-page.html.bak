@@ -65,9 +65,7 @@
     [items]="slides"
     [title]="slideshowTitle()"
     [collection]="slideshowCollection()"
-    [allowActions]="true"
     (closed)="closeSlideshow()"
-    (deleted)="onSlideDeleted($event)"
   />
 }
 

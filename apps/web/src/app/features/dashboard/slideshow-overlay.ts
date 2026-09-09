@@ -1,8 +1,11 @@
 import { Component, computed, DestroyRef, effect, HostListener, inject, input, OnDestroy, output, signal, viewChild } from '@angular/core';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
+import { TrashApiService } from '../../core/api/trash-api.service';
+import { AuthStateService } from '../../core/auth/auth-state.service';
 import { Icon } from '../../shared/icon';
 import { Sheet } from '../../shared/sheet';
 import { ShareButton } from '../../shared/share-button';
+import { ConfirmService } from '../../shared/confirm.service';
 import { ToastService } from '../../shared/toast.service';
 import { closeOnBrowserBack } from '../../shared/close-on-back';
 
@@ -81,9 +84,21 @@ export class SlideshowOverlay implements OnDestroy {
    * button appears; leave it null (public pages, ad-hoc strips) and it doesn't.
    */
   readonly collection = input<SlideshowCollection | null>(null);
+  /**
+   * Opt in to the per-photo actions menu. Off by default and deliberately not
+   * inferred from anything: this overlay also plays on the public share page
+   * and the guest contribute page, and a destructive control has no business
+   * rendering there even for a moment. Private pages pass it explicitly.
+   */
+  readonly allowActions = input(false);
   readonly closed = output<void>();
+  /** A photo left the library; parents drop it from their own lists. */
+  readonly deleted = output<string>();
 
   private readonly albums = inject(AlbumsApiService);
+  private readonly trashApi = inject(TrashApiService);
+  private readonly auth = inject(AuthStateService);
+  private readonly confirms = inject(ConfirmService);
   private readonly toasts = inject(ToastService);
   private readonly photoShare = viewChild<ShareButton>('photoShare');
   private readonly collectionShare = viewChild<ShareButton>('collectionShare');
@@ -103,6 +118,82 @@ export class SlideshowOverlay implements OnDestroy {
   openShareChoice(): void {
     this.isPaused.set(true); // Don't let slides advance under the sheet.
     this.shareChoiceOpen.set(true);
+  }
+
+  // --- Per-photo actions -----------------------------------------------------
+
+  readonly actionsOpen = signal(false);
+  readonly isTrashing = signal(false);
+
+  /** Anyone who can change the library sees the menu. */
+  get canWrite(): boolean {
+    const permission = this.auth.user()?.permission;
+    return permission === 'write' || permission === 'delete';
+  }
+
+  /** Trashing is its own grant, and the server enforces it too. */
+  get canDelete(): boolean {
+    return this.auth.user()?.permission === 'delete';
+  }
+
+  get showActions(): boolean {
+    return this.allowActions() && this.canWrite;
+  }
+
+  /**
+   * The show advances on a timer, so opening this without pausing would let the
+   * slide change between the tap and the confirm - and the confirm names the
+   * photo you were looking at, not the one that has since arrived.
+   */
+  openActions(): void {
+    this.isPaused.set(true);
+    this.actionsOpen.set(true);
+  }
+
+  /** Stays paused on close: you opened this to deal with a photo, not to watch. */
+  closeActions(): void {
+    this.actionsOpen.set(false);
+  }
+
+  async trashCurrent(): Promise<void> {
+    const asset = this.current();
+    if (!asset || this.isTrashing()) {
+      return;
+    }
+    // Drop the sheet before asking, so the confirm isn't a second modal
+    // stacked on the first. The show stays paused either way.
+    this.actionsOpen.set(false);
+    const confirmed = await this.confirms.ask({
+      title: 'Move this photo to Trash?',
+      message:
+        'It leaves your library now and is permanently deleted after the holding period. You can restore it from Trash until then.',
+      confirmLabel: 'Move to Trash',
+    });
+    if (!confirmed) {
+      return;
+    }
+    this.isTrashing.set(true);
+    try {
+      await this.trashApi.trashAssets([asset.id]);
+    } catch {
+      this.toasts.error("Couldn't move that photo to Trash.");
+      return;
+    } finally {
+      this.isTrashing.set(false);
+    }
+
+    // Step off the slide before it disappears from under the index, so the
+    // show lands on a real neighbour rather than past the end.
+    const wasLast = this.index() >= this.slides().length - 1;
+    this.removedIds.update((set) => new Set(set).add(asset.id));
+    if (this.slides().length === 0) {
+      this.close();
+    } else if (wasLast) {
+      this.index.set(this.slides().length - 1);
+    }
+    this.isFinished.set(false);
+    this.deleted.emit(asset.id);
+    this.toasts.success('Moved to Trash.');
   }
 
   async shareCurrentPhoto(): Promise<void> {
@@ -147,7 +238,20 @@ export class SlideshowOverlay implements OnDestroy {
   readonly isPaused = signal(false);
   /** True after the last slide: the show stops and offers a replay. */
   readonly isFinished = signal(false);
-  readonly current = computed<SlideItem | null>(() => this.items()[this.index()] ?? null);
+
+  /**
+   * Trashed during this show. `items` is an input and stays as the caller gave
+   * it, so the deleted slide is filtered out here — every count, dot, arrow and
+   * bound is taken from `slides`, never from the raw input, or the show would
+   * keep a hole where the photo used to be.
+   */
+  private readonly removedIds = signal<ReadonlySet<string>>(new Set());
+  readonly slides = computed<SlideItem[]>(() => {
+    const removed = this.removedIds();
+    return removed.size === 0 ? this.items() : this.items().filter((it) => !removed.has(it.id));
+  });
+
+  readonly current = computed<SlideItem | null>(() => this.slides()[this.index()] ?? null);
   /** The caption for the slide on screen — shown only while it's a paused/held
    *  image, never over a playing video's own controls. */
   readonly currentCaption = computed<string>(() => this.current()?.caption ?? '');
@@ -264,7 +368,7 @@ export class SlideshowOverlay implements OnDestroy {
 
   next(): void {
     // The end is the end: stop and offer a replay instead of looping.
-    if (this.index() >= this.items().length - 1) {
+    if (this.index() >= this.slides().length - 1) {
       this.isFinished.set(true);
       return;
     }

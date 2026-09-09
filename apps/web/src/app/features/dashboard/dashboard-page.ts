@@ -123,6 +123,22 @@ export class DashboardPage implements OnInit {
     this.slideshowItems.set(null);
   }
 
+  /**
+   * Trashed from inside the show. Drop it from the stacks and the recent strip
+   * so the dashboard behind doesn't still show a photo that has left the library.
+   */
+  onSlideDeleted(assetId: string): void {
+    this.onThisDay.update((moments) =>
+      moments
+        .map((moment) => ({
+          ...moment,
+          items: moment.items.filter((item) => item.id !== assetId),
+        }))
+        .filter((moment) => moment.items.length > 0),
+    );
+    this.recentlyAdded.update((items) => items.filter((item) => item.id !== assetId));
+  }
+
   /** Up to four fanned photos per stack; the rest wait for the show. */
   stackPreview(moment: OnThisDayMoment): Array<{ id: string; mediaType: string }> {
     return moment.items.slice(0, 4);

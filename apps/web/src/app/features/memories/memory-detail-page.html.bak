@@ -1,0 +1,344 @@
+<header class="topbar">
+  <div class="topbar-side">
+    <app-menu-button />
+    <app-back to="/memories" label="Back to memories" />
+  </div>
+  <a class="search-pill" routerLink="/search" aria-label="Search">
+    <app-icon name="search" [size]="17" />
+    <span>Search</span>
+  </a>
+  <div class="topbar-side end">
+    <app-account-badge />
+  </div>
+</header>
+
+@if (detail(); as memory) {
+  <main class="detail">
+    <header class="hero">
+      @if (coverUrl(memory); as cover) {
+        <img [src]="cover" alt="" />
+      }
+      <div class="hero-actions">
+        @if (memory.assetIds.length > 1) {
+          <button
+            type="button"
+            class="hero-play"
+            aria-label="Play slideshow"
+            (click)="openSlideshow()"
+          >
+            ▶
+          </button>
+        }
+        @if (canWrite) {
+          <app-edit-toggle variant="overlay" />
+          <app-share-button
+            variant="overlay"
+            targetType="memory"
+            [targetId]="memory.id"
+            [includeJournal]="true"
+            (changed)="refreshShareBadge(memory.id)"
+          />
+        }
+      </div>
+      <div class="hero-text">
+        @if (editMode.isEditing()) {
+          <input
+            class="title-input"
+            name="title"
+            [(ngModel)]="titleDraft"
+            (blur)="saveTitle()"
+            (keydown.enter)="saveTitle(); $any($event.target).blur()"
+            placeholder="Name this memory"
+            aria-label="Memory title"
+          />
+        } @else {
+          <h1>{{ memory.title }}</h1>
+        }
+        <p>
+          @if (memory.locationLabel) {
+            {{ memory.locationLabel }} ·
+          }
+          {{ formatSpan(memory) }} · {{ memory.assetIds.length }} photos
+        </p>
+        @if (shareBadge(); as badge) {
+          <span class="share-badge"><span class="dot" aria-hidden="true"></span>{{ badge }}</span>
+        }
+      </div>
+    </header>
+
+    @if (attendeesNamed().length > 0 || attendeesUnnamed().length > 0) {
+      <section class="who" aria-label="Who was there">
+        <h2>Who was there</h2>
+        <div class="chips">
+          @for (person of attendeesNamed(); track person.id) {
+            <a class="chip" [routerLink]="['/people', person.id]">
+              <img [src]="cropUrl(person.coverFaceId)" alt="" loading="lazy" />
+              {{ person.name }}
+              @if (person.behindCamera) {
+                <app-icon name="camera" [size]="14" class="camera-tag" />
+              }
+            </a>
+          }
+          @if (showUnidentified()) {
+            @for (person of attendeesUnnamed(); track person.id) {
+              <a class="chip unnamed" [routerLink]="['/people', person.id]">
+                <img [src]="cropUrl(person.coverFaceId)" alt="" loading="lazy" />
+                Who’s this?
+              </a>
+            }
+          }
+        </div>
+        @if (attendeesUnnamed().length > 0) {
+          <button type="button" class="identify-toggle" (click)="showUnidentified.set(!showUnidentified())">
+            @if (showUnidentified()) {
+              Hide unidentified faces
+            } @else {
+              Help identify {{ attendeesUnnamed().length }}
+              {{ attendeesUnnamed().length === 1 ? 'more face' : 'more faces' }}
+            }
+          </button>
+        }
+      </section>
+    }
+
+    @if (editMode.isEditing()) {
+      <!-- Edit mode: an unmistakable journal field, then a full grid where you
+           pick any photos and caption them together. -->
+      <section class="journal-edit" aria-label="Journal">
+        <label for="journal-editor">Your journal entry</label>
+        <textarea
+          #editor
+          id="journal-editor"
+          rows="4"
+          placeholder="Write the story of this day — who was there, what happened, what you want to remember…"
+          [value]="journalDraft()"
+          (input)="onJournalInput($any($event.target).value); autoGrow($any($event.target))"
+        ></textarea>
+        <div class="byline">
+          @if (saveState() === 'saving') {
+            <span>Saving…</span>
+          } @else if (saveState() === 'saved') {
+            <span>Saved ✓</span>
+          } @else if (saveState() === 'error') {
+            <span class="save-error">Not saved — check your connection</span>
+          } @else {
+            <span class="muted">Autosaves as you type</span>
+          }
+        </div>
+      </section>
+
+      <section class="caption-editor" aria-label="Caption photos">
+        <h2>Caption the photos</h2>
+        <p class="hint">
+          Tap the photos that go together, then write one caption for them — like
+          “the rocks were sweet” across three climbing shots. Skip the ones that
+          speak for themselves.
+        </p>
+        <div class="caption-grid">
+          @for (assetId of memory.assetIds; track assetId) {
+            <button
+              type="button"
+              class="cap-tile"
+              [class.selected]="captionSelection().has(assetId)"
+              [class.captioned]="!!memory.captions[assetId]"
+              [attr.aria-pressed]="captionSelection().has(assetId)"
+              (click)="toggleCaptionSelect(assetId)"
+            >
+              <img [src]="thumbUrl(assetId, 720)" alt="" loading="lazy" />
+              @if (captionSelection().has(assetId)) {
+                <span class="tick" aria-hidden="true">✓</span>
+              }
+              @if (memory.captions[assetId]; as caption) {
+                <span class="tile-caption">{{ caption }}</span>
+              }
+            </button>
+          }
+        </div>
+      </section>
+    } @else {
+      <!-- Read mode: a blog post. The journal is the spine; captioned photos
+           nestle into the gaps between its paragraphs, and the rest wait at the
+           end as a tappable stack. -->
+      @if (storyFlow().length > 0 || othersJournalEntries().length > 0) {
+        <article class="story-post" aria-label="Journal">
+          @for (item of storyFlow(); track $index) {
+            @if (item.kind === 'text') {
+              <p class="prose">{{ item.text }}</p>
+            } @else {
+              <figure class="story-group" [class.multi]="item.assetIds.length > 1">
+                <div class="story-images">
+                  @for (assetId of item.assetIds; track assetId) {
+                    <button type="button" aria-label="Open photo" (click)="openViewer(assetId)">
+                      <img
+                        [src]="thumbUrl(assetId, 720)"
+                        [srcset]="storySrcset(assetId)"
+                        sizes="(max-width: 45rem) 100vw, 45rem"
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    </button>
+                  }
+                </div>
+                <figcaption>{{ item.caption }}</figcaption>
+              </figure>
+            }
+          }
+          @if (journalDraft().trim().length > 0) {
+            <p class="author">— {{ myName }}</p>
+          }
+          @for (entry of othersJournalEntries(); track entry.id) {
+            <div class="entry">
+              <p class="prose">{{ entry.bodyMd }}</p>
+              <p class="author">— {{ entry.authorName }}</p>
+            </div>
+          }
+        </article>
+      }
+
+      @if (looseAssetIds().length > 0) {
+        <section class="more-photos" aria-label="More photos">
+          <button type="button" class="stack" (click)="openViewer(looseAssetIds()[0])">
+            <span class="fan">
+              @for (assetId of loosePreview(); track assetId; let i = $index) {
+                <span class="polaroid" [attr.data-card]="i">
+                  <img [src]="thumbUrl(assetId, 720)" alt="" loading="lazy" />
+                </span>
+              }
+            </span>
+            <span class="stack-label">
+              <strong>{{ looseAssetIds().length }} more {{ looseAssetIds().length === 1 ? 'photo' : 'photos' }}</strong>
+              <span class="sub">tap to browse — swipe &amp; zoom at your own pace</span>
+            </span>
+          </button>
+          @if (memory.assetIds.length > 1) {
+            <button type="button" class="play-here" (click)="openSlideshow()">
+              ▶ Play slideshow
+            </button>
+          }
+        </section>
+      }
+    }
+
+    @if (editMode.isEditing() || memory.quotes.length > 0) {
+    <section class="quotes" aria-label="Quotes of the day">
+      @for (quote of memory.quotes; track quote.id) {
+        <blockquote class="quote">
+          <p>“{{ quote.text }}”</p>
+          <footer>
+            —
+            @if (quote.saidByPersonId) {
+              <a class="said-by" [routerLink]="['/people', quote.saidByPersonId]">
+                {{ quote.saidBy }}
+              </a>
+            } @else {
+              {{ quote.saidBy }}
+            }
+            @if (editMode.isEditing()) {
+              <button
+                type="button"
+                class="quote-delete"
+                aria-label="Delete quote"
+                (click)="deleteQuote(quote)"
+              >✕</button>
+            }
+          </footer>
+        </blockquote>
+      }
+      @if (editMode.isEditing()) {
+        <form class="quote-form" (ngSubmit)="addQuote()">
+          <input
+            name="quoteText"
+            [(ngModel)]="quoteTextDraft"
+            placeholder="Quote of the day — the funny thing somebody said…"
+            maxlength="500"
+          />
+          <div class="quote-form-row">
+            <input
+              name="quoteSaidBy"
+              [(ngModel)]="quoteSaidByDraft"
+              (ngModelChange)="onSaidByInput($event)"
+              placeholder="Who said it?"
+              maxlength="80"
+              autocomplete="off"
+            />
+            <button type="submit" class="primary" [disabled]="!canSubmitQuote">Add quote</button>
+          </div>
+          @if (saidBySuggestions().length > 0) {
+            <div class="said-by-suggestions" role="listbox" aria-label="Link to a person">
+              @for (candidate of saidBySuggestions(); track candidate.id) {
+                <button type="button" (click)="pickSaidBy(candidate)">
+                  @if (candidate.coverFaceId; as cover) {
+                    <img [src]="cropUrl(cover)" alt="" loading="lazy" />
+                  }
+                  {{ candidate.name }}
+                </button>
+              }
+            </div>
+          }
+        </form>
+      }
+    </section>
+    }
+
+    @if (mapEmbedUrl(memory); as mapUrl) {
+      <section class="place" aria-label="Where this happened">
+        <h2>Where</h2>
+        <iframe
+          [src]="mapUrl | safeResource"
+          title="Map of where this memory happened"
+          loading="lazy"
+        ></iframe>
+        <a [href]="googleMapsUrl(memory)" target="_blank" rel="noopener">Open in Google Maps ↗</a>
+      </section>
+    }
+
+    @if (editMode.isEditing()) {
+      <section class="manage">
+        <button type="button" class="danger-link" (click)="deleteMemory()">Delete memory</button>
+      </section>
+    }
+  </main>
+
+  <!-- Floating bar: appears the moment photos are selected for a shared caption. -->
+  @if (editMode.isEditing() && captionSelection().size > 0) {
+    <div class="caption-apply-bar" role="group" aria-label="Caption selected photos">
+      <span class="count">{{ captionSelection().size }} selected</span>
+      <input
+        name="groupCaption"
+        [(ngModel)]="captionGroupDraft"
+        placeholder="Write their caption…"
+        maxlength="500"
+        autocomplete="off"
+        (keydown.enter)="applyGroupCaption()"
+      />
+      <button type="button" class="ghost" (click)="clearCaptionSelection()">Cancel</button>
+      <button type="button" class="primary" (click)="applyGroupCaption()">Apply</button>
+    </div>
+  }
+} @else if (loadFailed()) {
+  <app-load-error message="Couldn’t load this memory." (retry)="load()" />
+} @else {
+  <app-page-loading label="Loading memory…" />
+}
+
+@if (viewerIndex() !== null) {
+  <app-asset-viewer
+    [assets]="viewerAssets()"
+    [startIndex]="viewerIndex()!"
+    [captions]="detail()?.captions ?? {}"
+    (closed)="closeViewer()"
+    (deleted)="onViewerDeleted($event)"
+  />
+}
+
+@if (slideshowItems(); as slides) {
+  <app-slideshow-overlay
+    [items]="slides"
+    [title]="detail()?.title ?? ''"
+    [allowActions]="true"
+    (closed)="slideshowItems.set(null)"
+    (deleted)="onSlideDeleted($event)"
+  />
+}
+
