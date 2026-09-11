@@ -95,6 +95,22 @@ export class JobQueueService {
     };
   }
 
+  /**
+   * Pushes a running job's lease out again. A worker calls this on a timer
+   * for as long as its handler runs, so a job that takes longer than one
+   * lease (a 15 GB video encode) is not mistaken for a dead worker's and
+   * handed to a second worker while the first is still on it - which is how
+   * two ffmpegs ended up writing the same output file. Returns false if this
+   * worker no longer holds the job.
+   */
+  async heartbeat(jobId: string, workerId: string): Promise<boolean> {
+    const result = await this.db.execute(sql`
+      UPDATE job SET lease_expires_at = now() + interval '${sql.raw(String(WORKER_LEASE_MINUTES))} minutes'
+      WHERE id = ${jobId} AND worker_id = ${workerId} AND status = 'running'
+    `);
+    return (result.rowCount ?? 0) > 0;
+  }
+
   async complete(jobId: string): Promise<void> {
     await this.db
       .update(job)

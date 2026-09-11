@@ -7,8 +7,11 @@ export interface PurgeEvidence {
   rootExists: boolean;
   /** Size of the converted file on disk, or null if it is not there. */
   convertedSizeOnDisk: number | null;
-  /** The asset that currently owns the converted path in the index, if any. */
-  owner: { assetId: string; status: string; playbackError: string | null } | null;
+  /**
+   * The asset that currently owns the converted path in the index, if any,
+   * with the size the library last verified for that file.
+   */
+  owner: { assetId: string; status: string; playbackError: string | null; indexedSizeBytes: number } | null;
   /** Restores of this original that failed within the recent window. */
   recentFailedRestores: number;
 }
@@ -27,14 +30,21 @@ export function purgeVerdict(evidence: PurgeEvidence): string | null {
   if (evidence.convertedSizeOnDisk === null) {
     return 'the converted file is missing from the library';
   }
-  if (evidence.convertedSizeOnDisk !== manifest.convertedSizeBytes) {
-    return `the converted file is ${evidence.convertedSizeOnDisk} bytes, not the ${manifest.convertedSizeBytes} the conversion produced`;
-  }
   if (!owner) {
     return 'the converted file has not been indexed';
   }
   if (owner.assetId !== manifest.assetId) {
     return 'the converted file was re-indexed as a different asset';
+  }
+  // The file may legitimately have changed since the conversion wrote it: a
+  // confirmed date is written into its metadata afterwards, which grows it by
+  // a few KB, and the library re-verifies the size when that happens. So the
+  // size on disk must match EITHER what the conversion produced OR what the
+  // library last verified for this same asset. A truncated or clobbered file
+  // matches neither. (Four tapes were held on exactly this false positive.)
+  const size = evidence.convertedSizeOnDisk;
+  if (size !== manifest.convertedSizeBytes && size !== owner.indexedSizeBytes) {
+    return `the converted file is ${size} bytes, but the conversion produced ${manifest.convertedSizeBytes} and the library last saw ${owner.indexedSizeBytes}`;
   }
   if (owner.status !== 'active') {
     return `its asset is ${owner.status}`;

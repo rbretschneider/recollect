@@ -20,7 +20,7 @@ function good(): PurgeEvidence {
     manifest,
     rootExists: true,
     convertedSizeOnDisk: manifest.convertedSizeBytes,
-    owner: { assetId: 'asset-1', status: 'active', playbackError: null },
+    owner: { assetId: 'asset-1', status: 'active', playbackError: null, indexedSizeBytes: manifest.convertedSizeBytes },
     recentFailedRestores: 0,
   };
 }
@@ -39,7 +39,24 @@ describe('purgeVerdict', () => {
   });
 
   it('keeps the original when the converted file is not the size the conversion produced', () => {
-    expect(purgeVerdict({ ...good(), convertedSizeOnDisk: 12 })).toMatch(/12 bytes, not the 132644908/);
+    expect(purgeVerdict({ ...good(), convertedSizeOnDisk: 12 })).toMatch(/12 bytes, but the conversion produced 132644908/);
+  });
+
+  it('allows a file the library re-verified after a metadata rewrite grew it', () => {
+    // Four tapes were held on exactly this: the confirmed date was written
+    // into the mp4 afterwards (+3,262 bytes), the library re-verified the new
+    // size, and the gate compared only against the conversion's number.
+    const evidence = good();
+    evidence.convertedSizeOnDisk = manifest.convertedSizeBytes + 3262;
+    evidence.owner = { ...evidence.owner!, indexedSizeBytes: manifest.convertedSizeBytes + 3262 };
+    expect(purgeVerdict(evidence)).toBeNull();
+  });
+
+  it('still keeps the original when the size matches neither the conversion nor the index', () => {
+    const evidence = good();
+    evidence.convertedSizeOnDisk = manifest.convertedSizeBytes + 3262;
+    // index never re-verified: a change the library does not know about
+    expect(purgeVerdict(evidence)).toMatch(/but the conversion produced .* and the library last saw/);
   });
 
   it('keeps the original when the converted file was never indexed', () => {
@@ -50,21 +67,21 @@ describe('purgeVerdict', () => {
     // The exact failure of 2026-09-11: the hash was stale, ingest made a new
     // asset for the mp4, and the parked original's asset went "missing".
     const evidence = good();
-    evidence.owner = { assetId: 'asset-2', status: 'active', playbackError: null };
+    evidence.owner = { assetId: 'asset-2', status: 'active', playbackError: null, indexedSizeBytes: manifest.convertedSizeBytes };
     expect(purgeVerdict(evidence)).toMatch(/different asset/);
   });
 
   it('keeps the original when its asset is not active', () => {
     for (const status of ['missing', 'trashed']) {
       const evidence = good();
-      evidence.owner = { assetId: 'asset-1', status, playbackError: null };
+      evidence.owner = { assetId: 'asset-1', status, playbackError: null, indexedSizeBytes: manifest.convertedSizeBytes };
       expect(purgeVerdict(evidence)).toBe(`its asset is ${status}`);
     }
   });
 
   it('keeps the original when the converted video is flagged as damaged', () => {
     const evidence = good();
-    evidence.owner = { assetId: 'asset-1', status: 'active', playbackError: 'moov atom not found' };
+    evidence.owner = { assetId: 'asset-1', status: 'active', playbackError: 'moov atom not found', indexedSizeBytes: manifest.convertedSizeBytes };
     expect(purgeVerdict(evidence)).toMatch(/flagged as damaged/);
   });
 

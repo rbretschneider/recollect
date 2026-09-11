@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { execFile } from 'child_process';
 import { and, eq } from 'drizzle-orm';
 import ffmpegPath from 'ffmpeg-static';
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { createReadStream } from 'fs';
 import { copyFile, mkdir, rename, rm, stat } from 'fs/promises';
 import { pipeline } from 'stream/promises';
@@ -97,7 +97,14 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
       }
     };
     const sourcePath = join(row.rootPath, row.relPath);
-    const temp = resolve(this.config.appDataDir, 'staging', `convert_${assetId}.mp4`);
+    // Per-attempt temp name: two attempts of one job once ran at the same time
+    // (lease expired mid-encode) and wrote the same file with -y. The lease
+    // now heartbeats, but a shared output path is never worth the risk.
+    const temp = resolve(
+      this.config.appDataDir,
+      'staging',
+      `convert_${assetId}_${randomUUID().slice(0, 8)}.mp4`,
+    );
     await mkdir(dirname(temp), { recursive: true });
     this.logger.log(`Converting ${sourcePath}…`);
     // HEVC (~40% smaller, the archive choice; playback renditions cover old
@@ -106,23 +113,29 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
       codec === 'hevc'
         ? ['-c:v', 'libx265', '-preset', 'medium', '-crf', '26', '-tag:v', 'hvc1']
         : ['-c:v', 'libx264', '-preset', 'medium', '-crf', '23'];
-    await execFileAsync(
-      ffmpegPath,
-      [
-        '-y',
-        '-loglevel', 'error',
-        '-threads', String(this.config.transcodeThreads),
-        '-i', sourcePath,
-        '-map_metadata', '0',
-        ...videoArgs,
-        '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac',
-        '-b:a', '160k',
-        '-movflags', '+faststart',
-        temp,
-      ],
-      { maxBuffer: FFMPEG_MAX_BUFFER_BYTES },
-    );
+    try {
+      await execFileAsync(
+        ffmpegPath,
+        [
+          '-y',
+          '-loglevel', 'error',
+          '-threads', String(this.config.transcodeThreads),
+          '-i', sourcePath,
+          '-map_metadata', '0',
+          ...videoArgs,
+          '-pix_fmt', 'yuv420p',
+          '-c:a', 'aac',
+          '-b:a', '160k',
+          '-movflags', '+faststart',
+          temp,
+        ],
+        { maxBuffer: FFMPEG_MAX_BUFFER_BYTES },
+      );
+    } catch (error) {
+      // A failed encode leaves a partial file in staging; don't let it pile up.
+      await rm(temp, { force: true }).catch(() => undefined);
+      throw error;
+    }
     const converted = await stat(temp);
     // Validity gate BEFORE anything is swapped: the encode must be a COMPLETE,
     // readable video — not just a smaller file. A failed/interrupted ffmpeg run

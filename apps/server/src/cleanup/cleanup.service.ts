@@ -840,8 +840,8 @@ export class CleanupService {
       await this.db.execute<{ path: string }>(sql`select path from library_root where id = ${manifest.rootId}`)
     ).rows;
     const landed = root ? await stat(join(root.path, manifest.convertedRelPath)).catch(() => null) : null;
-    const owner = await this.db.execute<{ asset_id: string; status: string; playback_error: string | null }>(sql`
-      select f.asset_id, a.status, a.stage_errors->>'playback' as playback_error
+    const owner = await this.db.execute<{ asset_id: string; status: string; playback_error: string | null; size_bytes: number }>(sql`
+      select f.asset_id, a.status, a.stage_errors->>'playback' as playback_error, f.size_bytes
       from asset_file f join asset a on a.id = f.asset_id
       where f.root_id = ${manifest.rootId} and f.rel_path = ${manifest.convertedRelPath} and f.state = 'present'
       limit 1
@@ -857,7 +857,7 @@ export class CleanupService {
       manifest,
       rootExists: root !== undefined,
       convertedSizeOnDisk: landed?.size ?? null,
-      owner: row ? { assetId: row.asset_id, status: row.status, playbackError: row.playback_error } : null,
+      owner: row ? { assetId: row.asset_id, status: row.status, playbackError: row.playback_error, indexedSizeBytes: Number(row.size_bytes) } : null,
       recentFailedRestores: failed.rows[0]?.n ?? 0,
     });
   }
