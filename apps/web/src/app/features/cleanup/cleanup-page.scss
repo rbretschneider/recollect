@@ -132,6 +132,17 @@
       font-size: 0.78rem;
       color: var(--text-muted);
     }
+
+    // A held original is the advisor refusing to delete something; it should
+    // read as a warning, and it must wrap - the reason is a sentence.
+    p.held {
+      color: var(--text);
+      white-space: normal;
+
+      strong {
+        color: var(--danger);
+      }
+    }
   }
 
   .row-actions {

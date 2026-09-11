@@ -191,7 +191,14 @@
               </button>
               <div class="info">
                 <h3>{{ original.fileName }}</h3>
-                <p>{{ formatSize(original.sizeBytes) }} · deletes {{ deletesAtLabel(original.deletesAt) }}</p>
+                @if (original.held; as reason) {
+                  <p class="held">
+                    {{ formatSize(original.sizeBytes) }} · <strong>kept</strong> — {{ reason }}.
+                    It won't be deleted until that's resolved.
+                  </p>
+                } @else {
+                  <p>{{ formatSize(original.sizeBytes) }} · deletes {{ deletesAtLabel(original.deletesAt) }}</p>
+                }
               </div>
               <div class="row-actions">
                 @if (isRestoring(original)) {

@@ -2,7 +2,10 @@ import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { execFile } from 'child_process';
 import { and, eq } from 'drizzle-orm';
 import ffmpegPath from 'ffmpeg-static';
+import { createHash } from 'crypto';
+import { createReadStream } from 'fs';
 import { copyFile, mkdir, rename, rm, stat } from 'fs/promises';
+import { pipeline } from 'stream/promises';
 import { basename, dirname, join, resolve } from 'path';
 import { promisify } from 'util';
 import { APP_CONFIG } from '../config/app-config';
@@ -15,6 +18,13 @@ import { JobQueueService } from '../jobs/job-queue.service';
 import { CleanupService, CONVERT_VIDEO_JOB } from './cleanup.service';
 
 const execFileAsync = promisify(execFile);
+
+/** sha256 of a file, streamed - the same identity the scanner computes. */
+async function hashFile(path: string): Promise<string> {
+  const hash = createHash('sha256');
+  await pipeline(createReadStream(path), hash);
+  return hash.digest('hex');
+}
 const FFMPEG_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
 
 /**
@@ -128,33 +138,62 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
     // Undo window: the original parks in converted-originals for the trash
     // retention period before the purge sweep removes it.
     await this.cleanup.ensureDirs();
+    const newRelPath = row.relPath.replace(/\.[^./\\]+$/, '.mp4');
+    const newPath = join(row.rootPath, newRelPath);
     const parked = join(
       this.cleanup.convertedOriginalsDir,
       `${assetId}_${basename(row.relPath)}`,
     );
+    // The manifest is written BEFORE the original moves and records everything
+    // a restore needs, so the undo depends on nothing in the database staying
+    // the way it was. It used to: restore looked the asset up by its file row,
+    // a later scan had re-pointed that row at a brand-new asset, and the undo
+    // 404'd while the purge went ahead and deleted the only copy.
+    const [originalHash, originalStat] = await Promise.all([hashFile(sourcePath), stat(sourcePath)]);
+    await this.cleanup.writeManifest({
+      assetId,
+      rootId: row.rootId,
+      originalRelPath: row.relPath,
+      originalSizeBytes: originalStat.size,
+      originalMtime: originalStat.mtime.toISOString(),
+      originalHash,
+      convertedRelPath: newRelPath,
+      convertedSizeBytes: converted.size,
+      parkedAt: new Date().toISOString(),
+    });
     await this.moveFile(sourcePath, parked);
-    const newRelPath = row.relPath.replace(/\.[^./\\]+$/, '.mp4');
-    const newPath = join(row.rootPath, newRelPath);
     try {
       await this.moveFile(temp, newPath);
     } catch (error) {
       // Replacing failed: put the original back exactly where it was.
       await this.moveFile(parked, sourcePath);
+      await this.cleanup.removeManifest(assetId);
       throw error;
     }
+    // The library must be told what the file now IS, not just where it is.
+    // Recording the clock instead of the file's mtime guaranteed the next scan
+    // saw it as changed; leaving the old hash guaranteed that ingest then found
+    // no matching asset, created a new one, and orphaned this one - which is
+    // precisely how a working undo turned into a deleted original.
+    const [convertedHash, landed] = await Promise.all([hashFile(newPath), stat(newPath)]);
     await this.db
       .update(assetFile)
       .set({
         relPath: newRelPath,
         fileName: basename(newRelPath),
-        sizeBytes: converted.size,
-        fsMtime: new Date(),
+        sizeBytes: landed.size,
+        fsMtime: landed.mtime,
         lastVerifiedAt: new Date(),
       })
       .where(eq(assetFile.id, row.fileId));
     await this.db
       .update(asset)
-      .set({ videoCodec: codec === 'hevc' ? 'hvc1' : 'h264', mime: 'video/mp4', updatedAt: new Date() })
+      .set({
+        contentHash: convertedHash,
+        videoCodec: codec === 'hevc' ? 'hvc1' : 'h264',
+        mime: 'video/mp4',
+        updatedAt: new Date(),
+      })
       .where(eq(asset.id, assetId));
     // The old playback rendition is stale either way. H.264 streams directly;
     // HEVC gets a fresh rendition queued so playback is ready before first view.
@@ -205,12 +244,28 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
     return Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]);
   }
 
+  /**
+   * Cross-volume move (library NAS <-> app-data) as copy-then-delete. The
+   * source is only removed once the copy is proven complete: a full disk or a
+   * dropped mount leaves a short file, and deleting the original on the
+   * strength of an unverified copy is how a move becomes a loss.
+   */
   private async moveFile(from: string, to: string): Promise<void> {
     try {
       await rename(from, to);
+      return;
     } catch {
-      await copyFile(from, to);
-      await rm(from, { force: true }).catch(() => undefined);
+      // EXDEV or similar - fall through to copy.
     }
+    const expected = (await stat(from)).size;
+    await copyFile(from, to);
+    const landed = await stat(to);
+    if (landed.size !== expected) {
+      await rm(to, { force: true }).catch(() => undefined);
+      throw new Error(
+        `Move ${from} -> ${to}: copy is ${landed.size} bytes, expected ${expected}; source left untouched.`,
+      );
+    }
+    await rm(from, { force: true }).catch(() => undefined);
   }
 }

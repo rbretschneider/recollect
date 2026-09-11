@@ -1,7 +1,10 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { sql } from 'drizzle-orm';
-import { mkdir, readdir, rm, stat } from 'fs/promises';
+import { createHash } from 'crypto';
+import { createReadStream } from 'fs';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'fs/promises';
+import { pipeline } from 'stream/promises';
 import { join, resolve } from 'path';
 import { APP_CONFIG } from '../config/app-config';
 import type { AppConfig } from '../config/app-config';
@@ -11,12 +14,20 @@ import { cleanupDismissal } from '../database/schema';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { MlClientService } from '../ml/ml-client.service';
 import { safeMoveFile } from '../trash/safe-file-move';
+import { purgeVerdict } from './purge-verdict';
 
 /** Background job type for in-place video conversion. */
 export const CONVERT_VIDEO_JOB = 'convert_video';
 
 /** Background job type for undoing a conversion (a big cross-volume copy). */
 export const RESTORE_ORIGINAL_JOB = 'restore_original';
+
+/** sha256 of a file, streamed - the identity the scanner uses to match files to assets. */
+async function hashFile(path: string): Promise<string> {
+  const hash = createHash('sha256');
+  await pipeline(createReadStream(path), hash);
+  return hash.digest('hex');
+}
 
 /** A photo/video flagged as probably-junk. */
 export interface JunkSuggestion {
@@ -49,6 +60,31 @@ export interface ConvertedOriginal {
   deletesAt: string;
   /** A restore is queued/running for this original (a slow cross-volume copy). */
   restoring: boolean;
+  /**
+   * Set when the purge refuses to delete this original because the conversion
+   * it replaced cannot be shown to be good: it stays, past its date, until a
+   * person decides. Null means the replacement checks out.
+   */
+  held: string | null;
+}
+
+/**
+ * Written beside a parked original before it is moved, so the undo depends on
+ * nothing else surviving: not the asset's file row (a scan can re-point it),
+ * not stored metadata (not every format carries a source path), not the asset
+ * itself. Named `<assetId>.manifest.json` so the `<assetId>_<file>` listing
+ * pattern never mistakes it for a video.
+ */
+export interface ConvertManifest {
+  assetId: string;
+  rootId: string;
+  originalRelPath: string;
+  originalSizeBytes: number;
+  originalMtime: string;
+  originalHash: string;
+  convertedRelPath: string;
+  convertedSizeBytes: number;
+  parkedAt: string;
 }
 
 export interface CleanupSuggestions {
@@ -440,7 +476,7 @@ export class CleanupService {
     const originals: ConvertedOriginal[] = [];
     for (const name of names) {
       const match = /^([0-9a-f-]{36})_(.+)$/.exec(name);
-      if (!match) {
+      if (!match || name.endsWith('.manifest.json')) {
         continue;
       }
       try {
@@ -451,6 +487,7 @@ export class CleanupService {
           sizeBytes: info.size,
           deletesAt: new Date(info.mtimeMs + retentionMs).toISOString(),
           restoring: false,
+          held: await this.purgeBlocker(match[1]),
         });
       } catch {
         // Racing the purge is fine.
@@ -508,22 +545,55 @@ export class CleanupService {
     // lives on the app-data volume while the library is a separate NAS mount, so
     // a plain rename across them throws EXDEV and the restore silently fails.
     const finalPath = await safeMoveFile(parkedPath, restoredPath);
+    // The original is back. Prove it before anything else is touched: the
+    // manifest knows exactly what was parked, so a short or altered copy is
+    // caught here rather than discovered after the converted file is gone.
+    const manifest = await this.readManifest(assetId);
+    const landed = await stat(finalPath);
+    if (manifest && landed.size !== manifest.originalSizeBytes) {
+      throw new Error(
+        `Restore ${assetId}: restored file is ${landed.size} bytes, expected ${manifest.originalSizeBytes}; converted file left in place.`,
+      );
+    }
     // Drop the leftover converted file (the smaller re-encode that took the
     // original's place), unless the restore happened to land on that same path.
     if (target.convertedPath && target.convertedPath !== finalPath) {
       await rm(target.convertedPath, { force: true }).catch(() => undefined);
+      // If a scan had re-indexed the converted file as its own asset, that
+      // asset just lost its only file. Say so rather than leave a row that
+      // claims a file which is no longer there.
+      const convertedRelPath = target.convertedPath
+        .slice(target.rootPath.length)
+        .replace(/^[\\/]/, '')
+        .replaceAll('\\', '/');
+      const orphaned = await this.db.execute<{ asset_id: string }>(sql`
+        update asset_file set state = 'missing'
+        where root_id = ${target.rootId} and rel_path = ${convertedRelPath} and asset_id <> ${assetId}
+        returning asset_id
+      `);
+      for (const { asset_id } of orphaned.rows) {
+        await this.db.execute(sql`
+          update asset set status = 'missing', updated_at = now()
+          where id = ${asset_id} and status = 'active'
+            and not exists (select 1 from asset_file where asset_id = ${asset_id} and state = 'present')
+        `);
+      }
     }
     const finalRelPath = finalPath
       .slice(target.rootPath.length)
       .replace(/^[\\/]/, '')
       .replaceAll('\\', '/');
     const fileName = finalRelPath.split('/').pop() ?? parked.fileName;
+    // Tell the library what this file IS again - real mtime and real hash -
+    // or the next scan re-ingests the restored original as a brand-new asset
+    // and orphans this one, exactly the failure the undo exists to repair.
+    const contentHash = manifest?.originalHash ?? (await hashFile(finalPath));
     if (target.fileId) {
       await this.db.execute(sql`
         update asset_file
         set rel_path = ${finalRelPath}, file_name = ${fileName},
-            size_bytes = ${parked.sizeBytes}, state = 'present',
-            fs_mtime = now(), last_verified_at = now()
+            size_bytes = ${landed.size}, state = 'present',
+            fs_mtime = ${landed.mtime}, last_verified_at = now()
         where id = ${target.fileId}
       `);
     } else {
@@ -534,19 +604,39 @@ export class CleanupService {
           (id, asset_id, root_id, rel_path, file_name, size_bytes, fs_mtime, state, last_verified_at)
         values
           (${randomUUID()}, ${assetId}, ${target.rootId}, ${finalRelPath}, ${fileName},
-           ${parked.sizeBytes}, now(), 'present', now())
+           ${landed.size}, ${landed.mtime}, 'present', now())
         on conflict (root_id, rel_path) do update
           set asset_id = excluded.asset_id, file_name = excluded.file_name,
               size_bytes = excluded.size_bytes, state = 'present',
-              fs_mtime = now(), last_verified_at = now()
+              fs_mtime = excluded.fs_mtime, last_verified_at = now()
       `);
     }
     // The asset may have been flagged 'missing' when its file vanished — bring
-    // it back (never resurrect something the user has since trashed).
+    // it back (never resurrect something the user has since trashed), with the
+    // original's identity and without the damaged-conversion flag.
     await this.db.execute(sql`
-      update asset set status = 'active', updated_at = now()
+      update asset
+      set status = 'active',
+          stage_errors = case when stage_errors is null then null
+                              else (stage_errors::jsonb - 'playback')::jsonb end,
+          updated_at = now()
       where id = ${assetId} and status <> 'trashed'
     `);
+    // content_hash is unique. If a duplicate of this original was indexed
+    // elsewhere, that asset already owns the hash; the file is still restored
+    // and the next scan will simply link it there. Log it rather than fail.
+    const claimed = await this.db.execute<{ id: string }>(sql`
+      update asset set content_hash = ${contentHash}
+      where id = ${assetId}
+        and not exists (select 1 from asset where content_hash = ${contentHash} and id <> ${assetId})
+      returning id
+    `);
+    if (claimed.rows.length === 0) {
+      this.logger.warn(
+        `Restore ${assetId}: another asset already carries this file's hash (a duplicate); left its hash unchanged.`,
+      );
+    }
+    await this.removeManifest(assetId);
     // The user just chose the original over the converted copy — retire the
     // suggestion so the advisor doesn't immediately nag to redo the very
     // conversion they undid. (They can always re-suggest by not dismissing.)
@@ -579,6 +669,29 @@ export class CleanupService {
     convertedPath: string | null;
     fileId: string | null;
   }> {
+    // The manifest is the authority: it was written by the conversion itself,
+    // before anything moved, and nothing that happens to the database later
+    // can change what it says.
+    const manifest = await this.readManifest(assetId);
+    if (manifest) {
+      const [root] = (
+        await this.db.execute<{ path: string }>(sql`select path from library_root where id = ${manifest.rootId}`)
+      ).rows;
+      if (!root) {
+        throw new NotFoundException('The library root this original came from no longer exists.');
+      }
+      const existing = await this.db.execute<{ file_id: string }>(sql`
+        select id as file_id from asset_file
+        where asset_id = ${assetId} and root_id = ${manifest.rootId} and state = 'present' limit 1
+      `);
+      return {
+        rootId: manifest.rootId,
+        rootPath: root.path,
+        originalRelPath: manifest.originalRelPath,
+        convertedPath: join(root.path, manifest.convertedRelPath),
+        fileId: existing.rows[0]?.file_id ?? null,
+      };
+    }
     const present = await this.db.execute<{
       file_id: string;
       rel_path: string;
@@ -634,7 +747,15 @@ export class CleanupService {
     };
   }
 
-  /** Replaced originals past the trash retention window are gone for good. */
+  /**
+   * Replaced originals past the trash retention window are gone for good -
+   * but only once the thing that replaced them is proven to be a working
+   * video. Age alone used to be the whole test. On 2026-09-11 it deleted the
+   * only copy of a 14 GB family tape whose conversion had produced a truncated
+   * file, and whose restore had already failed; nothing checked either fact.
+   * Now every condition that would make a restore necessary makes the purge
+   * refuse, and the refusal is visible in the advisor as a held original.
+   */
   private async purgeExpiredOriginals(): Promise<void> {
     const cutoff = Date.now() - this.config.trashRetentionDays * 24 * 60 * 60 * 1000;
     let names: string[];
@@ -644,17 +765,101 @@ export class CleanupService {
       return; // Directory doesn't exist yet — nothing converted.
     }
     for (const name of names) {
+      const match = /^([0-9a-f-]{36})_(.+)$/.exec(name);
+      if (!match || name.endsWith('.manifest.json')) {
+        continue;
+      }
       const path = join(this.convertedOriginalsDir, name);
       try {
         const info = await stat(path);
-        if (info.mtimeMs < cutoff) {
-          await rm(path, { force: true });
-          this.logger.log(`Purged converted original past retention: ${name}`);
+        if (info.mtimeMs >= cutoff) {
+          continue;
         }
+        const blocker = await this.purgeBlocker(match[1]);
+        if (blocker) {
+          this.logger.warn(`Kept converted original ${name} past retention: ${blocker}`);
+          continue;
+        }
+        await rm(path, { force: true });
+        await this.removeManifest(match[1]);
+        this.logger.log(`Purged converted original past retention: ${name}`);
       } catch {
         // Racing another purge is fine.
       }
     }
+  }
+
+  /**
+   * Why a parked original must NOT be deleted yet, or null if its replacement
+   * checks out on every count a restore would need. Read the manifest, then
+   * the library: the converted file must exist at the size the conversion
+   * produced, belong to the same asset, and that asset must be active and not
+   * flagged unplayable. Anything unknown is a reason to keep, never to delete.
+   */
+  async purgeBlocker(assetId: string): Promise<string | null> {
+    const manifest = await this.readManifest(assetId);
+    if (!manifest) {
+      // Parked before manifests existed. The only evidence is the library.
+      const legacy = await this.db.execute<{ status: string; rel_path: string | null; playback_error: string | null }>(sql`
+        select a.status, f.rel_path, a.stage_errors->>'playback' as playback_error
+        from asset a left join asset_file f on f.asset_id = a.id and f.state = 'present'
+        where a.id = ${assetId} limit 1
+      `);
+      const row = legacy.rows[0];
+      if (!row) return 'its asset no longer exists';
+      if (row.status !== 'active') return `its asset is ${row.status}`;
+      if (!row.rel_path) return 'its asset has no file on disk';
+      if (row.playback_error) return 'the converted video is flagged as damaged';
+      if (!/\.mp4$/i.test(row.rel_path)) return 'its asset no longer points at a converted file';
+      return null;
+    }
+    // Gather the evidence; the decision itself is a pure function with a test
+    // that walks every reason to refuse.
+    const [root] = (
+      await this.db.execute<{ path: string }>(sql`select path from library_root where id = ${manifest.rootId}`)
+    ).rows;
+    const landed = root ? await stat(join(root.path, manifest.convertedRelPath)).catch(() => null) : null;
+    const owner = await this.db.execute<{ asset_id: string; status: string; playback_error: string | null }>(sql`
+      select f.asset_id, a.status, a.stage_errors->>'playback' as playback_error
+      from asset_file f join asset a on a.id = f.asset_id
+      where f.root_id = ${manifest.rootId} and f.rel_path = ${manifest.convertedRelPath} and f.state = 'present'
+      limit 1
+    `);
+    const failed = await this.db.execute<{ n: number }>(sql`
+      select count(*)::int as n from job
+      where type = ${RESTORE_ORIGINAL_JOB} and status = 'failed'
+        and payload->>'assetId' = ${assetId}
+        and coalesce(finished_at, created_at) > now() - interval '30 days'
+    `);
+    const row = owner.rows[0];
+    return purgeVerdict({
+      manifest,
+      rootExists: root !== undefined,
+      convertedSizeOnDisk: landed?.size ?? null,
+      owner: row ? { assetId: row.asset_id, status: row.status, playbackError: row.playback_error } : null,
+      recentFailedRestores: failed.rows[0]?.n ?? 0,
+    });
+  }
+
+  manifestPath(assetId: string): string {
+    return join(this.convertedOriginalsDir, `${assetId}.manifest.json`);
+  }
+
+  async writeManifest(manifest: ConvertManifest): Promise<void> {
+    await this.ensureDirs();
+    await writeFile(this.manifestPath(manifest.assetId), JSON.stringify(manifest, null, 2));
+  }
+
+  async readManifest(assetId: string): Promise<ConvertManifest | null> {
+    try {
+      return JSON.parse(await readFile(this.manifestPath(assetId), 'utf8')) as ConvertManifest;
+    } catch {
+      return null;
+    }
+  }
+
+  async removeManifest(assetId: string): Promise<void> {
+    await rm(this.manifestPath(assetId), { force: true }).catch(() => undefined);
   }
 
   async ensureDirs(): Promise<void> {

@@ -38,6 +38,8 @@ export interface ConvertedOriginal {
   deletesAt: string;
   /** A restore is queued/running for this original (a slow cross-volume copy). */
   restoring: boolean;
+  /** Why the purge is refusing to delete it, or null when the conversion checks out. */
+  held: string | null;
 }
 
 /** The cleanup advisor: junk flags and space hogs (delete grant). */
