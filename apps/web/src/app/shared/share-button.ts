@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { SharingApiService } from '../core/api/sharing-api.service';
 import { ShareLinkView } from '../core/api/api-models';
 import { ConfirmService } from './confirm.service';
+import { ToastService } from './toast.service';
 import { Icon } from './icon';
 import { Sheet } from './sheet';
 
@@ -29,6 +30,7 @@ const EXPIRY_OPTIONS = [
 export class ShareButton {
   private readonly api = inject(SharingApiService);
   private readonly confirms = inject(ConfirmService);
+  private readonly toasts = inject(ToastService);
 
   readonly targetType = input.required<'memory' | 'album' | 'asset'>();
   readonly targetId = input.required<string>();
@@ -82,18 +84,55 @@ export class ShareButton {
     return hours < 48 ? `Expires in ${hours}h` : `Expires in ${Math.round(hours / 24)} days`;
   }
 
-  /** The single, deliberate action that makes this content public. */
+  /**
+   * The single, deliberate action that makes this content public - and it
+   * puts the link on the clipboard in the same tap, because "create, then
+   * find the Copy button" is two taps for the one thing anyone wants next.
+   *
+   * The link doesn't exist until the server answers, and iOS Safari only lets a
+   * page write the clipboard inside the tap itself, not after an await. Its
+   * sanctioned way round that is a ClipboardItem whose text is a promise:
+   * the write starts synchronously in the gesture and is filled in when the
+   * request returns. Browsers that don't take a promise there fall through to a
+   * plain write after the fact, which they allow. If neither works, the Copy
+   * button is still there as it always was.
+   */
   async createLink(): Promise<void> {
     this.isBusy.set(true);
+    const created = this.api.createLink(
+      this.targetType(),
+      this.targetId(),
+      this.includeJournal(),
+      this.selectedExpiryHours,
+    );
+    let copied = false;
     try {
-      const { link } = await this.api.createLink(
-        this.targetType(),
-        this.targetId(),
-        this.includeJournal(),
-        this.selectedExpiryHours,
-      );
+      if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+        const text = created.then(({ link }) => new Blob([this.urlFor(link)], { type: 'text/plain' }));
+        text.catch(() => undefined); // a failed create is reported below, not as an unhandled rejection here
+        await navigator.clipboard.write([new ClipboardItem({ 'text/plain': text })]);
+        copied = true;
+      }
+    } catch {
+      // Fall through - some browsers reject a promise-valued item.
+    }
+    try {
+      const { link } = await created;
+      if (!copied) {
+        try {
+          await navigator.clipboard.writeText(this.urlFor(link));
+          copied = true;
+        } catch {
+          // No clipboard access; the Copy button remains.
+        }
+      }
       this.links.update((existing) => [link, ...existing]);
       this.changed.emit();
+      if (copied) {
+        this.toasts.success('Link copied — ready to paste.');
+        this.copiedLinkId.set(link.id);
+        setTimeout(() => this.copiedLinkId.set(null), 2000);
+      }
     } finally {
       this.isBusy.set(false);
     }
