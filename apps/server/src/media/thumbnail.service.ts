@@ -4,6 +4,7 @@ import ffmpegPath from 'ffmpeg-static';
 import sharp from 'sharp';
 import { promisify } from 'util';
 import { MediaTypeInfo } from './media-types';
+import { probeDurationSeconds } from './probe-duration';
 import { ThumbnailStore, THUMBNAIL_SIZES } from './thumbnail-store';
 
 const execFileAsync = promisify(execFile);
@@ -11,6 +12,12 @@ const execFileAsync = promisify(execFile);
 /** Grid tiles (240) read fine at q68 and halve the grid's byte weight. */
 const WEBP_QUALITY_BY_SIZE: Record<number, number> = { 240: 68, 720: 80, 1440: 80 };
 const VIDEO_POSTER_SEEK_SECONDS = 1;
+/** Where in the video the poster is taken from: a fifth of the way through. */
+const VIDEO_POSTER_FRACTION = 0.2;
+/** Below this length there is no leader to skip; a second in is fine. */
+const VIDEO_POSTER_MIN_SECONDS_FOR_SEEK = 5;
+/** Frames the thumbnail filter samples to pick a representative one. */
+const VIDEO_POSTER_SAMPLE_FRAMES = 30;
 const FFMPEG_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
 /** A poster extraction that hasn't produced a frame by now is hung on hostile input. */
 const FFMPEG_TIMEOUT_MS = 30_000;
@@ -103,8 +110,20 @@ export class ThumbnailService {
   }
 
   private async extractVideoPoster(absolutePath: string): Promise<Buffer> {
-    // Prefer a frame past the first second (first frames are often black),
-    // but clips shorter than that need the very first frame instead.
+    // The opening of a video is the worst place to look for a picture of it:
+    // black on phone clips, minutes of grey leader on digitised tapes. So aim
+    // a fifth of the way in - far enough past any leader, early enough to
+    // still be "the start" for a long recording - and let ffmpeg's thumbnail
+    // filter pick the most representative of the next 30 frames, so a lone
+    // dark frame at that spot doesn't win either. Short clips and files whose
+    // length can't be read fall back to a second in, then the first frame.
+    const duration = await probeDurationSeconds(absolutePath);
+    if (duration !== null && duration > VIDEO_POSTER_MIN_SECONDS_FOR_SEEK) {
+      const representative = await this.extractFrame(absolutePath, duration * VIDEO_POSTER_FRACTION, true);
+      if (representative.length > 0) {
+        return representative;
+      }
+    }
     const frameAtOneSecond = await this.extractFrame(absolutePath, VIDEO_POSTER_SEEK_SECONDS);
     if (frameAtOneSecond.length > 0) {
       return frameAtOneSecond;
@@ -116,7 +135,11 @@ export class ThumbnailService {
     return firstFrame;
   }
 
-  private async extractFrame(absolutePath: string, seekSeconds: number): Promise<Buffer> {
+  private async extractFrame(
+    absolutePath: string,
+    seekSeconds: number,
+    representative = false,
+  ): Promise<Buffer> {
     if (!ffmpegPath) {
       throw new Error('ffmpeg binary is not available on this platform.');
     }
@@ -132,6 +155,10 @@ export class ThumbnailService {
           '-protocol_whitelist', 'file',
           '-ss', String(seekSeconds),
           '-i', absolutePath,
+          // thumbnail=N buffers N frames and emits the one closest to their
+          // average - the "typical" frame of that stretch, not whatever the
+          // seek happened to land on.
+          ...(representative ? ['-vf', `thumbnail=${VIDEO_POSTER_SAMPLE_FRAMES}`] : []),
           '-frames:v', '1',
           '-f', 'image2pipe',
           '-vcodec', 'png',

@@ -16,6 +16,7 @@ import { asset, assetFile, cleanupDismissal, libraryRoot } from '../database/sch
 import { JobHandler, JobHandlerRegistry } from '../jobs/job-handler';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { AssetsService } from '../assets/assets.service';
+import { probeDurationSeconds } from '../media/probe-duration';
 import { CleanupService, CONVERT_VIDEO_JOB } from './cleanup.service';
 
 const execFileAsync = promisify(execFile);
@@ -131,8 +132,8 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
     // replace a good original with garbage. Compare durations: the output must
     // run at least 90% as long as the source, or we abort and keep the original.
     const [sourceSeconds, outputSeconds] = await Promise.all([
-      this.probeDurationSeconds(sourcePath),
-      this.probeDurationSeconds(temp),
+      probeDurationSeconds(sourcePath),
+      probeDurationSeconds(temp),
     ]);
     const outputIsComplete =
       outputSeconds !== null &&
@@ -246,29 +247,6 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
     this.logger.log(
       `Converted ${row.relPath}: ${row.sizeBytes} → ${converted.size} bytes (original parked for undo).`,
     );
-  }
-
-  /**
-   * Reads a media file's duration in seconds by parsing ffmpeg's own probe
-   * output (we ship ffmpeg, not ffprobe). Returns null when the file has no
-   * readable duration — a truncated/corrupt output prints no "Duration:" line.
-   */
-  private async probeDurationSeconds(path: string): Promise<number | null> {
-    let stderr = '';
-    try {
-      // No output target → ffmpeg exits non-zero after printing stream info;
-      // the duration we want is on stderr either way.
-      await execFileAsync(ffmpegPath as string, ['-hide_banner', '-i', path], {
-        maxBuffer: FFMPEG_MAX_BUFFER_BYTES,
-      });
-    } catch (error) {
-      stderr = String((error as { stderr?: string }).stderr ?? '');
-    }
-    const match = stderr.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
-    if (!match) {
-      return null;
-    }
-    return Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]);
   }
 
   /**
