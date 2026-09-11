@@ -15,6 +15,7 @@ import { JobQueueService } from '../jobs/job-queue.service';
 import { MlClientService } from '../ml/ml-client.service';
 import { safeMoveFile } from '../trash/safe-file-move';
 import { purgeVerdict } from './purge-verdict';
+import { parseTapeLabel, TapeLabelGuess } from '../media/tape-label';
 
 /** Background job type for in-place video conversion. */
 export const CONVERT_VIDEO_JOB = 'convert_video';
@@ -50,6 +51,12 @@ export interface SpaceHogSuggestion {
   /** Estimated bytes after H.264 re-encode; null when conversion isn't offered. */
   estimatedBytes: number | null;
   converting: boolean;
+  /** The date currently on record, and where it came from. */
+  capturedAt: string;
+  capturedAtSource: string;
+  title: string | null;
+  /** Title and date read off the cassette label, when the filename is a digitised tape. */
+  labelGuess: TapeLabelGuess | null;
 }
 
 /** One original slated for deletion after conversion (the undo window). */
@@ -207,9 +214,13 @@ export class CleanupService {
       size_bytes: number;
       media_type: string;
       duration_ms: number | null;
+      captured_at: string;
+      captured_at_source: string;
+      title: string | null;
       converting: boolean;
     }>(sql`
       select a.id, f.file_name, f.size_bytes, a.media_type, a.duration_ms,
+        a.captured_at, a.captured_at_source, a.title,
         exists(
           select 1 from job j
           where j.type = ${CONVERT_VIDEO_JOB}
@@ -248,6 +259,12 @@ export class CleanupService {
         bitrate,
         estimatedBytes,
         converting: row.converting,
+        capturedAt: new Date(row.captured_at).toISOString(),
+        capturedAtSource: row.captured_at_source,
+        title: row.title,
+        // What the cassette label says, for the convert sheet to prefill and a
+        // person to confirm. Null for anything that isn't a digitised tape.
+        labelGuess: parseTapeLabel(row.file_name),
       };
     });
     // Fuzzy CLIP guesses are fully isolated: any failure yields an empty list
@@ -450,7 +467,11 @@ export class CleanupService {
   }
 
   /** Queues the in-place re-encode for one video (HEVC default, H.264 option). */
-  async queueConversion(assetId: string, codec: 'hevc' | 'h264'): Promise<void> {
+  async queueConversion(
+    assetId: string,
+    codec: 'hevc' | 'h264',
+    confirmed: { title?: string; capturedAt?: string; tzOffsetMin?: number } = {},
+  ): Promise<void> {
     const [row] = await this.db.execute<{ id: string }>(
       sql`select id from asset where id = ${assetId} and media_type = 'video' and status = 'active'`,
     ).then((result) => result.rows.length ? [result.rows[0]] : []);
@@ -459,7 +480,7 @@ export class CleanupService {
     }
     await this.queue.enqueue(
       CONVERT_VIDEO_JOB,
-      { assetId, codec },
+      { assetId, codec, ...confirmed },
       { dedupeKey: `${CONVERT_VIDEO_JOB}:${assetId}`, priority: 200 },
     );
   }

@@ -10,6 +10,7 @@ import {
   signal,
 } from '@angular/core';
 import { AssetDetail, TimelineAsset } from '../../core/api/api-models';
+import { toLocalInputValue } from '../../core/local-input';
 import { inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
@@ -238,6 +239,8 @@ export class AssetViewer implements OnInit, OnDestroy {
       this.flushPendingRotation();
       this.editingDate.set(false);
       this.editedCapturedAt.set(null);
+      this.editingTitle.set(false);
+      this.editedTitle.set(undefined);
       this.resetZoom();
     });
   }
@@ -944,6 +947,48 @@ export class AssetViewer implements OnInit, OnDestroy {
     }
   }
 
+  // --- Title ---------------------------------------------------------------
+
+  readonly editingTitle = signal(false);
+  readonly savingTitle = signal(false);
+  /** A locally-applied title, so the panel updates without a reload. */
+  readonly editedTitle = signal<string | null | undefined>(undefined);
+  titleDraft = '';
+
+  /** The title to show — a just-saved edit wins over the loaded value. */
+  readonly displayTitle = computed<string | null>(() => {
+    const edited = this.editedTitle();
+    return edited !== undefined ? edited : (this.detail()?.title ?? null);
+  });
+
+  startEditTitle(): void {
+    this.titleDraft = this.displayTitle() ?? '';
+    this.editingTitle.set(true);
+  }
+
+  cancelEditTitle(): void {
+    this.editingTitle.set(false);
+  }
+
+  async saveTitle(): Promise<void> {
+    const asset = this.current();
+    if (!asset || this.savingTitle()) {
+      return;
+    }
+    const title = this.titleDraft.trim();
+    this.savingTitle.set(true);
+    try {
+      await firstValueFrom(this.http.patch(`/api/v1/assets/${asset.id}/title`, { title }));
+      this.editedTitle.set(title || null);
+      this.editingTitle.set(false);
+      this.toasts.success(title ? 'Title saved.' : 'Title removed.');
+    } catch {
+      this.toasts.error("Couldn't save the title.");
+    } finally {
+      this.savingTitle.set(false);
+    }
+  }
+
   formatSize(bytes: number | null): string {
     if (bytes === null) {
       return '';
@@ -988,12 +1033,3 @@ export class AssetViewer implements OnInit, OnDestroy {
   }
 }
 
-/** ISO → "YYYY-MM-DDTHH:MM" in local time, for a datetime-local input. */
-function toLocalInputValue(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number): string => String(n).padStart(2, '0');
-  return (
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
-    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
-  );
-}

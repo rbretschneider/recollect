@@ -15,6 +15,7 @@ import type { Database } from '../database/database.module';
 import { asset, assetFile, cleanupDismissal, libraryRoot } from '../database/schema';
 import { JobHandler, JobHandlerRegistry } from '../jobs/job-handler';
 import { JobQueueService } from '../jobs/job-queue.service';
+import { AssetsService } from '../assets/assets.service';
 import { CleanupService, CONVERT_VIDEO_JOB } from './cleanup.service';
 
 const execFileAsync = promisify(execFile);
@@ -45,6 +46,7 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     private readonly cleanup: CleanupService,
     private readonly queue: JobQueueService,
+    private readonly assets: AssetsService,
   ) {}
 
   onModuleInit(): void {
@@ -52,7 +54,13 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
   }
 
   async handle(payload: unknown): Promise<void> {
-    const { assetId, codec = 'hevc' } = payload as { assetId: string; codec?: 'hevc' | 'h264' };
+    const { assetId, codec = 'hevc', title, capturedAt, tzOffsetMin } = payload as {
+      assetId: string;
+      codec?: 'hevc' | 'h264';
+      title?: string;
+      capturedAt?: string;
+      tzOffsetMin?: number;
+    };
     if (!ffmpegPath) {
       throw new Error('ffmpeg binary is not available on this platform.');
     }
@@ -72,6 +80,21 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
       this.logger.warn(`Convert ${assetId}: no present file; skipping.`);
       return;
     }
+    // What the person confirmed in the convert sheet. The title is true whatever
+    // happens next, so it lands now. The date waits for the end of whichever
+    // path this takes: setCapturedAt queues a file rewrite, and that must never
+    // run against the source while ffmpeg is still reading it.
+    if (title !== undefined) {
+      await this.db
+        .update(asset)
+        .set({ title: title.trim() || null, updatedAt: new Date() })
+        .where(eq(asset.id, assetId));
+    }
+    const applyConfirmedDate = async (): Promise<void> => {
+      if (capturedAt) {
+        await this.assets.setCapturedAt(assetId, new Date(capturedAt), tzOffsetMin ?? 0);
+      }
+    };
     const sourcePath = join(row.rootPath, row.relPath);
     const temp = resolve(this.config.appDataDir, 'staging', `convert_${assetId}.mp4`);
     await mkdir(dirname(temp), { recursive: true });
@@ -117,6 +140,7 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
       (sourceSeconds === null || outputSeconds >= sourceSeconds * 0.9);
     if (!outputIsComplete) {
       await rm(temp, { force: true });
+      await applyConfirmedDate();
       throw new Error(
         `Convert ${assetId}: re-encode failed validation ` +
           `(source ${sourceSeconds ?? '?'}s → output ${outputSeconds ?? 'unreadable'}); ` +
@@ -133,6 +157,7 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
       this.logger.log(
         `Convert ${assetId}: re-encode saved too little (${converted.size} vs ${row.sizeBytes}); kept the original.`,
       );
+      await applyConfirmedDate();
       return;
     }
     // Undo window: the original parks in converted-originals for the trash
@@ -216,6 +241,8 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
       .insert(cleanupDismissal)
       .values({ assetId, dismissedBy: null })
       .onConflictDoNothing();
+    // Into the DB now and, via the rewrite job, into the new mp4's own metadata.
+    await applyConfirmedDate();
     this.logger.log(
       `Converted ${row.relPath}: ${row.sizeBytes} → ${converted.size} bytes (original parked for undo).`,
     );

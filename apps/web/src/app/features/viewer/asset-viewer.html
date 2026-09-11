@@ -171,7 +171,8 @@
       <button type="button" class="nav next" aria-label="Next" (click)="next()">›</button>
     }
 
-    @if (currentCaption(); as caption) {
+    <!-- A memory's caption for this photo wins; otherwise the item's own title. -->
+    @if (currentCaption() || displayTitle(); as caption) {
       @if (!showInfo() && zoom() === 1) {
         <figcaption class="caption-band" aria-live="polite">{{ caption }}</figcaption>
       }
@@ -179,6 +180,32 @@
 
     @if (showInfo()) {
       <aside class="info" aria-label="Photo details">
+        <!-- The item's name, above the date. Anyone with write access can set
+             one; most photos won't have one and the row simply says so. -->
+        @if (editingTitle()) {
+          <form class="date-edit" (ngSubmit)="saveTitle()">
+            <input type="text" name="title" [(ngModel)]="titleDraft" maxlength="200" placeholder="Give this a name" autofocus />
+            <div class="date-edit-actions">
+              <button type="button" class="ghost" (click)="cancelEditTitle()">Cancel</button>
+              <button type="submit" class="primary" [disabled]="savingTitle()">
+                {{ savingTitle() ? 'Saving…' : 'Save title' }}
+              </button>
+            </div>
+          </form>
+        } @else if (displayTitle() || canWrite) {
+          <div class="date-header title-header">
+            @if (displayTitle(); as title) {
+              <h3 class="item-title">{{ title }}</h3>
+            } @else {
+              <span class="no-title">No title</span>
+            }
+            @if (canWrite) {
+              <button type="button" class="date-edit-btn" (click)="startEditTitle()">
+                <app-icon name="pencil" [size]="13" aria-hidden="true" /> {{ displayTitle() ? 'Edit' : 'Add title' }}
+              </button>
+            }
+          </div>
+        }
         @if (editingDate()) {
           <form class="date-edit" (ngSubmit)="saveDate()">
             <input type="datetime-local" name="capturedAt" [(ngModel)]="dateDraft" required />

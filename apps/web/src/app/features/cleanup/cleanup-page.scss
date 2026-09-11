@@ -211,6 +211,47 @@
     line-height: 1.55;
   }
 
+  // Title and date, confirmed before the conversion runs. Two columns where
+  // there is room; the date's hint is a sentence and must wrap.
+  .meta-fields {
+    display: grid;
+    gap: 0.6rem;
+    grid-template-columns: 1fr;
+
+    @media (min-width: 30rem) {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .field {
+      display: grid;
+      gap: 0.3rem;
+      font-size: 0.8rem;
+
+      > span {
+        font-weight: 600;
+        color: var(--text-muted);
+      }
+
+      input {
+        min-height: 44px;
+        padding: 0 0.7rem;
+        border: 1px solid var(--border);
+        border-radius: 0.6rem;
+        background: var(--surface-raised);
+        color: var(--text);
+        font: inherit;
+        font-size: 0.9rem;
+        color-scheme: dark light;
+      }
+
+      small {
+        color: var(--text-muted);
+        line-height: 1.4;
+        white-space: normal;
+      }
+    }
+  }
+
   .codec {
     display: flex;
     gap: 0.7rem;

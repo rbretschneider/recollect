@@ -86,6 +86,8 @@ export interface AssetDetail {
   updatedAt: string;
   /** Where the capture date came from: exif | filename | file_mtime | user. */
   capturedAtSource: string;
+  /** A person's name for this item, if any. */
+  title: string | null;
   mediaType: 'image' | 'video';
   mime: string;
   capturedAt: string;
@@ -348,6 +350,7 @@ export class AssetsService {
       mime: row.mime,
       capturedAt: row.capturedAt.toISOString(),
       capturedAtSource: row.capturedAtSource,
+      title: row.title,
       width: row.width,
       height: row.height,
       durationMs: row.durationMs,
@@ -534,6 +537,18 @@ export class AssetsService {
       { assetId, capturedAt: capturedAt.toISOString(), tzOffsetMin },
       { dedupeKey: `${REWRITE_CAPTURE_DATE_JOB}:${assetId}`, priority: 40 },
     );
+  }
+
+  /** Name an item; an empty string clears the name. */
+  async setTitle(assetId: string, title: string): Promise<void> {
+    const [row] = await this.db.select({ id: asset.id }).from(asset).where(eq(asset.id, assetId));
+    if (!row) {
+      throw new NotFoundException('That item does not exist.');
+    }
+    await this.db
+      .update(asset)
+      .set({ title: title.trim() || null, updatedAt: new Date() })
+      .where(eq(asset.id, assetId));
   }
 
   /** Absolute path of the cached motion-photo clip, or 404 if there is none. */

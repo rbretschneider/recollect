@@ -26,6 +26,7 @@ import { AssetsService, TimelinePage } from './assets.service';
 import type { AssetDetail, TimelineAsset } from './assets.service';
 import { AssetIdsRequestDto } from './dto/asset-ids-request.dto';
 import { SetCapturedAtRequestDto } from './dto/set-captured-at-request.dto';
+import { SetTitleRequestDto } from './dto/set-title-request.dto';
 import { RotateRequestDto } from './dto/rotate-request.dto';
 import { RotateService } from './rotate.service';
 import { Body } from '@nestjs/common';
@@ -120,6 +121,17 @@ export class AssetsController {
       throw new BadRequestException('capturedAt must be a valid date.');
     }
     await this.assets.setCapturedAt(id, capturedAt, body.tzOffsetMin);
+  }
+
+  /** Name an item (write grant). Empty clears it. */
+  @RequireGrant('write')
+  @Patch(':id/title')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async setTitle(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: SetTitleRequestDto,
+  ): Promise<void> {
+    await this.assets.setTitle(id, body.title);
   }
 
   /** Queues a re-run of metadata + thumbnails for one item (user retry). */

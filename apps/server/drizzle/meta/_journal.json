@@ -225,6 +225,13 @@
       "when": 1788785925942,
       "tag": "0031_dashboard_day_index",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1789155106135,
+      "tag": "0032_asset_title",
+      "breakpoints": true
     }
   ]
 }

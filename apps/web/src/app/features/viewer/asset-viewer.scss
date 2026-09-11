@@ -350,6 +350,20 @@
       margin: 0;
     }
 
+    // The item's own name sits above the date, larger, and wraps: a title is
+    // a sentence sometimes, and cutting it off defeats the point of having one.
+    .item-title {
+      font-size: 1.05rem;
+      line-height: 1.3;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .no-title {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
     .date-edit-btn {
       display: inline-flex;
       align-items: center;

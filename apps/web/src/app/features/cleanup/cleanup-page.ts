@@ -1,6 +1,7 @@
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { formatBytes } from '../../core/format-date';
+import { toLocalInputValue } from '../../core/local-input';
 import {
   CleanupApiService,
   CleanupSuggestions,
@@ -237,10 +238,38 @@ export class CleanupPage implements OnInit, OnDestroy {
   /** The hog whose conversion options sheet is open. */
   readonly convertTarget = signal<SpaceHogSuggestion | null>(null);
   convertCodec: 'hevc' | 'h264' = 'hevc';
+  /** Title and date as the person will confirm them (prefilled from the label). */
+  convertTitle = '';
+  convertDate = '';
+  /** What the date field started as, so an untouched field sends nothing. */
+  private convertDateInitial = '';
 
   openConvert(item: SpaceHogSuggestion): void {
     this.convertCodec = 'hevc';
+    // A digitised tape's real date is on its label, not in its metadata (the
+    // metadata carries the day it was captured to disk). Offer the label's
+    // reading and let the person confirm or fix it; an ordinary video keeps
+    // whatever it has.
+    const guess = item.labelGuess;
+    this.convertTitle = item.title ?? guess?.title ?? '';
+    this.convertDate = guess?.date ? `${guess.date}T12:00` : toLocalInputValue(item.capturedAt);
+    this.convertDateInitial = guess?.date ? '' : this.convertDate;
     this.convertTarget.set(item);
+  }
+
+  /** A sentence about where the prefilled date came from, or why there is none. */
+  dateHint(item: SpaceHogSuggestion): string {
+    const guess = item.labelGuess;
+    if (!guess) {
+      return 'Videos converted from tape usually carry the wrong date; check this one.';
+    }
+    if (guess.precision === 'day') {
+      return `From the label “${guess.label}”${guess.yearEnd ? ' — a range; the first year is used' : ''}.`;
+    }
+    if (guess.precision === 'year') {
+      return `The label “${guess.label}” gives only the year — pick the day if you know it.`;
+    }
+    return `The label “${guess.label}” has no year; the date on record is the day it was digitised.`;
   }
 
   async confirmConvert(): Promise<void> {
@@ -250,9 +279,18 @@ export class CleanupPage implements OnInit, OnDestroy {
     }
     this.isConverting.set(true);
     try {
+      // Only send what the person actually set: a title that differs from the
+      // current one, a date that was prefilled from the label or edited.
+      const local = this.convertDate ? new Date(this.convertDate) : null;
+      const dateChanged = this.convertDate !== this.convertDateInitial && local && !Number.isNaN(local.getTime());
       // Await the queue call before showing "Converting…" or closing the sheet,
       // so a double-tap can't queue duplicate conversions and a failure is seen.
-      await this.api.convert(item.assetId, this.convertCodec);
+      await this.api.convert(item.assetId, {
+        codec: this.convertCodec,
+        title: this.convertTitle.trim() !== (item.title ?? '') ? this.convertTitle.trim() : undefined,
+        capturedAt: dateChanged ? local.toISOString() : undefined,
+        tzOffsetMin: dateChanged ? -local.getTimezoneOffset() : undefined,
+      });
       this.queuedConversions.update((set) => new Set([...set, item.assetId]));
       this.convertTarget.set(null);
       this.toasts.success(`Converting “${item.fileName}” — this runs in the background and can take a while.`);

@@ -19,6 +19,31 @@ export interface SpaceHogSuggestion {
   bitrate: number | null;
   estimatedBytes: number | null;
   converting: boolean;
+  /** The date currently on record, and where it came from. */
+  capturedAt: string;
+  capturedAtSource: string;
+  title: string | null;
+  /** Title and date read off the cassette label, when the filename is a digitised tape. */
+  labelGuess: TapeLabelGuess | null;
+}
+
+/** What a tape's label says about it, for the convert sheet to prefill. */
+export interface TapeLabelGuess {
+  label: string;
+  title: string;
+  /** ISO calendar date (YYYY-MM-DD), or null when the label has no year. */
+  date: string | null;
+  precision: 'day' | 'year' | null;
+  yearEnd: number | null;
+}
+
+/** What the person confirmed in the convert sheet. */
+export interface ConvertOptions {
+  codec: 'hevc' | 'h264';
+  title?: string;
+  /** ISO instant. */
+  capturedAt?: string;
+  tzOffsetMin?: number;
 }
 
 export interface CleanupSuggestions {
@@ -55,9 +80,9 @@ export class CleanupApiService {
     return firstValueFrom(this.http.post<void>('/api/v1/cleanup/dismiss', { assetIds }));
   }
 
-  convert(assetId: string, codec: 'hevc' | 'h264'): Promise<{ accepted: true }> {
+  convert(assetId: string, options: ConvertOptions): Promise<{ accepted: true }> {
     return firstValueFrom(
-      this.http.post<{ accepted: true }>(`/api/v1/cleanup/convert/${assetId}`, { codec }),
+      this.http.post<{ accepted: true }>(`/api/v1/cleanup/convert/${assetId}`, options),
     );
   }
 

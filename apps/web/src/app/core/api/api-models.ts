@@ -90,6 +90,8 @@ export interface LibraryRootView {
 export interface AssetDetail {
   /** Where the capture date came from: exif | filename | file_mtime | user. */
   capturedAtSource?: string;
+  /** A person's name for this item, if any. */
+  title?: string | null;
   id: string;
   mediaType: 'image' | 'video';
   mime: string;

@@ -233,6 +233,19 @@
         Nothing changes if the re-encode barely saves space — the original
         is kept automatically.
       </p>
+      <!-- A tape's real title and date are on its label, not in its metadata.
+           Prefilled from the filename; the person confirms. -->
+      <div class="meta-fields">
+        <label class="field">
+          <span>Title</span>
+          <input type="text" name="title" [(ngModel)]="convertTitle" maxlength="200" placeholder="e.g. Christmas 2007" />
+        </label>
+        <label class="field">
+          <span>Date taken</span>
+          <input type="datetime-local" name="capturedAt" [(ngModel)]="convertDate" />
+          <small>{{ dateHint(item) }}</small>
+        </label>
+      </div>
       <label class="codec">
         <input type="radio" name="codec" value="hevc" [(ngModel)]="convertCodec" />
         <span>

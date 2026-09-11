@@ -1,5 +1,5 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post } from '@nestjs/common';
-import { ArrayNotEmpty, IsArray, IsIn, IsOptional, IsUUID } from 'class-validator';
+import { ArrayNotEmpty, IsArray, IsIn, IsInt, IsISO8601, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequireAdmin } from '../auth/decorators/require-admin.decorator';
 import type { UserProfile } from '../users/user.types';
@@ -13,11 +13,31 @@ export class DismissRequestDto {
   assetIds!: string[];
 }
 
-/** Body for queueing a conversion. */
+/**
+ * Body for queueing a conversion. Title and date are what the person confirmed
+ * in the convert sheet (prefilled from the cassette label); either may be
+ * omitted to leave the current value alone.
+ */
 export class ConvertRequestDto {
   @IsOptional()
   @IsIn(['hevc', 'h264'])
   codec?: 'hevc' | 'h264';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  title?: string;
+
+  /** ISO instant. */
+  @IsOptional()
+  @IsISO8601()
+  capturedAt?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(-14 * 60)
+  @Max(14 * 60)
+  tzOffsetMin?: number;
 }
 
 /**
@@ -46,7 +66,11 @@ export class CleanupController {
     @Param('assetId', ParseUUIDPipe) assetId: string,
     @Body() body: ConvertRequestDto,
   ): Promise<{ accepted: true }> {
-    await this.cleanup.queueConversion(assetId, body.codec ?? 'hevc');
+    await this.cleanup.queueConversion(assetId, body.codec ?? 'hevc', {
+      title: body.title,
+      capturedAt: body.capturedAt,
+      tzOffsetMin: body.tzOffsetMin,
+    });
     return { accepted: true };
   }
 

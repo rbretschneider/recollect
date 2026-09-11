@@ -64,6 +64,12 @@ export const asset = pgTable(
     ),
     /** Video codec id from container metadata (e.g. 'hvc1', 'avc1'); drives playback transcoding. */
     videoCodec: text('video_codec'),
+    /**
+     * A person's name for this item ("Christmas 2007"). Set when a tape is
+     * converted (prefilled from its label) or edited in the viewer; null for
+     * the ordinary photo that needs none.
+     */
+    title: text('title'),
     /** True for stills carrying an embedded motion clip (Android/Pixel/Samsung). */
     motionPhoto: boolean('motion_photo').notNull().default(false),
     cameraMake: text('camera_make'),
