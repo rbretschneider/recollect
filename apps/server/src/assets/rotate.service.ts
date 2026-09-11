@@ -3,7 +3,7 @@ import { createHash } from 'crypto';
 import { and, eq } from 'drizzle-orm';
 import { exiftool } from 'exiftool-vendored';
 import { createReadStream } from 'fs';
-import { copyFile, mkdir, rm, stat } from 'fs/promises';
+import { stat } from 'fs/promises';
 import { join, resolve } from 'path';
 import sharp from 'sharp';
 import { APP_CONFIG } from '../config/app-config';
@@ -11,6 +11,7 @@ import type { AppConfig } from '../config/app-config';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
 import { asset, assetFile, libraryRoot } from '../database/schema';
+import { rewriteLibraryFileSafely } from '../media/safe-rewrite';
 import { ThumbnailService } from '../media/thumbnail.service';
 
 /**
@@ -97,51 +98,27 @@ export class RotateService {
     }
 
     const livePath = resolve(join(row.rootPath, row.relPath));
-    const originalSize = (await stat(livePath)).size;
-    const stageDir = join(this.config.appDataDir, 'staging', 'rotate');
-    await mkdir(stageDir, { recursive: true });
-    const rollbackPath = join(stageDir, `${assetId}.original`);
-    const workingPath = join(stageDir, `${assetId}.working`);
-
     try {
-      // 1-2. Two local copies: one untouched rollback, one to rewrite.
-      await copyFile(livePath, rollbackPath);
-      await copyFile(rollbackPath, workingPath);
-
-      // 3. Rewrite and verify on LOCAL disk, where the rename is safe. `-n`
-      //    writes the raw numeric value; without it exiftool expects the
-      //    descriptive form and rejects a bare number.
-      await exiftool.write(workingPath, { Orientation: to }, ['-overwrite_original', '-n']);
-      await this.assertUsableImage(workingPath, to);
-
-      // 4. Truncate-and-write over the library file. copyFile opens the
-      //    destination with O_TRUNC — it never unlinks or renames it, which is
-      //    the operation that failed on CIFS and lost the original.
-      await copyFile(workingPath, livePath);
-
-      // 5. Confirm what actually landed on the share, and put the original back
-      //    if it did not. A half-written file on a network mount is exactly the
-      //    case this exists for.
-      try {
-        await this.assertUsableImage(livePath, to);
-      } catch (error) {
-        await copyFile(rollbackPath, livePath);
-        this.logger.error(
-          `Rotate ${assetId}: written file failed verification, original restored: ${(error as Error).message}`,
-        );
-        throw new BadRequestException(
-          'That photo could not be saved to the library, so it was left as it was.',
-        );
-      }
+      // Staged, verified, copied over in place - see rewriteLibraryFileSafely
+      // for why the library file is never handed to exiftool directly. `-n`
+      // writes the raw numeric value; without it exiftool expects the
+      // descriptive form and rejects a bare number.
+      await rewriteLibraryFileSafely(
+        livePath,
+        join(this.config.appDataDir, 'staging', 'rotate'),
+        assetId,
+        {
+          rewrite: (working) => exiftool.write(working, { Orientation: to }, ['-overwrite_original', '-n']),
+          verify: (candidate) => this.assertUsableImage(candidate, to),
+        },
+        this.logger,
+      );
     } catch (error) {
-      // Any failure before or during the write: make sure the library file is
-      // whole. Restoring a byte-identical copy over a good file is harmless.
-      await this.restoreQuietly(rollbackPath, livePath, originalSize);
-      await this.cleanup(rollbackPath, workingPath);
-      throw error;
+      if (error instanceof BadRequestException) throw error;
+      throw new BadRequestException(
+        'That photo could not be saved to the library, so it was left as it was.',
+      );
     }
-
-    await this.cleanup(rollbackPath, workingPath);
 
     // The file changed, so its identity did. Skipping this leaves the stored
     // hash stale and the next scan re-ingests the photo as brand new.
@@ -196,30 +173,6 @@ export class RotateService {
     }
   }
 
-  /** Best-effort rollback; never masks the error that caused it. */
-  private async restoreQuietly(
-    rollbackPath: string,
-    livePath: string,
-    expectedSize: number,
-  ): Promise<void> {
-    try {
-      const live = await stat(livePath).catch(() => null);
-      if (live && live.size === expectedSize) {
-        return; // Untouched — nothing to undo.
-      }
-      await copyFile(rollbackPath, livePath);
-      this.logger.warn(`Restored the original for ${livePath} after a failed rotate.`);
-    } catch (error) {
-      this.logger.error(
-        `COULD NOT RESTORE ${livePath} — the rollback copy is at ${rollbackPath}: ${(error as Error).message}`,
-      );
-    }
-  }
-
-  /** Staging copies are only kept while they might still be needed. */
-  private async cleanup(...paths: string[]): Promise<void> {
-    await Promise.all(paths.map((path) => rm(path, { force: true }).catch(() => undefined)));
-  }
 }
 
 /** Missing or nonsensical orientation is treated as upright. */

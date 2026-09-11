@@ -508,10 +508,19 @@ export class ContributionsService {
   private async moveFile(from: string, to: string): Promise<void> {
     try {
       await rename(from, to);
+      return;
     } catch {
-      await copyFile(from, to);
-      await rm(from, { force: true }).catch(() => undefined);
+      // EXDEV / EBUSY - fall through to copy.
     }
+    await copyFile(from, to);
+    // Only remove the source once the copy is proven complete; an unverified
+    // copy-then-delete turns a short write into a lost upload.
+    const [a, b] = await Promise.all([stat(from), stat(to)]);
+    if (a.size !== b.size) {
+      await rm(to, { force: true }).catch(() => undefined);
+      throw new Error(`Move ${from} -> ${to}: copy is ${b.size} bytes, expected ${a.size}; source left in place.`);
+    }
+    await rm(from, { force: true }).catch(() => undefined);
   }
 
   private async findIngestedAssetId(rootId: string, relPath: string): Promise<string> {

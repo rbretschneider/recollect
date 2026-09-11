@@ -5,7 +5,10 @@ import { exiftool } from 'exiftool-vendored';
 import { createReadStream } from 'fs';
 import { stat } from 'fs/promises';
 import { join, resolve } from 'path';
+import { APP_CONFIG } from '../../config/app-config';
+import type { AppConfig } from '../../config/app-config';
 import { DATABASE } from '../../database/database.module';
+import { rewriteLibraryFileSafely } from '../../media/safe-rewrite';
 import type { Database } from '../../database/database.module';
 import { asset, assetFile, libraryRoot } from '../../database/schema';
 import { JobHandler, JobHandlerRegistry } from '../../jobs/job-handler';
@@ -26,6 +29,7 @@ export class RewriteCaptureDateHandler implements JobHandler, OnModuleInit {
   constructor(
     private readonly registry: JobHandlerRegistry,
     @Inject(DATABASE) private readonly db: Database,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
   onModuleInit(): void {
@@ -55,10 +59,36 @@ export class RewriteCaptureDateHandler implements JobHandler, OnModuleInit {
     const path = resolve(join(row.rootPath, row.relPath));
     const exifDate = toExifLocal(new Date(capturedAt), tzOffsetMin);
     try {
-      // -overwrite_original so we don't litter the NAS with _original backups.
-      await exiftool.write(path, { AllDates: exifDate }, ['-overwrite_original']);
+      // Never exiftool straight onto the library file: its -overwrite_original
+      // renames a sidecar over the original, which fails on the CIFS mount and
+      // takes the original with it. Staged, verified, copied over in place.
+      await rewriteLibraryFileSafely(
+        path,
+        join(this.config.appDataDir, 'staging', 'rewrite-date'),
+        assetId,
+        {
+          rewrite: (working) => exiftool.write(working, { AllDates: exifDate }, ['-overwrite_original']),
+          verify: async (candidate) => {
+            if ((await stat(candidate)).size === 0) {
+              throw new Error('file is empty');
+            }
+            const tags = await exiftool.read(candidate);
+            // Compare as digits (YYYYMMDDHHMM): exiftool hands dates back as
+            // objects that stringify ISO-style, not in the colon form written.
+            const digits = (v: unknown) => String(v ?? '').replace(/\D/g, '').slice(0, 12);
+            const want = digits(exifDate);
+            const landed = [tags.DateTimeOriginal, tags.CreateDate, tags.MediaCreateDate]
+              .map(digits)
+              .find((t) => t.length === 12);
+            if (landed !== want) {
+              throw new Error(`date read back as "${landed ?? 'none'}", expected "${want}"`);
+            }
+          },
+        },
+        this.logger,
+      );
     } catch (error) {
-      this.logger.warn(`Rewrite date ${assetId}: exiftool write failed: ${(error as Error).message}`);
+      this.logger.warn(`Rewrite date ${assetId}: file not updated: ${(error as Error).message}`);
       return; // DB date stays corrected; the file just isn't updated.
     }
     // The file changed — re-derive hash + fs stats so scans stay consistent.

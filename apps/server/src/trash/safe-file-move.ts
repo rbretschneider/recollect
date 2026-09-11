@@ -1,5 +1,5 @@
 import { constants } from 'fs';
-import { access, copyFile, mkdir, rename, unlink } from 'fs/promises';
+import { access, copyFile, mkdir, rename, stat, unlink } from 'fs/promises';
 import { dirname } from 'path';
 
 /**
@@ -17,6 +17,17 @@ export async function safeMoveFile(sourcePath: string, destinationPath: string):
       throw error;
     }
     await copyFile(sourcePath, finalPath, constants.COPYFILE_EXCL);
+    // The source is the only copy until this proves the destination is whole.
+    // A full disk or a dropped mount leaves a short file, and deleting the
+    // source on the strength of an unverified copy is how a move becomes a
+    // loss - this is the path a restored original travels.
+    const [from, to] = await Promise.all([stat(sourcePath), stat(finalPath)]);
+    if (to.size !== from.size) {
+      await unlink(finalPath).catch(() => undefined);
+      throw new Error(
+        `Move ${sourcePath} -> ${finalPath}: copy is ${to.size} bytes, expected ${from.size}; source left in place.`,
+      );
+    }
     await unlink(sourcePath);
   }
   return finalPath;
