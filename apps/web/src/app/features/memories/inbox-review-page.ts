@@ -45,6 +45,13 @@ export class InboxReviewPage implements OnInit {
 
   /** A card decided itself: drop it from the grid; count real decisions only. */
   onDecided(suggestionId: string, outcome: SuggestionOutcome): void {
+    if (outcome === 'stale') {
+      // The list on screen is older than the server's. Reload it and say so,
+      // rather than leave a card that can't be acted on.
+      this.toasts.error('That suggestion changed since this page loaded — the list has been refreshed.');
+      void this.load();
+      return;
+    }
     this.queue.update((queue) => queue.filter((suggestion) => suggestion.id !== suggestionId));
     if (outcome !== 'later') {
       this.reviewedCount.update((count) => count + 1);

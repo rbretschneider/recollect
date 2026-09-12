@@ -1,4 +1,5 @@
 import { Component, computed, inject, input, OnInit, output, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { describeError } from '../../core/describe-error';
 import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { FormsModule } from '@angular/forms';
@@ -8,7 +9,8 @@ import { AssetPicker } from '../../shared/asset-picker';
 import { ToastService } from '../../shared/toast.service';
 
 /** What happened to a suggestion, so the grid can drop the card. */
-export type SuggestionOutcome = 'created' | 'dismissed' | 'later';
+/** 'stale': the server no longer has this suggestion; the page should reload the list. */
+export type SuggestionOutcome = 'created' | 'dismissed' | 'later' | 'stale';
 
 /**
  * One suggestion in the review grid: name it, curate its photos (exclude/add),
@@ -126,6 +128,10 @@ export class SuggestionCard implements OnInit {
       // Only drop the card once the memory really exists.
       this.decided.emit('created');
     } catch (error) {
+      if (this.isGone(error)) {
+        this.decided.emit('stale');
+        return;
+      }
       this.toasts.error(describeError(error, "Couldn’t create this memory."), {
         label: 'Retry',
         run: () => void this.create(),
@@ -145,6 +151,10 @@ export class SuggestionCard implements OnInit {
       // Only drop the card once the dismissal is persisted.
       this.decided.emit('dismissed');
     } catch (error) {
+      if (this.isGone(error)) {
+        this.decided.emit('stale');
+        return;
+      }
       this.toasts.error(describeError(error, "Couldn’t dismiss this suggestion."), {
         label: 'Retry',
         run: () => void this.dismiss(),
@@ -152,6 +162,15 @@ export class SuggestionCard implements OnInit {
     } finally {
       this.isBusy.set(false);
     }
+  }
+
+  /**
+   * A 404 here means the suggestion changed on the server since this list was
+   * loaded - not that the photos are gone. Retrying the same id can't help;
+   * the page needs a fresh list.
+   */
+  private isGone(error: unknown): boolean {
+    return error instanceof HttpErrorResponse && error.status === 404;
   }
 
   /** "Later" just clears it from this session's grid; it returns on next visit. */

@@ -71,10 +71,49 @@ export class EventDetectionService {
     return new Set(rows.map((row) => row.memberSignature));
   }
 
+  /**
+   * Brings the suggested set in line with what was just detected WITHOUT
+   * renaming anything that didn't change.
+   *
+   * This used to delete every suggestion and re-insert them all with fresh
+   * ids - and it runs after every ingest and every scan, ~480 times a day on
+   * the live library. Any suggestion on screen was invalid within minutes:
+   * tapping Create or Dismiss hit an id that no longer existed, while the
+   * identical cluster sat in the table under a new one. "That suggestion is
+   * no longer available" for something you were looking at.
+   *
+   * A cluster is identified by its member signature. Same members: the row
+   * is kept (its dates and score refreshed) and its id survives. New members:
+   * inserted. No longer detected: removed. Ids only change when the cluster
+   * itself does.
+   */
   private async replaceSuggestions(clusters: DetectedCluster[]): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await tx.delete(eventCluster).where(eq(eventCluster.status, 'suggested'));
+      const existing = await tx
+        .select({ id: eventCluster.id, memberSignature: eventCluster.memberSignature })
+        .from(eventCluster)
+        .where(eq(eventCluster.status, 'suggested'));
+      const idBySignature = new Map(existing.map((row) => [row.memberSignature, row.id]));
+      const kept = new Set<string>();
       for (const cluster of clusters) {
+        const signature = this.signatureOf(cluster.assetIds);
+        const known = idBySignature.get(signature);
+        if (known) {
+          kept.add(known);
+          await tx
+            .update(eventCluster)
+            .set({
+              algoVersion: CLUSTERING_ALGO_VERSION,
+              startAt: cluster.startAt,
+              endAt: cluster.endAt,
+              seedTitle: formatDateSpan(cluster.startAt, cluster.endAt),
+              score: cluster.score,
+              signals: cluster.signals,
+              updatedAt: new Date(),
+            })
+            .where(eq(eventCluster.id, known));
+          continue;
+        }
         const clusterId = uuidv7();
         await tx.insert(eventCluster).values({
           id: clusterId,
@@ -85,11 +124,15 @@ export class EventDetectionService {
           seedTitle: formatDateSpan(cluster.startAt, cluster.endAt),
           score: cluster.score,
           signals: cluster.signals,
-          memberSignature: this.signatureOf(cluster.assetIds),
+          memberSignature: signature,
         });
         await tx.insert(eventClusterAsset).values(
           cluster.assetIds.map((assetId) => ({ clusterId, assetId })),
         );
+      }
+      const stale = existing.filter((row) => !kept.has(row.id)).map((row) => row.id);
+      if (stale.length > 0) {
+        await tx.delete(eventCluster).where(inArray(eventCluster.id, stale));
       }
     });
   }
