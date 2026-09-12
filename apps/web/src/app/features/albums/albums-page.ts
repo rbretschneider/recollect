@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { describeError } from '../../core/describe-error';
 import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -60,8 +61,8 @@ export class AlbumsPage implements OnInit {
       const { albumId } = await this.api.create(title, []);
       this.isCreating.set(false);
       await this.router.navigate(['/albums', albumId]);
-    } catch {
-      this.toasts.error("Couldn't create the album.", { label: 'Retry', run: () => void this.create() });
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't create the album."), { label: 'Retry', run: () => void this.create() });
     } finally {
       this.isSaving.set(false);
     }

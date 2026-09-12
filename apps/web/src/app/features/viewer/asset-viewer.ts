@@ -9,6 +9,7 @@ import {
   output,
   signal,
 } from '@angular/core';
+import { describeError } from '../../core/describe-error';
 import { AssetDetail, TimelineAsset } from '../../core/api/api-models';
 import { toLocalInputValue } from '../../core/local-input';
 import { inject } from '@angular/core';
@@ -940,8 +941,8 @@ export class AssetViewer implements OnInit, OnDestroy {
       this.editedCapturedAt.set(local.toISOString());
       this.editingDate.set(false);
       this.toasts.success('Date updated — saved to the file too.');
-    } catch {
-      this.toasts.error("Couldn't update the date.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't update the date."));
     } finally {
       this.savingDate.set(false);
     }
@@ -982,8 +983,8 @@ export class AssetViewer implements OnInit, OnDestroy {
       this.editedTitle.set(title || null);
       this.editingTitle.set(false);
       this.toasts.success(title ? 'Title saved.' : 'Title removed.');
-    } catch {
-      this.toasts.error("Couldn't save the title.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't save the title."));
     } finally {
       this.savingTitle.set(false);
     }

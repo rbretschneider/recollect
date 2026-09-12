@@ -1,4 +1,5 @@
 import { Component, computed, inject, input, OnInit, output, signal } from '@angular/core';
+import { describeError } from '../../core/describe-error';
 import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { FormsModule } from '@angular/forms';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
@@ -124,8 +125,8 @@ export class SuggestionCard implements OnInit {
       await this.api.acceptSuggestion(this.suggestion().id, title, isEdited ? finalIds : undefined);
       // Only drop the card once the memory really exists.
       this.decided.emit('created');
-    } catch {
-      this.toasts.error("Couldn’t create this memory.", {
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn’t create this memory."), {
         label: 'Retry',
         run: () => void this.create(),
       });
@@ -143,8 +144,8 @@ export class SuggestionCard implements OnInit {
       await this.api.dismissSuggestion(this.suggestion().id);
       // Only drop the card once the dismissal is persisted.
       this.decided.emit('dismissed');
-    } catch {
-      this.toasts.error("Couldn’t dismiss this suggestion.", {
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn’t dismiss this suggestion."), {
         label: 'Retry',
         run: () => void this.dismiss(),
       });

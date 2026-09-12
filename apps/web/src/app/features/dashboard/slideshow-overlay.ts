@@ -1,4 +1,5 @@
 import { Component, computed, DestroyRef, effect, HostListener, inject, input, OnDestroy, output, signal, viewChild } from '@angular/core';
+import { describeError } from '../../core/describe-error';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
 import { TrashApiService } from '../../core/api/trash-api.service';
 import { AuthStateService } from '../../core/auth/auth-state.service';
@@ -175,8 +176,8 @@ export class SlideshowOverlay implements OnDestroy {
     this.isTrashing.set(true);
     try {
       await this.trashApi.trashAssets([asset.id]);
-    } catch {
-      this.toasts.error("Couldn't move that photo to Trash.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't move that photo to Trash."));
       return;
     } finally {
       this.isTrashing.set(false);
@@ -220,8 +221,8 @@ export class SlideshowOverlay implements OnDestroy {
           const { albumId } = await this.albums.create(coll.title, coll.assetIds);
           this.collectionTarget.set({ targetType: 'album', targetId: albumId });
         }
-      } catch {
-        this.toasts.error("Couldn't prepare that for sharing.");
+      } catch (error) {
+        this.toasts.error(describeError(error, "Couldn't prepare that for sharing."));
         return;
       } finally {
         this.resolvingCollection.set(false);

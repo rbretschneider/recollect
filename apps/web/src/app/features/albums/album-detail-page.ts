@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { describeError } from '../../core/describe-error';
 import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -130,8 +131,8 @@ export class AlbumDetailPage implements OnInit {
     try {
       await this.api.removeAsset(detail.id, assetId);
       this.detail.set({ ...detail, assetIds: detail.assetIds.filter((id) => id !== assetId) });
-    } catch {
-      this.toasts.error("Couldn't remove that photo from the album.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't remove that photo from the album."));
     }
   }
 
@@ -202,8 +203,8 @@ export class AlbumDetailPage implements OnInit {
     try {
       const { memoryId } = await this.memoriesApi.createMemory(title, ids);
       await this.router.navigate(['/memories', memoryId], { queryParams: { new: 1 } });
-    } catch {
-      this.toasts.error("Couldn't create the memory.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't create the memory."));
     } finally {
       this.isCreatingMemory.set(false);
     }
@@ -225,8 +226,8 @@ export class AlbumDetailPage implements OnInit {
     try {
       await this.api.remove(detail.id);
       await this.router.navigateByUrl('/albums');
-    } catch {
-      this.toasts.error("Couldn't delete the album.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't delete the album."));
     }
   }
 
@@ -240,8 +241,8 @@ export class AlbumDetailPage implements OnInit {
       await this.contributionsApi.approve(ids);
       await this.refreshAfterReview();
       this.toasts.success(ids.length === 1 ? 'Photo approved.' : `${ids.length} photos approved.`);
-    } catch {
-      this.toasts.error("Couldn't approve those photos.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't approve those photos."));
     } finally {
       this.reviewBusy.set(false);
     }
@@ -253,8 +254,8 @@ export class AlbumDetailPage implements OnInit {
       await this.contributionsApi.reject(ids);
       await this.refreshAfterReview();
       this.toasts.success(ids.length === 1 ? 'Photo rejected.' : `${ids.length} photos rejected.`);
-    } catch {
-      this.toasts.error("Couldn't reject those photos.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't reject those photos."));
     } finally {
       this.reviewBusy.set(false);
     }

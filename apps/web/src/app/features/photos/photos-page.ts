@@ -10,6 +10,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { describeError } from '../../core/describe-error';
 import { ActivityService } from '../../core/activity.service';
 import { PhotosApiService } from '../../core/api/photos-api.service';
 import { TimelineAsset } from '../../core/api/api-models';
@@ -493,9 +494,9 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
       if (page.nextCursor === null) {
         this.isComplete.set(true);
       }
-    } catch {
+    } catch (error) {
       // Don't dead-end the scroll silently — offer a retry.
-      this.toasts.error('Couldn’t load more photos.', {
+      this.toasts.error(describeError(error, 'Couldn’t load more photos.'), {
         label: 'Retry',
         run: () => void this.loadMore(),
       });

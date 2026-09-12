@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { describeError } from '../../core/describe-error';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -139,8 +140,8 @@ export class LookbackPage implements OnInit {
     try {
       await navigator.clipboard.writeText(this.internalUrl());
       this.toasts.success('Family link copied — they sign in and land right here.');
-    } catch {
-      this.toasts.error("Couldn't copy the link.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't copy the link."));
     }
   }
 
@@ -166,8 +167,8 @@ export class LookbackPage implements OnInit {
       this.publicUrl.set(url);
       await navigator.clipboard.writeText(url).catch(() => undefined);
       this.toasts.success('Public link created and copied.');
-    } catch {
-      this.toasts.error("Couldn't create a public link.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't create a public link."));
     } finally {
       this.publicBusy.set(false);
     }
@@ -181,8 +182,8 @@ export class LookbackPage implements OnInit {
     try {
       await navigator.clipboard.writeText(url);
       this.toasts.success('Public link copied.');
-    } catch {
-      this.toasts.error("Couldn't copy the link.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't copy the link."));
     }
   }
 

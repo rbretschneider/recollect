@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { describeError } from '../../core/describe-error';
 import { RouterLink } from '@angular/router';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { InboxSuggestion } from '../../core/api/api-models';
@@ -72,9 +73,9 @@ export class InboxReviewPage implements OnInit {
       await this.api.dismissAllSuggestions();
       this.queue.set([]);
       this.toasts.success('Inbox cleared.');
-    } catch {
+    } catch (error) {
       this.queue.set(previous);
-      this.toasts.error("Couldn’t dismiss the suggestions.", {
+      this.toasts.error(describeError(error, "Couldn’t dismiss the suggestions."), {
         label: 'Retry',
         run: () => void this.dismissAll(),
       });

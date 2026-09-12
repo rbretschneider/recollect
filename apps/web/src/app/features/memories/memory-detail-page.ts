@@ -8,6 +8,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { describeError } from '../../core/describe-error';
 import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { formatDateSpan } from '../../core/format-date';
 import { FormsModule } from '@angular/forms';
@@ -512,10 +513,10 @@ export class MemoryDetailPage implements OnInit {
     try {
       await this.api.writeJournal(detail.id, this.journalDraft());
       this.saveState.set('saved');
-    } catch {
+    } catch (error) {
       // Never leave the byline stuck on "Saving…" over unsaved text.
       this.saveState.set('error');
-      this.toasts.error('Couldn’t save your journal.', { label: 'Retry', run: () => void this.saveJournal() });
+      this.toasts.error(describeError(error, 'Couldn’t save your journal.'), { label: 'Retry', run: () => void this.saveJournal() });
     }
   }
 

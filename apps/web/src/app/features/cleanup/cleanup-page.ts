@@ -1,4 +1,5 @@
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { describeError } from '../../core/describe-error';
 import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { formatBytes } from '../../core/format-date';
 import { toLocalInputValue } from '../../core/local-input';
@@ -143,8 +144,8 @@ export class CleanupPage implements OnInit, OnDestroy {
       await this.trashApi.trashAssets([item.assetId]);
       this.removeJunk(item.assetId);
       this.toasts.success(`Moved “${item.fileName}” to Trash`);
-    } catch {
-      this.toasts.error("Couldn't move that to Trash.", {
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't move that to Trash."), {
         label: 'Retry',
         run: () => void this.trashJunk(item),
       });
@@ -212,8 +213,8 @@ export class CleanupPage implements OnInit, OnDestroy {
     try {
       await this.api.dismiss([item.assetId]);
       this.removeJunk(item.assetId);
-    } catch {
-      this.toasts.error("Couldn't dismiss that suggestion.", {
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't dismiss that suggestion."), {
         label: 'Retry',
         run: () => void this.dismissJunk(item),
       });
@@ -227,8 +228,8 @@ export class CleanupPage implements OnInit, OnDestroy {
       if (data) {
         this.data.set({ ...data, hogs: data.hogs.filter((hog) => hog.assetId !== item.assetId) });
       }
-    } catch {
-      this.toasts.error("Couldn't dismiss that suggestion.", {
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't dismiss that suggestion."), {
         label: 'Retry',
         run: () => void this.dismissHog(item),
       });
@@ -294,8 +295,8 @@ export class CleanupPage implements OnInit, OnDestroy {
       this.queuedConversions.update((set) => new Set([...set, item.assetId]));
       this.convertTarget.set(null);
       this.toasts.success(`Converting “${item.fileName}” — this runs in the background and can take a while.`);
-    } catch {
-      this.toasts.error("Couldn't start that conversion.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't start that conversion."));
     } finally {
       this.isConverting.set(false);
     }

@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { describeError } from '../../core/describe-error';
 import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { RouterLink } from '@angular/router';
 import { TrashApiService, TrashItem } from '../../core/api/trash-api.service';
@@ -50,8 +51,8 @@ export class TrashPage implements OnInit {
       await this.api.restoreAssets([item.assetId]);
       this.items.update((list) => list.filter((entry) => entry.assetId !== item.assetId));
       this.toasts.success(`Restored “${item.fileName}”`);
-    } catch {
-      this.toasts.error("Couldn't restore that photo.", {
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't restore that photo."), {
         label: 'Retry',
         run: () => void this.restore(item),
       });

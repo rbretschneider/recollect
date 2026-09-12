@@ -9,6 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { describeError } from '../../core/describe-error';
 import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import * as L from 'leaflet';
@@ -227,9 +228,9 @@ export class PlacesPage implements OnInit, OnDestroy {
       if (this.selectedLabel() === label) {
         this.placeAssets.set(items);
       }
-    } catch {
+    } catch (error) {
       // A failed place fetch shouldn't vanish silently into an empty grid.
-      this.toasts.error("Couldn't load photos for this place.", {
+      this.toasts.error(describeError(error, "Couldn't load photos for this place."), {
         label: 'Retry',
         run: () => void this.loadPlace(label),
       });

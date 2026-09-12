@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { describeError } from '../../core/describe-error';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { FormsModule } from '@angular/forms';
@@ -199,8 +200,8 @@ export class SettingsPage implements OnInit {
     try {
       await this.backupApi.remove(name);
       await this.reloadBackup();
-    } catch {
-      this.toasts.error("Couldn't delete that backup.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't delete that backup."));
     }
   }
 
@@ -243,9 +244,8 @@ export class SettingsPage implements OnInit {
         await this.push.enable();
         this.toasts.success('Notifications on — this device will be notified.');
       }
-    } catch {
-      this.toasts.error(
-        "Couldn't change notifications. Your browser may have blocked them — check its site permissions.",
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't change notifications. Your browser may have blocked them — check its site permissions."),
       );
     }
   }
@@ -269,8 +269,8 @@ export class SettingsPage implements OnInit {
           ? `Test sent to ${delivered} device${delivered === 1 ? '' : 's'}.`
           : 'No subscribed devices to notify yet.',
       );
-    } catch {
-      this.toasts.error("Couldn't send the test notification.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't send the test notification."));
     }
   }
 

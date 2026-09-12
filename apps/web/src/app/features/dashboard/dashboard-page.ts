@@ -1,4 +1,5 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { describeError } from '../../core/describe-error';
 import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { HttpClient } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
@@ -169,8 +170,8 @@ export class DashboardPage implements OnInit {
         moment.items.map((item) => item.id),
       );
       await this.router.navigate(['/albums', albumId]);
-    } catch {
-      this.toasts.error('Couldn’t create that album.', {
+    } catch (error) {
+      this.toasts.error(describeError(error, 'Couldn’t create that album.'), {
         label: 'Retry',
         run: () => void this.saveAsAlbum(moment),
       });

@@ -1,5 +1,5 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
@@ -14,6 +14,7 @@ import { AppModule } from './app.module';
 import { APP_CONFIG, AppConfig, loadAppConfig } from './config/app-config';
 import { ContributionsService } from './contributions/contributions.service';
 import { SharingService } from './sharing/sharing.service';
+import { HttpExceptionLogFilter } from './logging/http-exception-log.filter';
 import { RotatingFileLogger } from './logging/rotating-file-logger';
 
 /** Loads the nearest .env (cwd, then repo root) without overriding real env vars. */
@@ -194,6 +195,8 @@ async function bootstrap(): Promise<void> {
   app.use(compression({ threshold: 1024 }));
   app.use(cookieParser());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  // Every failed request reaches the log, 4xx included - see the filter.
+  app.useGlobalFilters(new HttpExceptionLogFilter(app.get(HttpAdapterHost).httpAdapter));
   app.enableShutdownHooks();
   serveWebApp(app, config);
   await app.listen(config.port);

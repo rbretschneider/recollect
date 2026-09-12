@@ -1,4 +1,5 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { describeError } from '../../core/describe-error';
 import { assetThumbUrl } from '../../core/api/photos-api.service';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -102,9 +103,9 @@ export class PersonPage implements OnInit {
     this.isBusy.set(true);
     try {
       await this.api.rename(person.id, name);
-    } catch {
+    } catch (error) {
       // Don't flash "Saved ✓" — keep the name editable so they can retry.
-      this.toasts.error("Couldn't save the name.", { label: 'Retry', run: () => void this.saveName() });
+      this.toasts.error(describeError(error, "Couldn't save the name."), { label: 'Retry', run: () => void this.saveName() });
       return;
     } finally {
       this.isBusy.set(false);
@@ -160,8 +161,8 @@ export class PersonPage implements OnInit {
       await this.api.setCoverFace(person.id, faceId);
       this.selectedFaceIds.set(new Set());
       await this.load();
-    } catch {
-      this.toasts.error("Couldn't set the avatar.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't set the avatar."));
     } finally {
       this.isBusy.set(false);
     }
@@ -179,8 +180,8 @@ export class PersonPage implements OnInit {
       await this.api.removeFaces(person.id, faceIds);
       this.selectedFaceIds.set(new Set());
       await this.load();
-    } catch {
-      this.toasts.error("Couldn't remove those faces.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't remove those faces."));
     } finally {
       this.isBusy.set(false);
     }
@@ -205,8 +206,8 @@ export class PersonPage implements OnInit {
     try {
       await this.api.mergeInto(person.id, target.id);
       await this.router.navigate(['/people', target.id]);
-    } catch {
-      this.toasts.error("Couldn't merge these people.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't merge these people."));
     } finally {
       this.isBusy.set(false);
     }
@@ -227,9 +228,9 @@ export class PersonPage implements OnInit {
           ? `${person.name ?? 'This person'} is marked as family.`
           : `Removed ${person.name ?? 'this person'} from family.`,
       );
-    } catch {
+    } catch (error) {
       this.person.set({ ...person, favorite: !favorite }); // Roll back.
-      this.toasts.error("Couldn't update that.");
+      this.toasts.error(describeError(error, "Couldn't update that."));
     }
   }
 
@@ -262,8 +263,8 @@ export class PersonPage implements OnInit {
         `Re-sorted ${reclustered} ${reclustered === 1 ? 'face' : 'faces'}. Check People for the new groups.`,
       );
       await this.router.navigate(['/people']);
-    } catch {
-      this.toasts.error("Couldn't re-sort those faces.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't re-sort those faces."));
     } finally {
       this.regrouping.set(false);
     }
@@ -285,8 +286,8 @@ export class PersonPage implements OnInit {
     try {
       await this.api.hide(person.id);
       await this.router.navigateByUrl('/people');
-    } catch {
-      this.toasts.error("Couldn't hide this person.");
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't hide this person."));
     }
   }
 
@@ -350,8 +351,8 @@ export class PersonPage implements OnInit {
         return;
       }
       await this.load();
-    } catch {
-      this.toasts.error("Couldn't remove those photos.", {
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't remove those photos."), {
         label: 'Retry',
         run: () => void this.removeSelectedPhotos(),
       });
