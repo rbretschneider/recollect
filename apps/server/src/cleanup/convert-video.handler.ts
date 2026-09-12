@@ -72,8 +72,11 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
         rootId: assetFile.rootId,
         rootPath: libraryRoot.path,
         sizeBytes: assetFile.sizeBytes,
+        mime: asset.mime,
+        videoCodec: asset.videoCodec,
       })
       .from(assetFile)
+      .innerJoin(asset, eq(asset.id, assetFile.assetId))
       .innerJoin(libraryRoot, eq(libraryRoot.id, assetFile.rootId))
       .where(and(eq(assetFile.assetId, assetId), eq(assetFile.state, 'present')))
       .limit(1);
@@ -196,6 +199,8 @@ export class ConvertVideoHandler implements JobHandler, OnModuleInit {
       originalSizeBytes: originalStat.size,
       originalMtime: originalStat.mtime.toISOString(),
       originalHash,
+      originalMime: row.mime,
+      originalVideoCodec: row.videoCodec,
       convertedRelPath: newRelPath,
       convertedSizeBytes: converted.size,
       parkedAt: new Date().toISOString(),

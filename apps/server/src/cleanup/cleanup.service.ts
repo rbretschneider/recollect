@@ -16,6 +16,7 @@ import { MlClientService } from '../ml/ml-client.service';
 import { safeMoveFile } from '../trash/safe-file-move';
 import { purgeVerdict } from './purge-verdict';
 import { parseTapeLabel, TapeLabelGuess } from '../media/tape-label';
+import { classifyMediaFile } from '../media/media-types';
 
 /** Background job type for in-place video conversion. */
 export const CONVERT_VIDEO_JOB = 'convert_video';
@@ -89,6 +90,9 @@ export interface ConvertManifest {
   originalSizeBytes: number;
   originalMtime: string;
   originalHash: string;
+  /** What the asset recorded before conversion rewrote them; restore puts them back. */
+  originalMime?: string;
+  originalVideoCodec?: string | null;
   convertedRelPath: string;
   convertedSizeBytes: number;
   parkedAt: string;
@@ -635,14 +639,27 @@ export class CleanupService {
     // The asset may have been flagged 'missing' when its file vanished — bring
     // it back (never resurrect something the user has since trashed), with the
     // original's identity and without the damaged-conversion flag.
+    // Convert rewrote mime and codec for the mp4; the file is the original
+    // again, so they go back too. Manifests written before these fields
+    // existed fall back to what the filename says the file is.
+    const restoredMime = manifest?.originalMime ?? classifyMediaFile(fileName)?.mime ?? null;
     await this.db.execute(sql`
       update asset
       set status = 'active',
+          mime = coalesce(${restoredMime}, mime),
+          video_codec = ${manifest?.originalVideoCodec ?? null},
           stage_errors = case when stage_errors is null then null
                               else (stage_errors::jsonb - 'playback')::jsonb end,
           updated_at = now()
       where id = ${assetId} and status <> 'trashed'
     `);
+    // The playback rendition in app-data was made from the converted file,
+    // which is gone. Left in place, the re-queued transcode sees "already
+    // done" and the original plays through a rendition of something else.
+    // Derived cache only - regenerated from the restored file by the job below.
+    await rm(resolve(this.config.appDataDir, 'playback', assetId.slice(0, 2), `${assetId}.mp4`), {
+      force: true,
+    }).catch(() => undefined);
     // content_hash is unique. If a duplicate of this original was indexed
     // elsewhere, that asset already owns the hash; the file is still restored
     // and the next scan will simply link it there. Log it rather than fail.
