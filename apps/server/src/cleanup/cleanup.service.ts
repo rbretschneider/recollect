@@ -424,24 +424,31 @@ export class CleanupService {
     const flagged: JunkSuggestion[] = [];
     for (const junk of this.clipPrompts.junk) {
       const junkLiteral = JSON.stringify(junk.vec);
-      const result = await this.db.execute<{
-        id: string;
-        file_name: string;
-        size_bytes: number;
-        media_type: string;
-      }>(sql`
-        select a.id, f.file_name, f.size_bytes, a.media_type
-        from asset_embedding e
-        join asset a on a.id = e.asset_id and a.status = 'active' and a.media_type = 'image'
-        join asset_file f on f.asset_id = a.id and f.state = 'present'
-        left join cleanup_dismissal d on d.asset_id = a.id
-        where d.asset_id is null
-          and (e.embedding <=> ${junkLiteral}::vector) < ${CLIP_ACCIDENTAL_MAX_DISTANCE}
-          and (e.embedding <=> ${junkLiteral}::vector)
-              < (e.embedding <=> ${goodLiteral}::vector) - ${CLIP_ACCIDENTAL_MARGIN}
-        order by (e.embedding <=> ${junkLiteral}::vector)
-        limit ${CLIP_ACCIDENTAL_LIMIT}
-      `);
+      // The HNSW index hands over hnsw.ef_search candidates (default 40) and
+      // the WHERE clauses then thin those - so the pass could never surface
+      // more than a few dozen, however many there were. Raised for this
+      // transaction only; the dismissed/margin filters need candidates to work on.
+      const result = await this.db.transaction(async (tx) => {
+        await tx.execute(sql`SET LOCAL hnsw.ef_search = ${sql.raw(String(CLIP_ACCIDENTAL_LIMIT * 5))}`);
+        return tx.execute<{
+          id: string;
+          file_name: string;
+          size_bytes: number;
+          media_type: string;
+        }>(sql`
+          select a.id, f.file_name, f.size_bytes, a.media_type
+          from asset_embedding e
+          join asset a on a.id = e.asset_id and a.status = 'active' and a.media_type = 'image'
+          join asset_file f on f.asset_id = a.id and f.state = 'present'
+          left join cleanup_dismissal d on d.asset_id = a.id
+          where d.asset_id is null
+            and (e.embedding <=> ${junkLiteral}::vector) < ${CLIP_ACCIDENTAL_MAX_DISTANCE}
+            and (e.embedding <=> ${junkLiteral}::vector)
+                < (e.embedding <=> ${goodLiteral}::vector) - ${CLIP_ACCIDENTAL_MARGIN}
+          order by (e.embedding <=> ${junkLiteral}::vector)
+          limit ${CLIP_ACCIDENTAL_LIMIT}
+        `);
+      });
       for (const row of result.rows) {
         if (seen.has(row.id)) {
           continue;

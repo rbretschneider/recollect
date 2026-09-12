@@ -167,14 +167,23 @@ export class SearchService {
         return [];
       }
       const vectorLiteral = JSON.stringify(embedding);
-      const result = await this.db.execute(sql`
-        SELECT a.id, a.media_type, a.captured_at,
-               e.embedding <=> ${vectorLiteral}::vector AS distance
-        FROM asset_embedding e
-        JOIN asset a ON a.id = e.asset_id AND a.status = 'active'
-        ORDER BY e.embedding <=> ${vectorLiteral}::vector
-        LIMIT ${SEMANTIC_LIMIT}
-      `);
+      // pgvector's HNSW index returns at most hnsw.ef_search rows (default
+      // 40) no matter what LIMIT says - the query below silently came back
+      // with 40 candidates for a thousand matching photos. SET LOCAL scopes
+      // the raise to this transaction. ef_search must be >= LIMIT to be
+      // honoured, and the index still does the work: 500 on a 25k-row index
+      // is a few milliseconds.
+      const result = await this.db.transaction(async (tx) => {
+        await tx.execute(sql`SET LOCAL hnsw.ef_search = ${sql.raw(String(SEMANTIC_LIMIT))}`);
+        return tx.execute(sql`
+          SELECT a.id, a.media_type, a.captured_at,
+                 e.embedding <=> ${vectorLiteral}::vector AS distance
+          FROM asset_embedding e
+          JOIN asset a ON a.id = e.asset_id AND a.status = 'active'
+          ORDER BY e.embedding <=> ${vectorLiteral}::vector
+          LIMIT ${SEMANTIC_LIMIT}
+        `);
+      });
       const best = result.rows.length > 0 ? Number(result.rows[0].distance) : Infinity;
       const cutoff = Math.min(SEMANTIC_MAX_DISTANCE, best + SEMANTIC_RELATIVE_WINDOW);
       return result.rows
