@@ -81,11 +81,26 @@ section h2 {
 
 // The newest four photos to land in the library, as a quick tappable row.
 .recently-added {
+  // Two rows of recents. Phones keep the four-across tile they had and gain a
+  // second row (eight); wider screens go six-across so the tiles get smaller
+  // and twelve fit - more of what just arrived, at a glance.
   .recent-row {
     margin-top: 0.6rem;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 0.4rem;
+
+    .recent-tile:nth-child(n + 9) {
+      display: none;
+    }
+
+    @media (min-width: 48rem) {
+      grid-template-columns: repeat(6, 1fr);
+
+      .recent-tile:nth-child(n + 9) {
+        display: block;
+      }
+    }
   }
 
   .recent-tile {

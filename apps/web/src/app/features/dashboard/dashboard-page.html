@@ -88,9 +88,16 @@
         <a routerLink="/photos">All photos ›</a>
       </div>
       <div class="recent-row">
-        @for (item of recentlyAdded().slice(0, 4); track item.id; let i = $index) {
+        @for (item of recentlyAdded().slice(0, 12); track item.id; let i = $index) {
           <button type="button" class="recent-tile" aria-label="Open photo" (click)="openRecent(i)">
-            <img [src]="thumbUrl(item.id, 720)" alt="" loading="lazy" />
+            <img
+              [src]="thumbUrl(item.id, 240)"
+              [srcset]="thumbUrl(item.id, 240) + ' 240w, ' + thumbUrl(item.id, 720) + ' 720w'"
+              sizes="(max-width: 48rem) 25vw, 12rem"
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
             @if (item.mediaType === 'video') {
               <span class="video-badge" aria-hidden="true">▶</span>
             }

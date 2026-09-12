@@ -232,7 +232,7 @@ export class DashboardPage implements OnInit {
 
     void firstValueFrom(
       this.http.get<{ items: Array<{ id: string; mediaType: 'image' | 'video' }> }>(
-        `/api/v1/dashboard/recently-added?limit=4`,
+        `/api/v1/dashboard/recently-added?limit=12`,
       ),
     )
       .then((recent) => {
