@@ -43,9 +43,15 @@ export class MlClientService {
       results: Array<{ id: string; faces: Array<{ bbox: number[]; score: number; embedding: number[] }> }>;
       model: string;
     }>('/faces/detect', body);
-    const first = response.results[0];
+    // "No result for the image we sent" is a failure and must surface as one,
+    // so the job retries and the error is recorded. "Processed, found no
+    // faces" is a legitimate answer and comes back as an empty list.
+    const first = response.results?.[0];
+    if (!first) {
+      throw new Error(`ML sidecar returned no result for ${imagePath} (model ${response.model ?? 'unknown'}).`);
+    }
     return {
-      faces: (first?.faces ?? []).map((f) => ({ bbox: f.bbox, score: f.score, embedding: f.embedding })),
+      faces: (first.faces ?? []).map((f) => ({ bbox: f.bbox, score: f.score, embedding: f.embedding })),
       model: response.model,
     };
   }
@@ -57,7 +63,14 @@ export class MlClientService {
       results: Array<{ id: string; embedding: number[] }>;
       model: string;
     }>('/embed/clip', body);
-    return { embedding: response.results[0]?.embedding ?? [], model: response.model };
+    // An empty vector used to be handed back as success. The caller stamped
+    // the asset "embedded" on the strength of it, and 25,333 photos - 99.6%
+    // of the library - ended up permanently invisible to semantic search.
+    const embedding = response.results?.[0]?.embedding;
+    if (!embedding || embedding.length === 0) {
+      throw new Error(`ML sidecar returned no embedding for ${imagePath} (model ${response.model ?? 'unknown'}).`);
+    }
+    return { embedding, model: response.model };
   }
 
   /** CLIP text embedding (same space as images), for semantic search. */

@@ -91,15 +91,19 @@ export class MlProcessingService {
     }
     const thumbPath = this.thumbnails.pathFor(assetId, ML_INPUT_SIZE);
     const result = await this.ml.embedImage(thumbPath);
-    if (result.embedding.length > 0) {
-      await this.db
-        .insert(assetEmbedding)
-        .values({ assetId, model: result.model, embedding: result.embedding })
-        .onConflictDoUpdate({
-          target: [assetEmbedding.assetId, assetEmbedding.model],
-          set: { embedding: result.embedding },
-        });
+    // The client throws on an empty vector, but the stamp below is the thing
+    // that makes an asset invisible to search forever if it is wrong, so it
+    // is not reachable without a stored embedding. Done means done.
+    if (result.embedding.length === 0) {
+      throw new Error(`Embedding for ${assetId} came back empty; leaving the stage unfinished.`);
     }
+    await this.db
+      .insert(assetEmbedding)
+      .values({ assetId, model: result.model, embedding: result.embedding })
+      .onConflictDoUpdate({
+        target: [assetEmbedding.assetId, assetEmbedding.model],
+        set: { embedding: result.embedding },
+      });
     await this.db
       .update(asset)
       .set({ stageEmbedAt: new Date(), updatedAt: new Date() })
