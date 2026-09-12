@@ -47,6 +47,13 @@ describe('parseTapeLabel', () => {
     expect(guess?.title).toBe('Ski');
   });
 
+  it('does not mistake an ordinal for a year', () => {
+    // "60th" is a birthday, not 1960 - this one shipped as "Partyth 1960".
+    const guess = parseTapeLabel('grammasH60th.22-07-25_22-11.00.avi');
+    expect(guess?.date).toBeNull();
+    expect(guess?.title).toBe('Grammas H60th');
+  });
+
   it('pivots two-digit years at 30', () => {
     expect(parseTapeLabel('party07.22-01-01_00-00.00.avi')?.date).toBe('2007-01-01');
     expect(parseTapeLabel('party31.22-01-01_00-00.00.avi')?.date).toBe('1931-01-01');

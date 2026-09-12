@@ -68,8 +68,9 @@ export function parseTapeLabel(fileName: string): TapeLabelGuess | null {
       if (y4[2]) yearEnd = y4[2].length === 4 ? Number(y4[2]) : Math.floor(year / 100) * 100 + Number(y4[2]);
       rest = rest.replace(y4[0], y4[0].match(/^\D/) ? y4[0][0] : '');
     } else {
-      // Two-digit year, optionally a range, glued to or dashed off the word: 91-93, christmas95.
-      const y2 = rest.match(/(?:^|\D)(\d{2})(?:-(\d{2}))?(?=$|\D)/);
+      // Two-digit year, optionally a range, glued to or dashed off the word:
+      // 91-93, christmas95. Not an ordinal - "60th" is a birthday, not 1960.
+      const y2 = rest.match(/(?:^|\D)(\d{2})(?:-(\d{2}))?(?=$|(?!st|nd|rd|th)\D)/i);
       if (y2) {
         year = fullYear(y2[1]);
         if (y2[2]) yearEnd = fullYear(y2[2]);
