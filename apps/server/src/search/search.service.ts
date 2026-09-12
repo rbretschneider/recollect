@@ -66,8 +66,18 @@ export interface SearchResults {
 }
 
 const MIN_TEXT_LENGTH = 2;
-const SEMANTIC_LIMIT = 30;
-const SEMANTIC_MAX_DISTANCE = 0.78;
+/**
+ * Semantic search bounds, set by looking at real results rather than guessed.
+ * For "dog" on a 25k-photo library the nearest match sits at cosine distance
+ * 0.74 and results stay almost all dogs out to about 0.79 - roughly a
+ * thousand photos - before mixing in at 0.80. The old cap took the nearest
+ * 30 and showed 17 of them. CLIP distances are packed tightly, so the cutoff
+ * is relative to the best match for THIS query (a rarer subject starts
+ * further out), with an absolute ceiling so a nonsense query returns little.
+ */
+const SEMANTIC_LIMIT = 500;
+const SEMANTIC_MAX_DISTANCE = 0.8;
+const SEMANTIC_RELATIVE_WINDOW = 0.06;
 const MEMORY_LIMIT = 20;
 const ALBUM_LIMIT = 20;
 const FOLDER_LIMIT = 10;
@@ -165,8 +175,10 @@ export class SearchService {
         ORDER BY e.embedding <=> ${vectorLiteral}::vector
         LIMIT ${SEMANTIC_LIMIT}
       `);
+      const best = result.rows.length > 0 ? Number(result.rows[0].distance) : Infinity;
+      const cutoff = Math.min(SEMANTIC_MAX_DISTANCE, best + SEMANTIC_RELATIVE_WINDOW);
       return result.rows
-        .filter((row) => Number(row.distance) <= SEMANTIC_MAX_DISTANCE)
+        .filter((row) => Number(row.distance) <= cutoff)
         .map((row) => ({
           id: row.id as string,
           mediaType: row.media_type as 'image' | 'video',
