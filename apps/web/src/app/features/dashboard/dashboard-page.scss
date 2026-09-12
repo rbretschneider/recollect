@@ -283,9 +283,12 @@ section h2 {
     }
   }
 
+  // Captions wrap to different heights, so the action buttons sit at the
+  // bottom of each grid row — one straight line across every pile.
   .stack-actions {
     display: flex;
     justify-content: center;
+    margin-top: auto;
   }
 
   .ghost-link {
