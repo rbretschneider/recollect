@@ -41,7 +41,13 @@ export class ToastService {
 
   private push(partial: Omit<Toast, 'id'>): void {
     const toast: Toast = { ...partial, id: toastSeq++ };
-    this.toasts.update((list) => [...list, toast]);
+    // Only the latest success shows: trashing or converting five things in a
+    // row should not stack five "Moved…" messages. Errors keep stacking, since
+    // each one can carry its own Retry.
+    this.toasts.update((list) => [
+      ...(toast.kind === 'success' ? list.filter((t) => t.kind !== 'success') : list),
+      toast,
+    ]);
     // Success is disposable; an error with a retry stays until acted on.
     if (toast.kind === 'success') {
       setTimeout(() => this.dismiss(toast.id), 3200);
