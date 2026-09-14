@@ -232,6 +232,13 @@
       "when": 1789155106135,
       "tag": "0032_asset_title",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1789400000000,
+      "tag": "0033_video_timeline_index",
+      "breakpoints": true
     }
   ]
 }

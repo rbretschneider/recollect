@@ -148,6 +148,8 @@ export class AssetsService {
      * view. So it is fetched only when something is going to render it.
      */
     includeCardDetail = false,
+    /** Photos-only or videos-only; undefined is the mixed timeline. */
+    mediaType?: 'image' | 'video',
   ): Promise<TimelinePage> {
     const pageSize = Math.min(limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const cursor = cursorToken ? decodeTimelineCursor(cursorToken) : null;
@@ -189,6 +191,7 @@ export class AssetsService {
           eq(asset.status, 'active'),
           cursorFilter,
           favoritesOnly ? sql`${favorite.userId} is not null` : sql`true`,
+          mediaType ? eq(asset.mediaType, mediaType) : sql`true`,
         ),
       )
       .orderBy(desc(asset.capturedAt), desc(asset.id))

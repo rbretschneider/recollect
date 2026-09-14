@@ -563,8 +563,60 @@
 // Grid controls, parked with the grid instead of the header.
 .grid-toolbar {
   display: flex;
-  justify-content: flex-end;
   align-items: center;
   gap: 0.6rem;
   padding: 0.5rem 1rem 0;
+
+  .spacer {
+    flex: 1;
+  }
+
+  @media (width < 400px) {
+    gap: 0.4rem;
+    padding-inline: 0.75rem;
+  }
+}
+
+// All | Photos | Videos. Same pill language as the view switch so the two
+// read as one toolbar; on the narrowest phones the words yield to the icons.
+.media-switch {
+  display: flex;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 38px;
+    min-height: 38px;
+    padding: 0 0.7rem;
+    border: none;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &.active {
+      background: var(--surface-raised);
+      color: var(--accent);
+    }
+
+    & + button {
+      border-left: 1px solid var(--border);
+    }
+  }
+
+  @media (width < 360px) {
+    button {
+      padding: 0 0.55rem;
+    }
+
+    .label {
+      display: none;
+    }
+  }
 }

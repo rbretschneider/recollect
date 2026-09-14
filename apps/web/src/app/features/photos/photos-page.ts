@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { describeError } from '../../core/describe-error';
 import { ActivityService } from '../../core/activity.service';
-import { PhotosApiService } from '../../core/api/photos-api.service';
+import { MediaFilter, PhotosApiService } from '../../core/api/photos-api.service';
 import { TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { TrashApiService } from '../../core/api/trash-api.service';
@@ -29,7 +29,8 @@ import { ToastService } from '../../shared/toast.service';
 import { Icon } from '../../shared/icon';
 import { LongPressDirective } from '../../shared/long-press.directive';
 import { AssetViewer } from '../viewer/asset-viewer';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 
 /** One day's worth of photos in the grid. */
@@ -83,6 +84,7 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
   private readonly albumsApi = inject(AlbumsApiService);
   private readonly memoriesApi = inject(MemoriesApiService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(AuthStateService);
   private readonly confirms = inject(ConfirmService);
   private readonly toasts = inject(ToastService);
@@ -101,6 +103,11 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
   readonly isSelecting = signal(false);
   /** Show only the signed-in user's hearted photos. */
   readonly favoritesOnly = signal(false);
+  /**
+   * All media, photos only, or videos only. Lives in the URL (`?type=video`)
+   * so back, refresh and a shared link all land on the same view.
+   */
+  readonly mediaFilter = signal<MediaFilter>(null);
   readonly selectedIds = signal<ReadonlySet<string>>(new Set());
   readonly isPickingAlbum = signal(false);
   readonly undoIds = signal<string[]>([]);
@@ -132,8 +139,20 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
   });
 
   ngAfterViewInit(): void {
-    // First page loads eagerly; the observer only paginates from there.
-    void this.loadMore();
+    // First page loads eagerly (the query-param stream fires at once with the
+    // current URL); the observer only paginates from there. A later change to
+    // ?type= - a tap on the segment, or the back button - restarts the stream.
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        const type = params.get('type');
+        const next: MediaFilter = type === 'image' || type === 'video' ? type : null;
+        const changed = next !== this.mediaFilter();
+        this.mediaFilter.set(next);
+        if (changed || !this.hasLoadedFirstPage) {
+          void this.refreshFromStart();
+        }
+      });
     this.observer = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting)) {
         void this.loadMore();
@@ -329,6 +348,15 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
     void this.refreshFromStart();
   }
 
+  /** The URL is the source of truth; the query-param subscription reloads. */
+  setMediaFilter(filter: MediaFilter): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { type: filter },
+      queryParamsHandling: 'merge',
+    });
+  }
+
   /** The viewer trashed a photo: drop it from the grid and offer Undo. */
   onViewerDeleted(assetId: string): void {
     this.items.update((list) => list.filter((item) => item.id !== assetId));
@@ -487,6 +515,7 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
         PAGE_SIZE,
         this.favoritesOnly(),
         this.viewMode() === 'cards',
+        this.mediaFilter(),
       );
       this.items.update((existing) => [...existing, ...page.items]);
       this.nextCursor = page.nextCursor;
@@ -506,9 +535,11 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
   }
 
   get showEmptyState(): boolean {
-    // An empty favorites filter means "no hearts yet", not "no library".
+    // An empty favorites or videos-only view means "none of those yet", not
+    // "no library" - those get their own gentler message.
     return (
       !this.favoritesOnly() &&
+      this.mediaFilter() === null &&
       this.hasLoadedFirstPage &&
       this.items().length === 0 &&
       this.pendingCount() === 0

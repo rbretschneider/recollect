@@ -49,12 +49,24 @@ export class AssetsController {
     @Query('favorites') favorites?: string,
     /** '1' when the caller renders card view and needs the EXIF/place block. */
     @Query('cards') cards?: string,
+    /** 'image' or 'video' narrows the timeline to one kind; absent means both. */
+    @Query('type') type?: string,
   ): Promise<TimelinePage> {
     const parsedLimit = limit === undefined ? undefined : Number(limit);
     if (parsedLimit !== undefined && (!Number.isInteger(parsedLimit) || parsedLimit < 1)) {
       throw new BadRequestException('limit must be a positive integer.');
     }
-    return this.assets.listTimeline(cursor, parsedLimit, user.id, favorites === '1', cards === '1');
+    if (type !== undefined && type !== 'image' && type !== 'video') {
+      throw new BadRequestException("type must be 'image' or 'video'.");
+    }
+    return this.assets.listTimeline(
+      cursor,
+      parsedLimit,
+      user.id,
+      favorites === '1',
+      cards === '1',
+      type,
+    );
   }
 
   /** Batch lookup: one round trip for a whole album/memory viewer list. */

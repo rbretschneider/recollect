@@ -3,6 +3,9 @@ import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { TimelineAsset, TimelinePage } from './api-models';
 
+/** Which kind of media the timeline shows: null is the mixed stream. */
+export type MediaFilter = 'image' | 'video' | null;
+
 /** Raw HTTP calls for the photo timeline. */
 @Injectable({ providedIn: 'root' })
 export class PhotosApiService {
@@ -14,6 +17,8 @@ export class PhotosApiService {
     favoritesOnly = false,
     /** Card view is the only grid that renders EXIF, place and filename. */
     withCardDetail = false,
+    /** Photos-only or videos-only; null is everything. */
+    mediaType: MediaFilter = null,
   ): Promise<TimelinePage> {
     let params = new HttpParams().set('limit', limit);
     if (cursor) {
@@ -24,6 +29,9 @@ export class PhotosApiService {
     }
     if (withCardDetail) {
       params = params.set('cards', '1');
+    }
+    if (mediaType) {
+      params = params.set('type', mediaType);
     }
     return firstValueFrom(this.http.get<TimelinePage>('/api/v1/assets', { params }));
   }

@@ -31,6 +31,38 @@
 @if (!isSelecting()) {
   <!-- Grid controls live with the grid they shape, not in the header. -->
   <div class="grid-toolbar" role="toolbar" aria-label="Grid options">
+    <!-- What you're looking at on the left; how it's drawn on the right. -->
+    <div class="media-switch" role="group" aria-label="Show">
+      <button
+        type="button"
+        [class.active]="mediaFilter() === null"
+        [attr.aria-pressed]="mediaFilter() === null"
+        (click)="setMediaFilter(null)"
+      >
+        All
+      </button>
+      <button
+        type="button"
+        [class.active]="mediaFilter() === 'image'"
+        [attr.aria-pressed]="mediaFilter() === 'image'"
+        aria-label="Photos only"
+        (click)="setMediaFilter('image')"
+      >
+        <app-icon name="image" [size]="16" />
+        <span class="label">Photos</span>
+      </button>
+      <button
+        type="button"
+        [class.active]="mediaFilter() === 'video'"
+        [attr.aria-pressed]="mediaFilter() === 'video'"
+        aria-label="Videos only"
+        (click)="setMediaFilter('video')"
+      >
+        <app-icon name="video" [size]="16" />
+        <span class="label">Videos</span>
+      </button>
+    </div>
+    <span class="spacer"></span>
     <button
       type="button"
       class="fav-filter"
@@ -87,6 +119,16 @@
     <section class="empty">
       <h2>No favorites yet</h2>
       <p>Open a photo and tap the heart to keep it here.</p>
+    </section>
+  } @else if (mediaFilter() === 'video' && items().length === 0 && !isLoading()) {
+    <section class="empty">
+      <h2>No videos yet</h2>
+      <p>Videos in your library will show up here once they're indexed.</p>
+    </section>
+  } @else if (mediaFilter() === 'image' && items().length === 0 && !isLoading()) {
+    <section class="empty">
+      <h2>No photos yet</h2>
+      <p>Photos in your library will show up here once they're indexed.</p>
     </section>
   }
 

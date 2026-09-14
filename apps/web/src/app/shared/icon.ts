@@ -16,6 +16,7 @@ export type IconName =
   | 'user'
   | 'file'
   | 'image'
+  | 'video'
   | 'aperture'
   | 'map-pin'
   | 'share'
@@ -184,6 +185,10 @@ export type IconName =
           <path d="m22 13-1.296-1.296a2.41 2.41 0 0 0-3.408 0L11 18" />
           <circle cx="12" cy="8" r="2" />
           <rect width="16" height="16" x="6" y="2" rx="2" />
+        }
+        @case ('video') {
+          <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" />
+          <rect x="2" y="6" width="14" height="12" rx="2" />
         }
       }
     </svg>
