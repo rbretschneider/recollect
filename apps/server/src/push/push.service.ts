@@ -181,7 +181,7 @@ export class PushService implements OnModuleInit {
   async recordDailyPush(userId: string, momentKeys: string): Promise<void> {
     await this.db
       .update(notificationPref)
-      .set({ lastMomentKeys: momentKeys })
+      .set({ lastMomentKeys: momentKeys, lastPushedAt: new Date() })
       .where(eq(notificationPref.userId, userId));
   }
 

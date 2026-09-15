@@ -146,6 +146,8 @@ export const notificationPref = pgTable('notification_pref', {
   lastSentOn: date('last_sent_on'),
   /** Comma-joined moment keys from the last push, to skip an identical day. */
   lastMomentKeys: text('last_moment_keys'),
+  /** When a daily push last actually went out (lastSentOn also covers skipped days). */
+  lastPushedAt: timestamp('last_pushed_at', { withTimezone: true }),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

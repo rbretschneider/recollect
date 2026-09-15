@@ -11,8 +11,12 @@ const CHECK_EVERY_MS = 5 * 60 * 1000;
 /** Only fire within this many minutes past the target, so a late boot doesn't
  * buzz someone at an odd hour — they just get it the next morning instead. */
 const WINDOW_MINUTES = 180;
-/** The look-back page shows a few more moments than the dashboard. */
-const LOOKBACK_LIMIT = 6;
+/**
+ * Same cap as the look-back page, so "is today different?" is judged on what
+ * the person will actually see when they tap through - not a shorter list
+ * that the same few big clusters can dominate for a week.
+ */
+const LOOKBACK_LIMIT = 12;
 
 /**
  * Sends the daily "this week, years ago" push at each user's own local time.
@@ -68,23 +72,28 @@ export class DailyLookbackScheduler implements OnApplicationBootstrap, OnApplica
         await this.push.markDailySent(candidate.userId, local.date);
         const moments = await this.dashboard.onThisDayMoments(local.mmdd, local.year, LOOKBACK_LIMIT);
         if (moments.length === 0) {
-          continue; // Nothing to relive today — skip the notification.
+          this.logger.log(`Daily look-back for ${candidate.userId}: skipped, nothing to relive.`);
+          continue;
         }
-        // The ±3-day window overlaps day to day, so most mornings the moments
-        // are identical. Only buzz when at least one moment wasn't in the last
-        // push — otherwise it's the same look-back they already saw.
-        const keys = moments.map((moment) => moment.key).sort();
-        const lastKeys = new Set((candidate.lastMomentKeys ?? '').split(',').filter(Boolean));
-        if (keys.every((key) => lastKeys.has(key))) {
-          continue; // Same as before — stay quiet.
+        // The window slides a day at a time, so the page almost always changes
+        // a little. Stay quiet only when it is exactly what they were sent last
+        // time - the old "nothing new in the top few" test let one big cluster
+        // silence a week of mornings.
+        const keys = moments.map((moment) => moment.key).sort().join(',');
+        if (keys === candidate.lastMomentKeys) {
+          this.logger.log(`Daily look-back for ${candidate.userId}: skipped, identical to last push.`);
+          continue;
         }
         const count = moments.length;
-        await this.push.sendToUser(candidate.userId, {
+        const delivered = await this.push.sendToUser(candidate.userId, {
           title: 'This week, years ago 📸',
           body: `${count} ${count === 1 ? 'moment' : 'moments'} from years past — tap to look back.`,
           url: '/lookback',
         });
-        await this.push.recordDailyPush(candidate.userId, keys.join(','));
+        await this.push.recordDailyPush(candidate.userId, keys);
+        this.logger.log(
+          `Daily look-back for ${candidate.userId}: sent ${count} moments to ${delivered} device(s).`,
+        );
       } catch (error) {
         this.logger.warn(`Daily look-back for ${candidate.userId} failed: ${(error as Error).message}`);
       }
