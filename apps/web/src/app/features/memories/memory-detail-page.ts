@@ -294,10 +294,14 @@ export class MemoryDetailPage implements OnInit {
     return permission === 'write' || permission === 'delete';
   }
 
+  /** `?new=1`: created a moment ago, from a look-back, suggestion, album or pick. */
+  private isFreshlyCreated = false;
+
   ngOnInit(): void {
     this.destroyRef.onDestroy(() => this.flushJournalSave());
     // A memory just created from a selection or album opens ready to write.
     if (this.route.snapshot.queryParamMap.get('new') === '1') {
+      this.isFreshlyCreated = true;
       this.editMode.enter();
     }
     void this.load();
@@ -498,6 +502,13 @@ export class MemoryDetailPage implements OnInit {
         const element = this.editor()?.nativeElement;
         if (element) {
           this.autoGrow(element);
+          // A brand-new memory lands you in the journal, cursor blinking: the
+          // point of making it was to write, so no hunting for the box.
+          if (this.isFreshlyCreated) {
+            this.isFreshlyCreated = false;
+            element.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            element.focus({ preventScroll: true });
+          }
         }
       });
     } catch {

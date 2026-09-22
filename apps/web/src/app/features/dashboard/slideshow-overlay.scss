@@ -60,14 +60,16 @@
   place-items: center;
   overflow: hidden;
   cursor: pointer;
-  // Horizontal swipes are ours; the browser keeps vertical (nothing scrolls).
-  touch-action: pan-y;
+  // Every touch is ours: swipes steer, pinches zoom, nothing here scrolls.
+  touch-action: none;
 
   .slide {
     max-width: 100vw;
     max-height: 100dvh;
     object-fit: contain;
     transition: opacity 0.6s ease, transform 6s linear;
+    user-select: none;
+    -webkit-user-drag: none;
 
     // Gentle Ken Burns drift + crossfade in.
     @starting-style {
@@ -81,6 +83,24 @@
     @starting-style {
       transform: scale(1);
     }
+  }
+
+  // Zoomed in, the drift gives way to the pinch: quick easing between steps,
+  // none at all while a finger is down so the picture tracks it exactly.
+  &.zoomed .slide {
+    transition: opacity 0.6s ease, transform 0.18s ease;
+  }
+
+  &.dragging .slide {
+    transition: opacity 0.6s ease;
+  }
+
+  &.zoomed {
+    cursor: grab;
+  }
+
+  &.zoomed:active {
+    cursor: grabbing;
   }
 
   .end-card {

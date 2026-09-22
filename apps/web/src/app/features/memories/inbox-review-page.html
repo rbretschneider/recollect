@@ -26,6 +26,7 @@
           [suggestion]="suggestion"
           [canWrite]="canWrite"
           (decided)="onDecided(suggestion.id, $event)"
+          (created)="openNewMemory($event)"
         />
       }
     </div>

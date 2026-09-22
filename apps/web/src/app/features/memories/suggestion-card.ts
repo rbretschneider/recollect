@@ -31,6 +31,8 @@ export class SuggestionCard implements OnInit {
   readonly canWrite = input<boolean>(false);
   /** Emitted once the card is decided; the grid removes it. */
   readonly decided = output<SuggestionOutcome>();
+  /** The memory this suggestion became — the page takes you there to write. */
+  readonly created = output<string>();
 
   readonly name = signal('');
   readonly isBusy = signal(false);
@@ -124,9 +126,14 @@ export class SuggestionCard implements OnInit {
     const title = this.name().trim() || undefined;
     this.isBusy.set(true);
     try {
-      await this.api.acceptSuggestion(this.suggestion().id, title, isEdited ? finalIds : undefined);
+      const { memoryId } = await this.api.acceptSuggestion(
+        this.suggestion().id,
+        title,
+        isEdited ? finalIds : undefined,
+      );
       // Only drop the card once the memory really exists.
       this.decided.emit('created');
+      this.created.emit(memoryId);
     } catch (error) {
       if (this.isGone(error)) {
         this.decided.emit('stale');

@@ -25,17 +25,10 @@ import { ConfirmService } from '../../shared/confirm.service';
 import { ToastService } from '../../shared/toast.service';
 import { Icon } from '../../shared/icon';
 import { Sheet } from '../../shared/sheet';
+import { ZoomGesture } from '../../shared/zoom-gesture';
 
 /** Minimum horizontal swipe distance (px) that counts as navigation. */
 const SWIPE_THRESHOLD_PX = 60;
-
-/** Zoom bounds and the double-tap zoom level. */
-const MIN_ZOOM = 1;
-const MAX_ZOOM = 6;
-const DOUBLE_TAP_ZOOM = 2.5;
-
-/** Movement beyond this (px) makes a gesture a drag, not a tap/click. */
-const DRAG_THRESHOLD_PX = 8;
 
 /** Bottom band of the stage reserved for the native video seek bar. */
 const VIDEO_CONTROLS_STRIP_PX = 72;
@@ -135,15 +128,11 @@ export class AssetViewer implements OnInit, OnDestroy {
     return this.favoriteOverrides().get(asset.id) ?? asset.isFavorite;
   });
 
-  /** Pinch/scroll zoom state; 1 = fitted. Pan is in screen pixels. */
-  readonly zoom = signal(1);
-  readonly panX = signal(0);
-  readonly panY = signal(0);
-  readonly isGestureActive = signal(false);
-
-  readonly mediaTransform = computed(
-    () => `translate(${this.panX()}px, ${this.panY()}px) scale(${this.zoom()})`,
-  );
+  /** Pinch/scroll zoom + pan, shared with the slideshow. 1 = fitted. */
+  private readonly gesture = new ZoomGesture();
+  readonly zoom = this.gesture.zoom;
+  readonly isGestureActive = this.gesture.isActive;
+  readonly mediaTransform = this.gesture.transform;
 
   /**
    * The optimistic turn rides the INDEPENDENT rotate property, not transform.
@@ -154,17 +143,6 @@ export class AssetViewer implements OnInit, OnDestroy {
    */
   readonly mediaRotate = computed(() => `${this.previewTurns() * 90}deg`);
 
-  private readonly activePointers = new Map<number, { x: number; y: number }>();
-  private gestureStart: {
-    zoom: number;
-    panX: number;
-    panY: number;
-    x: number;
-    y: number;
-    pinchDistance: number | null;
-  } | null = null;
-  private didDrag = false;
-  private didPinch = false;
   private lastResetAssetId: string | null = null;
   private lastShownWasImage = false;
   /** Swipe-over-video tracking; native controls stay untouched. */
@@ -384,7 +362,7 @@ export class AssetViewer implements OnInit, OnDestroy {
   // --- Gestures: pinch/wheel zoom, pan while zoomed, swipe-nav at 1x -------
 
   onPointerDown(event: PointerEvent): void {
-    if ((event.target as HTMLElement).tagName === 'VIDEO') {
+    if (!this.gesture.pointerDown(event)) {
       // Videos keep their native controls (no capture, no preventDefault),
       // but a horizontal swipe across the picture still navigates. The
       // bottom strip is exempt — that's the seek bar.
@@ -392,38 +370,11 @@ export class AssetViewer implements OnInit, OnDestroy {
       if (event.clientY < stage.bottom - VIDEO_CONTROLS_STRIP_PX) {
         this.videoSwipeStart = { x: event.clientX, y: event.clientY };
       }
-      return;
-    }
-    this.activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-    this.isGestureActive.set(true);
-    this.didDrag = false;
-    if (this.activePointers.size === 2) {
-      this.didPinch = true;
-      this.beginGesture(this.pinchDistance());
-    } else {
-      this.didPinch = false;
-      this.beginGesture(null);
     }
   }
 
   onPointerMove(event: PointerEvent): void {
-    if (!this.activePointers.has(event.pointerId) || !this.gestureStart) {
-      return;
-    }
-    this.activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-    const start = this.gestureStart;
-    const center = this.pointerCenter();
-    if (Math.hypot(center.x - start.x, center.y - start.y) > DRAG_THRESHOLD_PX) {
-      this.didDrag = true;
-    }
-    if (this.activePointers.size === 2 && start.pinchDistance !== null) {
-      const scale = this.clampZoom((start.zoom * this.pinchDistance()) / start.pinchDistance);
-      this.zoomAround(center, scale, start);
-    } else if (this.activePointers.size === 1 && this.zoom() > MIN_ZOOM) {
-      this.panX.set(start.panX + (center.x - start.x));
-      this.panY.set(start.panY + (center.y - start.y));
-    }
+    this.gesture.pointerMove(event);
   }
 
   onPointerUp(event: PointerEvent): void {
@@ -441,61 +392,27 @@ export class AssetViewer implements OnInit, OnDestroy {
       }
       return;
     }
-    const wasSingle = this.activePointers.size === 1;
-    const start = this.gestureStart;
-    this.activePointers.delete(event.pointerId);
-    if (this.activePointers.size > 0) {
-      this.beginGesture(this.activePointers.size === 2 ? this.pinchDistance() : null);
-      return;
+    const swipe = this.gesture.pointerUp(event);
+    if (swipe === 'next') {
+      this.next();
+    } else if (swipe === 'previous') {
+      this.previous();
     }
-    this.isGestureActive.set(false);
-    if (this.zoom() < 1.05) {
-      this.resetZoom();
-    }
-    if (wasSingle && !this.didPinch && this.zoom() === MIN_ZOOM && start) {
-      const deltaX = event.clientX - start.x;
-      if (deltaX < -SWIPE_THRESHOLD_PX) {
-        this.next();
-      } else if (deltaX > SWIPE_THRESHOLD_PX) {
-        this.previous();
-      }
-    }
-    this.gestureStart = null;
   }
 
   /** Desktop: scroll wheel zooms toward the cursor. */
   onWheel(event: WheelEvent): void {
-    event.preventDefault();
-    const scale = this.clampZoom(this.zoom() * Math.exp(-event.deltaY * 0.0022));
-    this.zoomAround({ x: event.clientX, y: event.clientY }, scale, {
-      zoom: this.zoom(),
-      panX: this.panX(),
-      panY: this.panY(),
-    });
-    if (this.zoom() < 1.05) {
-      this.resetZoom();
-    }
+    this.gesture.wheel(event);
   }
 
   /** Double tap / double click toggles between fitted and zoomed-in. */
   onDoubleClick(event: MouseEvent): void {
-    if ((event.target as HTMLElement).tagName === 'VIDEO') {
-      return;
-    }
-    if (this.zoom() > MIN_ZOOM) {
-      this.resetZoom();
-    } else {
-      this.zoomAround({ x: event.clientX, y: event.clientY }, DOUBLE_TAP_ZOOM, {
-        zoom: 1,
-        panX: 0,
-        panY: 0,
-      });
-    }
+    this.gesture.doubleClick(event);
   }
 
   /** Anywhere that isn't the media or a control closes the viewer. */
   onStageClick(event: MouseEvent): void {
-    if (this.didDrag || this.didPinch) {
+    if (this.gesture.consumedClick) {
       return; // The tail end of a pan/pinch is not a click.
     }
     if (event.target === event.currentTarget) {
@@ -507,57 +424,8 @@ export class AssetViewer implements OnInit, OnDestroy {
     }
   }
 
-  private beginGesture(pinchDistance: number | null): void {
-    const center = this.pointerCenter();
-    this.gestureStart = {
-      zoom: this.zoom(),
-      panX: this.panX(),
-      panY: this.panY(),
-      x: center.x,
-      y: center.y,
-      pinchDistance,
-    };
-  }
-
-  /** Rescales so the image point under `anchor` stays under it. */
-  private zoomAround(
-    anchor: { x: number; y: number },
-    scale: number,
-    from: { zoom: number; panX: number; panY: number },
-  ): void {
-    const originX = window.innerWidth / 2;
-    const originY = window.innerHeight / 2;
-    const imagePointX = (anchor.x - originX - from.panX) / from.zoom;
-    const imagePointY = (anchor.y - originY - from.panY) / from.zoom;
-    this.zoom.set(scale);
-    this.panX.set(anchor.x - originX - imagePointX * scale);
-    this.panY.set(anchor.y - originY - imagePointY * scale);
-  }
-
-  private pointerCenter(): { x: number; y: number } {
-    const points = [...this.activePointers.values()];
-    if (points.length === 0) {
-      return { x: 0, y: 0 };
-    }
-    return {
-      x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
-      y: points.reduce((sum, point) => sum + point.y, 0) / points.length,
-    };
-  }
-
-  private pinchDistance(): number {
-    const [first, second] = [...this.activePointers.values()];
-    return Math.hypot(second.x - first.x, second.y - first.y);
-  }
-
-  private clampZoom(value: number): number {
-    return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM * 0.85, value));
-  }
-
   private resetZoom(): void {
-    this.zoom.set(1);
-    this.panX.set(0);
-    this.panY.set(0);
+    this.gesture.reset();
   }
 
   @HostListener('document:keydown', ['$event'])

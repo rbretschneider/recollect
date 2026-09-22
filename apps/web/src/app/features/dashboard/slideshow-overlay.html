@@ -101,13 +101,27 @@
 
   <div
     class="stage"
+    [class.zoomed]="gesture.isZoomed()"
+    [class.dragging]="gesture.isActive()"
     (click)="onStageClick($event)"
     (pointerdown)="onPointerDown($event)"
+    (pointermove)="onPointerMove($event)"
     (pointerup)="onPointerUp($event)"
+    (pointercancel)="onPointerUp($event)"
+    (wheel)="onWheel($event)"
+    (dblclick)="onDoubleClick($event)"
   >
     @for (item of currentAsList(); track item.id) {
       @if (item.mediaType === 'image') {
-        <img class="slide" [src]="imageUrl(item.id)" alt="" />
+        <!-- Zoomed, the pinch transform replaces the Ken Burns drift; at 1x the
+             inline style is dropped so the stylesheet's drift runs again. -->
+        <img
+          class="slide"
+          [src]="imageUrl(item.id)"
+          [style.transform]="gesture.isZoomed() ? gesture.transform() : null"
+          alt=""
+          draggable="false"
+        />
       } @else {
         <video
           class="slide"

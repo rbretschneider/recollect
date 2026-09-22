@@ -9,6 +9,7 @@ import { ShareButton } from '../../shared/share-button';
 import { ConfirmService } from '../../shared/confirm.service';
 import { ToastService } from '../../shared/toast.service';
 import { closeOnBrowserBack } from '../../shared/close-on-back';
+import { ZoomGesture } from '../../shared/zoom-gesture';
 
 /** One slide. */
 export interface SlideItem {
@@ -275,6 +276,11 @@ export class SlideshowOverlay implements OnDestroy {
   private trackIndex = 0;
 
   constructor() {
+    // A new slide always arrives fitted, whatever the last one was zoomed to.
+    effect(() => {
+      this.current();
+      this.gesture.reset();
+    });
     effect(() => {
       const item = this.current();
       const paused = this.isPaused();
@@ -394,34 +400,66 @@ export class SlideshowOverlay implements OnDestroy {
     this.isPaused.update((value) => !value);
   }
 
-  /** Swipe tracking: a real swipe navigates and swallows the tap. */
-  private pointerStartX: number | null = null;
+  // --- Gestures: pinch / double-tap zoom, pan, swipe to steer ---------------
+
+  /**
+   * Same pinch/pan/double-tap as the asset viewer. Zooming in pauses the show:
+   * a photo you're leaning into must not slide away under your fingers.
+   */
+  readonly gesture = new ZoomGesture();
+  /** Videos have no zoom, so their swipes are tracked the plain way. */
+  private videoSwipeStartX: number | null = null;
   private didSwipe = false;
 
   onPointerDown(event: PointerEvent): void {
-    this.pointerStartX = event.clientX;
     this.didSwipe = false;
+    if (!this.gesture.pointerDown(event)) {
+      this.videoSwipeStartX = event.clientX;
+    }
+  }
+
+  onPointerMove(event: PointerEvent): void {
+    this.gesture.pointerMove(event);
+    if (this.gesture.isZoomed()) {
+      this.isPaused.set(true);
+    }
   }
 
   onPointerUp(event: PointerEvent): void {
-    if (this.pointerStartX === null) {
-      return;
-    }
-    const delta = event.clientX - this.pointerStartX;
-    this.pointerStartX = null;
-    if (Math.abs(delta) >= 50) {
-      this.didSwipe = true;
-      if (delta < 0) {
-        this.next();
-      } else {
-        this.previous();
+    let swipe = this.gesture.pointerUp(event);
+    if (this.videoSwipeStartX !== null) {
+      const delta = event.clientX - this.videoSwipeStartX;
+      this.videoSwipeStartX = null;
+      if (Math.abs(delta) >= 50) {
+        swipe = delta < 0 ? 'next' : 'previous';
       }
+    }
+    if (swipe === 'next') {
+      this.didSwipe = true;
+      this.next();
+    } else if (swipe === 'previous') {
+      this.didSwipe = true;
+      this.previous();
+    }
+  }
+
+  onWheel(event: WheelEvent): void {
+    this.gesture.wheel(event);
+    if (this.gesture.isZoomed()) {
+      this.isPaused.set(true);
+    }
+  }
+
+  onDoubleClick(event: MouseEvent): void {
+    if (this.gesture.doubleClick(event) && this.gesture.isZoomed()) {
+      this.isPaused.set(true);
     }
   }
 
   onStageClick(event: MouseEvent): void {
-    // The click after a swipe is the same gesture — don't also steer by zones.
-    if (this.didSwipe) {
+    // The click after a swipe, pan or pinch is the same gesture — don't also
+    // steer by zones. Zoomed in, the sides are picture, not buttons.
+    if (this.didSwipe || this.gesture.consumedClick || this.gesture.isZoomed()) {
       this.didSwipe = false;
       return;
     }

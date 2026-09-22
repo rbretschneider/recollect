@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { describeError } from '../../core/describe-error';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { InboxSuggestion } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
@@ -27,6 +27,7 @@ export class InboxReviewPage implements OnInit {
   private readonly auth = inject(AuthStateService);
   private readonly confirms = inject(ConfirmService);
   private readonly toasts = inject(ToastService);
+  private readonly router = inject(Router);
 
   readonly queue = signal<InboxSuggestion[]>([]);
   readonly isLoaded = signal(false);
@@ -41,6 +42,15 @@ export class InboxReviewPage implements OnInit {
 
   ngOnInit(): void {
     void this.load();
+  }
+
+  /**
+   * A memory was just made: go write it up. The rest of the queue is still
+   * here when you come back — creating one is the start of something, not a
+   * tick on a list.
+   */
+  openNewMemory(memoryId: string): void {
+    void this.router.navigate(['/memories', memoryId], { queryParams: { new: 1 } });
   }
 
   /** A card decided itself: drop it from the grid; count real decisions only. */
