@@ -1,6 +1,7 @@
-import { Component, ElementRef, HostListener, inject, input, OnInit, output } from '@angular/core';
+import { Component, DestroyRef, ElementRef, HostListener, inject, input, OnInit, output } from '@angular/core';
 import { Icon } from './icon';
 import { OverlayFocus } from './overlay-focus.directive';
+import { portalToBody } from './portal-to-body';
 
 let sheetSeq = 0;
 
@@ -41,6 +42,7 @@ let sheetSeq = 0;
 })
 export class Sheet implements OnInit {
   private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly sheetTitle = input.required<string>();
   /** CSS selector for the control to focus on open (e.g. a Cancel button). */
@@ -63,9 +65,10 @@ export class Sheet implements OnInit {
   ngOnInit(): void {
     // Portal to <body>: a host inside any stacking context (a z-indexed hero
     // button, a transformed card) would otherwise paint the sheet UNDER
-    // fixed chrome like the bottom nav. Angular still owns the node, so
-    // destroy/cleanup work unchanged.
-    document.body.appendChild(this.host.nativeElement);
+    // fixed chrome like the bottom nav. The helper also takes the node back
+    // out on destroy — moved out of its subtree, it would otherwise outlive
+    // the component that opened it.
+    portalToBody(this.host, this.destroyRef);
   }
 
   @HostListener('document:keydown.escape')

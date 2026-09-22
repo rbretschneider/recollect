@@ -1,8 +1,9 @@
-import { Component, ElementRef, HostListener, inject, OnInit, output } from '@angular/core';
+import { Component, DestroyRef, ElementRef, HostListener, inject, OnInit, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthStateService } from '../core/auth/auth-state.service';
 import { PwaInstallService } from '../core/pwa-install.service';
 import { OverlayFocus } from './overlay-focus.directive';
+import { portalToBody } from './portal-to-body';
 
 /**
  * The app side panel: account and the destinations. Kept deliberately short so
@@ -19,6 +20,7 @@ export class AppDrawer implements OnInit {
   private readonly auth = inject(AuthStateService);
   protected readonly pwa = inject(PwaInstallService);
   private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly closed = output<void>();
 
@@ -64,6 +66,6 @@ export class AppDrawer implements OnInit {
   ngOnInit(): void {
     // Portal to <body> (same as app-sheet): hosted inside a topbar, the
     // backdrop-filter/z-index context breaks the fixed panel and scrim.
-    document.body.appendChild(this.host.nativeElement);
+    portalToBody(this.host, this.destroyRef);
   }
 }
