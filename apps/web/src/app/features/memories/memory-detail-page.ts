@@ -36,6 +36,9 @@ import { SlideItem, SlideshowOverlay } from '../dashboard/slideshow-overlay';
 
 const JOURNAL_AUTOSAVE_MS = 1500;
 
+/** Tiles rendered before "Show all" — a screenful or two on a phone. */
+const GRID_PAGE_SIZE = 24;
+
 /** One Memory: hero, editable title, media grid, and the journal. */
 @Component({
   selector: 'app-memory-detail-page',
@@ -167,14 +170,53 @@ export class MemoryDetailPage implements OnInit {
     return [...byCaption.entries()].map(([caption, assetIds]) => ({ caption, assetIds }));
   });
 
-  /** Photos with no caption — shown at the end as a tappable polaroid stack. */
-  readonly looseAssetIds = computed<string[]>(() => {
-    const detail = this.detail();
-    return detail ? detail.assetIds.filter((id) => !detail.captions[id]) : [];
-  });
+  /**
+   * Every photo in the memory, as a scannable grid at the foot of the page.
+   *
+   * It used to be only the uncaptioned ones, behind a fanned polaroid stack.
+   * But captioning is deliberate work almost nobody does for a whole day, so
+   * the default was a hundred photos collapsed into one button — the thing the
+   * page is ABOUT, reduced to a footnote. The grid shows them all, captioned
+   * ones included: a contact sheet under the essay, where the count on the tin
+   * is the count you can see.
+   */
+  readonly allAssetIds = computed<string[]>(() => this.detail()?.assetIds ?? []);
 
-  /** Up to four fanned previews for the end-of-story stack. */
-  readonly loosePreview = computed<string[]>(() => this.looseAssetIds().slice(0, 4));
+  /** Render a screenful first; a hundred tiles is payload nobody asked for. */
+  readonly showAllPhotos = signal(false);
+  readonly gridAssetIds = computed<string[]>(() =>
+    this.showAllPhotos() ? this.allAssetIds() : this.allAssetIds().slice(0, GRID_PAGE_SIZE),
+  );
+  readonly hiddenPhotoCount = computed<number>(() =>
+    Math.max(0, this.allAssetIds().length - this.gridAssetIds().length),
+  );
+
+  /**
+   * "12 photos · 9:04 AM – 7:12 PM" — a day-long memory reads as a day rather
+   * than an undifferentiated bag. Only the clock is added, and only for a
+   * single day: the hero already carries the dates, and a multi-day span
+   * repeated here would just be the same sentence twice.
+   */
+  readonly photoSpanLabel = computed<string>(() => {
+    const detail = this.detail();
+    if (!detail) {
+      return '';
+    }
+    const count = detail.assetIds.length;
+    const parts = [`${count} ${count === 1 ? 'photo' : 'photos'}`];
+    const start = new Date(detail.startAt);
+    const end = new Date(detail.endAt);
+    const sameDay =
+      !Number.isNaN(start.getTime()) &&
+      !Number.isNaN(end.getTime()) &&
+      start.toDateString() === end.toDateString();
+    // A single instant (or a memory with no real span) says nothing useful.
+    if (sameDay && end.getTime() - start.getTime() >= 60_000) {
+      const time = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+      parts.push(`${time.format(start)} – ${time.format(end)}`);
+    }
+    return parts.join(' · ');
+  });
 
   /** My journal entry split into paragraphs (blank-line separated). */
   readonly journalParagraphs = computed<string[]>(() => {

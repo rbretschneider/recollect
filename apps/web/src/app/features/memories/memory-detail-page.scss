@@ -282,82 +282,64 @@
   }
 }
 
-// Captioned photos woven into the story as figures — the bloggy layer. A
-// group of photos that share a caption sit side by side under it.
-// The leftover, uncaptioned photos: a fanned polaroid stack that plays the
-// whole memory when tapped.
-.more-photos {
+// The contact sheet: every photo in the memory, scannable at a glance. This
+// replaced a fanned polaroid stack of only the UNCAPTIONED photos — pretty,
+// but it hid the whole point of the page behind a single button.
+.all-photos {
   max-width: 38rem;
   margin: 0 auto;
-  padding: 1.5rem 1.5rem 0;
+  padding: 1.25rem 1.5rem 0;
 
-  .stack {
-    display: flex;
-    align-items: center;
-    gap: 1.25rem;
-    width: 100%;
-    padding: 0.5rem;
-    border: none;
-    background: none;
-    color: var(--text);
-    cursor: pointer;
+  h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin: 0 0 0.15rem;
   }
 
-  .fan {
-    position: relative;
-    flex-shrink: 0;
-    width: 8rem;
-    height: 7rem;
+  .span {
+    margin: 0 0 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
   }
 
-  .polaroid {
-    position: absolute;
-    inset: 0.25rem auto auto 0.5rem;
-    width: 6.4rem;
-    padding: 0.3rem 0.3rem 1rem;
-    background: #f4f1ea;
-    border-radius: 2px;
-    box-shadow: 0 6px 16px rgb(0 0 0 / 45%);
-    transition: rotate 0.25s ease, translate 0.25s ease;
-
-    img {
-      display: block;
-      width: 100%;
-      aspect-ratio: 1;
-      object-fit: cover;
-      background: #ddd;
-    }
-
-    &[data-card='0'] { rotate: -5deg; z-index: 4; }
-    &[data-card='1'] { rotate: 4deg; translate: 8px 3px; z-index: 3; }
-    &[data-card='2'] { rotate: -9deg; translate: -6px 6px; z-index: 2; }
-    &[data-card='3'] { rotate: 8deg; translate: 4px 8px; z-index: 1; }
-  }
-
-  .stack:hover .polaroid[data-card='0'] {
-    rotate: -9deg;
-    translate: -3px -5px;
-  }
-
-  .stack-label {
+  .photo-grid {
     display: grid;
-    gap: 0.15rem;
-    text-align: left;
+    // Deliberately smaller than the edit-mode caption tiles: this is an index
+    // you scan, not a thing you tap precisely. 3 across on a phone, 5 on a
+    // wide screen — big enough to recognise a face, small enough that a
+    // hundred photos don't turn into a hundred screens of scrolling.
+    grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+    gap: 0.5rem;
 
-    strong {
-      font-size: 1rem;
-    }
+    button {
+      padding: 0;
+      border: none;
+      border-radius: 0.7rem;
+      overflow: hidden;
+      background: var(--surface);
+      cursor: pointer;
+      aspect-ratio: 1;
 
-    .sub {
-      font-size: 0.8rem;
-      color: var(--text-muted);
+      img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: scale 0.18s ease;
+      }
+
+      &:hover img {
+        scale: 1.04;
+      }
     }
   }
 
-  .play-here {
-    margin: 0.5rem 0 0 0.5rem;
-    min-height: 40px;
-    padding: 0 1.1rem;
+  .show-all {
+    margin-top: 0.75rem;
+    width: 100%;
+    min-height: 44px;
     border: 1px solid var(--border);
     border-radius: 2rem;
     background: var(--surface-raised);
@@ -365,6 +347,10 @@
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
+
+    &:hover {
+      background: var(--surface);
+    }
   }
 }
 

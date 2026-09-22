@@ -196,28 +196,6 @@
         </article>
       }
 
-      @if (looseAssetIds().length > 0) {
-        <section class="more-photos" aria-label="More photos">
-          <button type="button" class="stack" (click)="openViewer(looseAssetIds()[0])">
-            <span class="fan">
-              @for (assetId of loosePreview(); track assetId; let i = $index) {
-                <span class="polaroid" [attr.data-card]="i">
-                  <img [src]="thumbUrl(assetId, 720)" alt="" loading="lazy" />
-                </span>
-              }
-            </span>
-            <span class="stack-label">
-              <strong>{{ looseAssetIds().length }} more {{ looseAssetIds().length === 1 ? 'photo' : 'photos' }}</strong>
-              <span class="sub">tap to browse — swipe &amp; zoom at your own pace</span>
-            </span>
-          </button>
-          @if (memory.assetIds.length > 1) {
-            <button type="button" class="play-here" (click)="openSlideshow()">
-              ▶ Play slideshow
-            </button>
-          }
-        </section>
-      }
     }
 
     @if (editMode.isEditing() || memory.quotes.length > 0) {
@@ -279,6 +257,29 @@
         </form>
       }
     </section>
+    }
+
+    <!-- The contact sheet: every photo, scannable, after the writing and the
+         quotes but before the map. Read mode used to show less here than edit
+         mode did, which made the photos feel like a footnote to their own
+         memory. -->
+    @if (!editMode.isEditing() && allAssetIds().length > 0) {
+      <section class="all-photos" aria-label="All photos">
+        <h2>Photos</h2>
+        <p class="span">{{ photoSpanLabel() }}</p>
+        <div class="photo-grid">
+          @for (assetId of gridAssetIds(); track assetId) {
+            <button type="button" aria-label="Open photo" (click)="openViewer(assetId)">
+              <img [src]="thumbUrl(assetId, 240)" alt="" loading="lazy" decoding="async" />
+            </button>
+          }
+        </div>
+        @if (hiddenPhotoCount() > 0) {
+          <button type="button" class="show-all" (click)="showAllPhotos.set(true)">
+            Show all {{ allAssetIds().length }} photos
+          </button>
+        }
+      </section>
     }
 
     @if (mapEmbedUrl(memory); as mapUrl) {
