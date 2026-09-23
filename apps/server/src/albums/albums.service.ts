@@ -88,17 +88,20 @@ export class AlbumsService {
   }
 
   async create(userId: string, title: string, assetIds: string[]): Promise<{ albumId: string }> {
+    // Same composite key, same reasoning as memories: a repeated id would fail
+    // the whole insert rather than simply meaning "this photo, once".
+    const ids = [...new Set(assetIds)];
     const albumId = uuidv7();
     await this.db.transaction(async (tx) => {
       await tx.insert(album).values({
         id: albumId,
         title,
-        coverAssetId: assetIds[0] ?? null,
+        coverAssetId: ids[0] ?? null,
         createdBy: userId,
       });
-      if (assetIds.length > 0) {
+      if (ids.length > 0) {
         await tx.insert(albumAsset).values(
-          assetIds.map((assetId, index) => ({ albumId, assetId, sortOrder: index, addedBy: userId })),
+          ids.map((assetId, index) => ({ albumId, assetId, sortOrder: index, addedBy: userId })),
         );
       }
     });
@@ -121,7 +124,9 @@ export class AlbumsService {
   async addAssets(albumId: string, assetIds: string[], userId: string): Promise<void> {
     await this.requireAlbum(albumId);
     const existing = await this.loadAssetIds(albumId);
-    const fresh = assetIds.filter((id) => !existing.includes(id));
+    // Deduped against the batch as well as against what's already here: a
+    // repeated id inside one request fails the composite key just as surely.
+    const fresh = [...new Set(assetIds)].filter((id) => !existing.includes(id));
     if (fresh.length === 0) {
       return;
     }

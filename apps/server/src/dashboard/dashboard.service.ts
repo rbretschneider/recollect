@@ -290,7 +290,20 @@ export class DashboardService {
              a.gps_lat, a.gps_lon,
              g.label as place, f.size_bytes, a.stage_errors
       from asset a
-      join asset_file f on f.asset_id = a.id and f.state = 'present'
+      -- LATERAL, not a plain join: one asset can legitimately have several
+      -- 'present' files, because the same photo sits at two paths on the NAS
+      -- (a dated dump folder AND an event folder) and is deduplicated by
+      -- content into one asset. A plain join fanned that asset out into two
+      -- candidate rows, which put the same photo in a moment twice: duplicate
+      -- slides, inflated "141 photos" counts, and a 500 when the moment was
+      -- turned into a memory, since memory_asset is keyed (memory_id, asset_id).
+      join lateral (
+        select af.size_bytes
+        from asset_file af
+        where af.asset_id = a.id and af.state = 'present'
+        order by af.size_bytes desc
+        limit 1
+      ) f on true
       left join geocode_cache g on g.cell_key = a.geocode_cell_key
       where a.status = 'active'
         -- Matched as a number, not as text: to_char() is locale-dependent and

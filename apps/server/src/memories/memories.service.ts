@@ -333,7 +333,11 @@ export class MemoriesService {
 
   /** Manual Memory creation from a selection (or empty, S9.5). */
   async create(userId: string, title: string, assetIds: string[]): Promise<{ memoryId: string }> {
-    const span = await this.resolveSpan(assetIds);
+    // memory_asset is keyed (memory_id, asset_id), so one repeated id fails the
+    // whole insert. A caller listing the same photo twice means it, at worst,
+    // once — a 500 helps nobody. First occurrence wins, so ordering holds.
+    const ids = [...new Set(assetIds)];
+    const span = await this.resolveSpan(ids);
     const memoryId = uuidv7();
     await this.db.transaction(async (tx) => {
       await tx.insert(memory).values({
@@ -341,12 +345,12 @@ export class MemoriesService {
         title,
         startAt: span.startAt,
         endAt: span.endAt,
-        coverAssetId: assetIds[0] ?? null,
+        coverAssetId: ids[0] ?? null,
         createdBy: userId,
       });
-      if (assetIds.length > 0) {
+      if (ids.length > 0) {
         await tx.insert(memoryAsset).values(
-          assetIds.map((assetId, index) => ({ memoryId, assetId, sortOrder: index, addedBy: userId })),
+          ids.map((assetId, index) => ({ memoryId, assetId, sortOrder: index, addedBy: userId })),
         );
       }
     });
@@ -377,7 +381,9 @@ export class MemoriesService {
     }
     const existing = await this.loadAssetIds(memoryId);
     const nextOrder = existing.length;
-    const fresh = assetIds.filter((id) => !existing.includes(id));
+    // Deduped against the batch as well as against what's already here: a
+    // repeated id inside one request fails the composite key just as surely.
+    const fresh = [...new Set(assetIds)].filter((id) => !existing.includes(id));
     if (fresh.length === 0) {
       return;
     }
