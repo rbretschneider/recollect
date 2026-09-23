@@ -32,31 +32,81 @@
     </section>
   }
 
-  <section class="timeline" aria-label="Memory timeline">
-    @for (memory of memories(); track memory.id; let index = $index) {
-      @if (isFirstOfYear(index)) {
-        <h2 class="year">{{ yearOf(memory) }}</h2>
-      }
-      <a class="memory-card" [routerLink]="['/memories', memory.id]">
-        @if (coverUrl(memory); as cover) {
-          <img class="cover" [src]="cover" alt="" loading="lazy" />
-        } @else {
-          <div class="cover placeholder"></div>
+  @if (memories().length > 0) {
+    <div class="view-toolbar" role="toolbar" aria-label="View options">
+      <div class="media-switch" role="group" aria-label="How to show memories">
+        <button
+          type="button"
+          [class.active]="view() === 'cards'"
+          [attr.aria-pressed]="view() === 'cards'"
+          (click)="setView('cards')"
+        >
+          <app-icon name="image" [size]="16" />
+          <span class="label">Cards</span>
+        </button>
+        <button
+          type="button"
+          [class.active]="view() === 'timeline'"
+          [attr.aria-pressed]="view() === 'timeline'"
+          (click)="setView('timeline')"
+        >
+          <app-icon name="list" [size]="16" />
+          <span class="label">Timeline</span>
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (view() === 'cards') {
+    <section class="timeline" aria-label="Memory timeline">
+      @for (memory of memories(); track memory.id; let index = $index) {
+        @if (isFirstOfYear(index)) {
+          <h2 class="year">{{ yearOf(memory) }}</h2>
         }
-        <div class="overlay">
-          <h3>{{ memory.title }}</h3>
-          <p>
-            @if (memory.locationLabel) {
-              {{ memory.locationLabel }} ·
-            }
-            {{ formatSpan(memory) }} · {{ memory.assetCount }} photos
-          </p>
-          @if (memory.journalPreview) {
-            <p class="snippet">{{ memory.journalPreview }}</p>
+        <a class="memory-card" [routerLink]="['/memories', memory.id]">
+          @if (coverUrl(memory); as cover) {
+            <img class="cover" [src]="cover" alt="" loading="lazy" />
+          } @else {
+            <div class="cover placeholder"></div>
           }
+          <div class="overlay">
+            <h3>{{ memory.title }}</h3>
+            <p>
+              @if (memory.locationLabel) {
+                {{ memory.locationLabel }} ·
+              }
+              {{ formatSpan(memory) }} · {{ memory.assetCount }} photos
+            </p>
+            @if (memory.journalPreview) {
+              <p class="snippet">{{ memory.journalPreview }}</p>
+            }
+          </div>
+        </a>
+      }
+    </section>
+  } @else {
+    <!-- Timeline: a spine with entries alternating either side, so a long
+         library is skimmable in a fraction of the scrolling. -->
+    <section class="spine" aria-label="Memory timeline">
+      @for (memory of memories(); track memory.id; let index = $index) {
+        @if (isFirstOfYear(index)) {
+          <h2 class="year">{{ yearOf(memory) }}</h2>
+        }
+        <div class="rung" [class.right]="index % 2 === 1">
+          <a class="stub" [routerLink]="['/memories', memory.id]">
+            @if (thumbUrl(memory); as thumb) {
+              <img [src]="thumb" alt="" loading="lazy" decoding="async" />
+            } @else {
+              <span class="thumb placeholder"></span>
+            }
+            <span class="stub-text">
+              <strong>{{ memory.title }}</strong>
+              <span class="meta">{{ shortSpan(memory) }} · {{ memory.assetCount }}</span>
+            </span>
+          </a>
         </div>
-      </a>
-    }
-  </section>
+      }
+    </section>
+  }
 </main>
 

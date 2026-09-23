@@ -8,11 +8,25 @@ import { LibraryStatus, MemorySummary } from '../../core/api/api-models';
 import { AppTopbar } from '../../shared/app-topbar';
 import { PageLoading } from '../../shared/page-loading';
 import { LoadError } from '../../shared/load-error';
+import { Icon } from '../../shared/icon';
+
+/** Big browsing cards, or a compact spine you can skim years of. */
+export type MemoriesView = 'cards' | 'timeline';
+
+const VIEW_PREF_KEY = 'recollect.memoriesView';
+
+function loadViewPref(): MemoriesView {
+  try {
+    return localStorage.getItem(VIEW_PREF_KEY) === 'timeline' ? 'timeline' : 'cards';
+  } catch {
+    return 'cards';
+  }
+}
 
 /** The Memories tab: the timeline of confirmed memories; suggestions live on their own review page. */
 @Component({
   selector: 'app-memories-page',
-  imports: [PageLoading, AppTopbar, RouterLink, LoadError],
+  imports: [PageLoading, AppTopbar, RouterLink, LoadError, Icon],
   templateUrl: './memories-page.html',
   styleUrl: './memories-page.scss',
 })
@@ -27,6 +41,8 @@ export class MemoriesPage implements OnInit {
   readonly isLoaded = signal(false);
   readonly loadFailed = signal(false);
   readonly status = signal<LibraryStatus | null>(null);
+  /** Cards to browse, spine to find something — the choice sticks per device. */
+  readonly view = signal<MemoriesView>(loadViewPref());
 
   readonly pendingCount = computed(() => {
     const status = this.status();
@@ -47,8 +63,30 @@ export class MemoriesPage implements OnInit {
     return memory.coverAssetId ? assetThumbUrl(memory.coverAssetId, 720) : null;
   }
 
+  /** The spine's thumbnails are small, so they take the small derivative too. */
+  thumbUrl(memory: MemorySummary): string | null {
+    return memory.coverAssetId ? assetThumbUrl(memory.coverAssetId, 240) : null;
+  }
+
   formatSpan(memory: MemorySummary): string {
     return formatDateSpan(memory.startAt, memory.endAt);
+  }
+
+  /** "Sep 22" — the year is already the heading above the rung. */
+  shortSpan(memory: MemorySummary): string {
+    return new Date(memory.startAt).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+
+  setView(view: MemoriesView): void {
+    this.view.set(view);
+    try {
+      localStorage.setItem(VIEW_PREF_KEY, view);
+    } catch {
+      // Storage refused; the switch still works for this visit.
+    }
   }
 
   yearOf(memory: MemorySummary): number {

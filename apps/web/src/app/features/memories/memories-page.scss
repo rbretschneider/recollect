@@ -255,3 +255,163 @@
     margin-bottom: 0.25rem;
   }
 }
+
+// The view switch shares the grid toolbar's visual language from the Photos
+// page, so "how this list is drawn" looks the same wherever it is offered.
+.view-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0.5rem 0 1rem;
+}
+
+.media-switch {
+  display: flex;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 38px;
+    min-height: 38px;
+    padding: 0 0.7rem;
+    border: none;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &.active {
+      background: var(--surface-raised);
+      color: var(--accent);
+    }
+
+    & + button {
+      border-left: 1px solid var(--border);
+    }
+  }
+}
+
+// The spine: a centre rule with entries alternating either side. Each rung is
+// a half-width row that flips its own direction, so the alternation is pure
+// CSS and the markup stays one flat list in date order.
+.spine {
+  position: relative;
+  padding: 0.5rem 0 1rem;
+
+  // The rule itself, behind the rungs and stopping at the last one.
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    margin-left: -1px;
+    background: var(--border);
+  }
+
+  .year {
+    position: relative;
+    width: fit-content;
+    margin: 1.75rem auto 1rem;
+    padding: 0.1rem 0.9rem;
+    font-size: 1.05rem;
+    border: 1px solid var(--border);
+    border-radius: 2rem;
+    background: var(--bg);
+  }
+}
+
+.rung {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  width: 50%;
+  padding-right: 0.9rem;
+  margin-bottom: 0.5rem;
+
+  // The node where this entry meets the spine.
+  &::after {
+    content: '';
+    position: absolute;
+    top: 1.35rem;
+    right: -4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  &.right {
+    margin-left: 50%;
+    justify-content: flex-start;
+    padding-right: 0;
+    padding-left: 0.9rem;
+
+    &::after {
+      right: auto;
+      left: -4px;
+    }
+  }
+}
+
+.stub {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.4rem;
+  border-radius: 0.7rem;
+  text-decoration: none;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border);
+
+  &:hover {
+    border-color: var(--accent);
+  }
+
+  img,
+  .thumb {
+    flex-shrink: 0;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.5rem;
+    object-fit: cover;
+    background: var(--surface-raised);
+  }
+
+  .stub-text {
+    display: grid;
+    gap: 0.1rem;
+    min-width: 0;
+
+    strong {
+      font-size: 0.85rem;
+      font-weight: 600;
+      // Two lines, then ellipsis: titles are short but not always THAT short.
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+  }
+}
+
+// Mirrored, so the thumbnails sit on the outside edge on both sides and the
+// titles run along the spine — the eye follows one column of text down the
+// middle instead of zig-zagging between pictures.
+.rung.right .stub {
+  flex-direction: row-reverse;
+  text-align: right;
+}
