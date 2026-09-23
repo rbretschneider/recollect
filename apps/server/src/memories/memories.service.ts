@@ -12,6 +12,7 @@ import {
   person,
   userAccount,
 } from '../database/schema';
+import { PeopleService } from '../people/people.service';
 
 /** A Memory card on the timeline. */
 export interface MemorySummary {
@@ -95,7 +96,48 @@ const JOURNAL_PREVIEW_LENGTH = 140;
 /** Human-owned Memory CRUD and journal writing. Machine code never calls this. */
 @Injectable()
 export class MemoriesService {
-  constructor(@Inject(DATABASE) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE) private readonly db: Database,
+    private readonly people: PeopleService,
+  ) {}
+
+  /**
+   * "That's not them": takes someone off a memory's guest list.
+   *
+   * The list is computed from faces, so there is nothing on the memory to
+   * delete — the honest fix is to detach the faces that put them here, which
+   * is the same thing the person page's "remove faces" does. They drop off
+   * this memory AND off anywhere else that face wrongly placed them, and each
+   * detached face re-clusters into whoever it actually matches. Photos are
+   * never touched.
+   */
+  async removePerson(memoryId: string, personId: string): Promise<{ removed: number }> {
+    await this.requireMemory(memoryId);
+    const result = await this.db.execute<{ face_id: string; owner_id: string }>(sql`
+      select f.id as face_id, f.person_id as owner_id
+      from memory_asset ma
+      join face f on f.asset_id = ma.asset_id and f.ignored = false
+      join person p on p.id = f.person_id
+      left join person survivor on survivor.id = p.merged_into_id
+      where ma.memory_id = ${memoryId}
+        and coalesce(survivor.id, p.id) = ${personId}
+    `);
+    // A face can still sit under a merged-away identity, and removeFaces only
+    // detaches faces that belong to the person it is given — so group by the
+    // owning person rather than assuming the chip's id owns them all.
+    const byOwner = new Map<string, string[]>();
+    for (const row of result.rows) {
+      const list = byOwner.get(row.owner_id) ?? [];
+      list.push(row.face_id);
+      byOwner.set(row.owner_id, list);
+    }
+    let removed = 0;
+    for (const [ownerId, faceIds] of byOwner) {
+      const outcome = await this.people.removeFaces(ownerId, faceIds);
+      removed += outcome.removed;
+    }
+    return { removed };
+  }
 
   async list(): Promise<MemorySummary[]> {
     // One statement with lateral aggregates — the old shape was 2 queries per

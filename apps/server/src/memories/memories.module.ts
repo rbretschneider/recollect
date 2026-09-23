@@ -7,8 +7,10 @@ import { InboxController } from './inbox.controller';
 import { InboxService } from './inbox.service';
 import { MemoriesController } from './memories.controller';
 import { MemoriesService } from './memories.service';
+import { PeopleModule } from '../people/people.module';
 
 @Module({
+  imports: [PeopleModule],
   controllers: [InboxController, MemoriesController],
   providers: [
     EventDetectionService,

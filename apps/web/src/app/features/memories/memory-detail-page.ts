@@ -17,7 +17,7 @@ import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { PhotosApiService } from '../../core/api/photos-api.service';
 import { SharingApiService } from '../../core/api/sharing-api.service';
 import { PeopleApiService, PersonSummary } from '../../core/api/people-api.service';
-import { MemoryDetail, MemoryQuote, TimelineAsset } from '../../core/api/api-models';
+import { MemoryDetail, MemoryPerson, MemoryQuote, TimelineAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { EditModeService } from '../../core/edit-mode.service';
 import { AccountBadge } from '../../shared/account-badge';
@@ -88,6 +88,8 @@ export class MemoryDetailPage implements OnInit {
   readonly attendeesNamed = computed(() => this.detail()?.people.filter((p) => p.name !== null) ?? []);
   /** Recurring but still-unnamed faces — collapsed behind a "help identify" toggle. */
   readonly attendeesUnnamed = computed(() => this.detail()?.people.filter((p) => p.name === null) ?? []);
+  /** The chip whose removal is in flight, so only that one shows as busy. */
+  readonly removingPersonId = signal<string | null>(null);
   quoteTextDraft = '';
   quoteSaidByDraft = '';
   /** Person explicitly picked from the who-said-it typeahead. */
@@ -489,6 +491,48 @@ export class MemoryDetailPage implements OnInit {
     }
     await this.api.deleteQuote(detail.id, quote.id);
     this.detail.set({ ...detail, quotes: detail.quotes.filter((entry) => entry.id !== quote.id) });
+  }
+
+  /**
+   * "They weren't here." The guest list is computed from faces, so there is
+   * nothing on the memory to unset — the fix is to detach the faces in these
+   * photos that claim to be them, which also stops them turning up wherever
+   * else that face was wrong. Spelled out in the confirm, because it reaches
+   * further than the page you're looking at.
+   */
+  async removePerson(person: MemoryPerson): Promise<void> {
+    const detail = this.detail();
+    if (!detail || this.removingPersonId() !== null) {
+      return;
+    }
+    const name = person.name ?? 'this person';
+    const photos = `${person.photoCount} ${person.photoCount === 1 ? 'photo' : 'photos'}`;
+    const confirmed = await this.confirms.ask({
+      title: `${name} wasn't here?`,
+      message:
+        `They're on this list because ${photos} here were matched to them. ` +
+        `Removing them un-matches those faces, so they'll also stop appearing ` +
+        `anywhere else that match was wrong. No photos are deleted.`,
+      confirmLabel: `Remove ${name}`,
+    });
+    if (!confirmed) {
+      return;
+    }
+    this.removingPersonId.set(person.id);
+    try {
+      await this.api.removePerson(detail.id, person.id);
+      // The list is derived server-side; reload rather than guess at the shape
+      // re-clustering left behind.
+      await this.load();
+      this.toasts.success(`${name} removed.`);
+    } catch (error) {
+      this.toasts.error(describeError(error, `Couldn't remove ${name}.`), {
+        label: 'Retry',
+        run: () => void this.removePerson(person),
+      });
+    } finally {
+      this.removingPersonId.set(null);
+    }
   }
 
   /** The journal grows with the writing instead of scrolling inside a box. */

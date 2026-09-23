@@ -124,6 +124,39 @@
     gap: 0.45rem;
   }
 
+  // The chip and its edit-mode ✕ ride together, so the remove control never
+  // wraps onto its own line away from the person it belongs to.
+  .chip-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+  }
+
+  .chip-remove {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--danger);
+      border-color: var(--danger);
+      color: #fff;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: progress;
+    }
+  }
+
   .chip {
     display: inline-flex;
     align-items: center;

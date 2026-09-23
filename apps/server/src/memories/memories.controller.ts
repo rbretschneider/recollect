@@ -78,6 +78,19 @@ export class MemoriesController {
     await this.memories.addAssets(id, body.assetIds, user.id);
   }
 
+  /**
+   * "That's not them" — takes someone off the memory's guest list by detaching
+   * the faces that put them there. `removed` is how many faces moved.
+   */
+  @RequireGrant('write')
+  @Post(':id/people/:personId/remove')
+  async removePerson(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('personId', ParseUUIDPipe) personId: string,
+  ): Promise<{ removed: number }> {
+    return this.memories.removePerson(id, personId);
+  }
+
   @RequireGrant('write')
   @Patch(':id/assets/:assetId/caption')
   @HttpCode(HttpStatus.NO_CONTENT)

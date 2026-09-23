@@ -71,13 +71,30 @@
         <h2>Who was there</h2>
         <div class="chips">
           @for (person of attendeesNamed(); track person.id) {
-            <a class="chip" [routerLink]="['/people', person.id]">
-              <img [src]="cropUrl(person.coverFaceId)" alt="" loading="lazy" />
-              {{ person.name }}
-              @if (person.behindCamera) {
-                <app-icon name="camera" [size]="14" class="camera-tag" />
+            <span class="chip-wrap">
+              <a class="chip" [routerLink]="['/people', person.id]">
+                <img [src]="cropUrl(person.coverFaceId)" alt="" loading="lazy" />
+                {{ person.name }}
+                @if (person.behindCamera) {
+                  <app-icon name="camera" [size]="14" class="camera-tag" />
+                }
+              </a>
+              <!-- Only face-derived chips can be corrected here. A "behind the
+                   camera" chip comes from the device owner, not from a face in
+                   these photos, so there is nothing for this to detach. -->
+              @if (editMode.isEditing() && !person.behindCamera) {
+                <button
+                  type="button"
+                  class="chip-remove"
+                  [disabled]="removingPersonId() === person.id"
+                  [attr.aria-label]="'Remove ' + person.name + ' — they were not here'"
+                  [title]="'Remove ' + person.name"
+                  (click)="removePerson(person)"
+                >
+                  ✕
+                </button>
               }
-            </a>
+            </span>
           }
           @if (showUnidentified()) {
             @for (person of attendeesUnnamed(); track person.id) {

@@ -59,6 +59,20 @@ export class MemoriesApiService {
     return firstValueFrom(this.http.put<void>(`/api/v1/memories/${memoryId}/journal`, { bodyMd }));
   }
 
+  /**
+   * "That's not them": drops someone from a memory's guest list by detaching
+   * the faces that put them there, so they also stop appearing wherever else
+   * that face was wrong. Resolves with how many faces moved.
+   */
+  removePerson(memoryId: string, personId: string): Promise<{ removed: number }> {
+    return firstValueFrom(
+      this.http.post<{ removed: number }>(
+        `/api/v1/memories/${memoryId}/people/${personId}/remove`,
+        {},
+      ),
+    );
+  }
+
   /** Writes one photo's scrapbook caption; empty text clears it. */
   setCaption(memoryId: string, assetId: string, caption: string): Promise<void> {
     return firstValueFrom(
