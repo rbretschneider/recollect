@@ -85,9 +85,10 @@
     }
   }
 
-  // Zoomed in, the drift gives way to the pinch: quick easing between steps,
-  // none at all while a finger is down so the picture tracks it exactly.
-  &.zoomed .slide {
+  // Keyed on "has been zoomed", not "is zoomed": the slow Ken Burns transform
+  // transition must not come back the instant you return to 1x, or the last
+  // step home animates over six seconds.
+  &.manual .slide {
     transition: opacity 0.6s ease, transform 0.18s ease;
   }
 

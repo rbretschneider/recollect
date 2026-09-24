@@ -107,6 +107,8 @@ export class SlideshowOverlay implements OnDestroy {
 
   readonly shareChoiceOpen = signal(false);
   readonly resolvingCollection = signal(false);
+  /** "Open the collection's share panel as soon as that button exists." */
+  private readonly pendingCollectionShare = signal(false);
   /** Resolved lazily — a place/person moment only becomes an album if asked. */
   readonly collectionTarget = signal<{ targetType: 'memory' | 'album'; targetId: string } | null>(
     null,
@@ -230,10 +232,12 @@ export class SlideshowOverlay implements OnDestroy {
       }
     }
     this.shareChoiceOpen.set(false);
-    // The share button only exists once its target input is set, so let the
-    // template render before reaching for it.
-    await Promise.resolve();
-    await this.collectionShare()?.open();
+    // Don't race the renderer. This share button only comes into existence
+    // once its target is set, and one microtask is not a promise that Angular
+    // has rendered it — when it hadn't, `collectionShare()` was undefined and
+    // `?.open()` quietly did nothing at all. Ask instead, and let the effect
+    // below open it the moment it exists.
+    this.pendingCollectionShare.set(true);
   }
 
   readonly index = signal(0);
@@ -276,10 +280,20 @@ export class SlideshowOverlay implements OnDestroy {
   private trackIndex = 0;
 
   constructor() {
+    // The collection's share button is rendered lazily, so opening it waits
+    // for it to appear rather than assuming it already has.
+    effect(() => {
+      const button = this.collectionShare();
+      if (button && this.pendingCollectionShare()) {
+        this.pendingCollectionShare.set(false);
+        void button.open();
+      }
+    });
     // A new slide always arrives fitted, whatever the last one was zoomed to.
     effect(() => {
       this.current();
       this.gesture.reset();
+      this.hasZoomed.set(false);
     });
     effect(() => {
       const item = this.current();
@@ -407,6 +421,18 @@ export class SlideshowOverlay implements OnDestroy {
    * a photo you're leaning into must not slide away under your fingers.
    */
   readonly gesture = new ZoomGesture();
+  /**
+   * Sticky for the rest of the slide once you've zoomed at all — NOT the same
+   * as "currently zoomed".
+   *
+   * At rest a slide carries the Ken Burns drift, which is a 6s transform
+   * transition. Keying the fast transition off `isZoomed()` meant the instant
+   * you came back to 1x the class fell away, the inline transform was dropped,
+   * and that last step home animated over those 6 seconds — zoom in snappy,
+   * zoom out apparently broken. Once a slide has been handled, it keeps the
+   * quick transition and its own transform until the next slide arrives.
+   */
+  readonly hasZoomed = signal(false);
   /** Videos have no zoom, so their swipes are tracked the plain way. */
   private videoSwipeStartX: number | null = null;
   private didSwipe = false;
@@ -423,9 +449,7 @@ export class SlideshowOverlay implements OnDestroy {
 
   onPointerMove(event: PointerEvent): void {
     this.gesture.pointerMove(event);
-    if (this.gesture.isZoomed()) {
-      this.isPaused.set(true);
-    }
+    this.onZoomChanged();
   }
 
   onPointerUp(event: PointerEvent): void {
@@ -448,13 +472,19 @@ export class SlideshowOverlay implements OnDestroy {
 
   onWheel(event: WheelEvent): void {
     this.gesture.wheel(event);
-    if (this.gesture.isZoomed()) {
-      this.isPaused.set(true);
-    }
+    this.onZoomChanged();
   }
 
   onDoubleClick(event: MouseEvent): void {
-    if (this.gesture.doubleClick(event) && this.gesture.isZoomed()) {
+    if (this.gesture.doubleClick(event)) {
+      this.onZoomChanged();
+    }
+  }
+
+  /** Zooming holds the show where it is, and marks the slide as handled. */
+  private onZoomChanged(): void {
+    if (this.gesture.isZoomed()) {
+      this.hasZoomed.set(true);
       this.isPaused.set(true);
     }
   }

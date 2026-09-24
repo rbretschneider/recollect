@@ -102,6 +102,7 @@
   <div
     class="stage"
     [class.zoomed]="gesture.isZoomed()"
+    [class.manual]="hasZoomed()"
     [class.dragging]="gesture.isActive()"
     (click)="onStageClick($event)"
     (pointerdown)="onPointerDown($event)"
@@ -113,12 +114,14 @@
   >
     @for (item of currentAsList(); track item.id) {
       @if (item.mediaType === 'image') {
-        <!-- Zoomed, the pinch transform replaces the Ken Burns drift; at 1x the
-             inline style is dropped so the stylesheet's drift runs again. -->
+        <!-- Once you've zoomed this slide, its transform stays yours — coming
+             back to 1x hands it to the stylesheet's 6s Ken Burns transition,
+             which made the last step home crawl. The drift returns with the
+             next slide. -->
         <img
           class="slide"
           [src]="imageUrl(item.id)"
-          [style.transform]="gesture.isZoomed() ? gesture.transform() : null"
+          [style.transform]="hasZoomed() ? gesture.transform() : null"
           alt=""
           draggable="false"
         />
