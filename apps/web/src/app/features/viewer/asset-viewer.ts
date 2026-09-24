@@ -362,7 +362,9 @@ export class AssetViewer implements OnInit, OnDestroy {
   // --- Gestures: pinch/wheel zoom, pan while zoomed, swipe-nav at 1x -------
 
   onPointerDown(event: PointerEvent): void {
-    if (!this.gesture.pointerDown(event)) {
+    // 'control' (the motion-photo badge) is left entirely alone; capturing it
+    // would steal the pointerup its own hold-to-play handler needs.
+    if (this.gesture.pointerDown(event) === 'video') {
       // Videos keep their native controls (no capture, no preventDefault),
       // but a horizontal swipe across the picture still navigates. The
       // bottom strip is exempt — that's the seek bar.

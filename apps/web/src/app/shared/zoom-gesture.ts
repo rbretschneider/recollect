@@ -14,6 +14,31 @@ const DRAG_THRESHOLD_PX = 8;
 export type SwipeDirection = 'next' | 'previous';
 
 /**
+ * What a pointerdown turned into.
+ * - `captured`: the gesture owns it (zoom / pan / swipe).
+ * - `video`: left alone so native video controls keep working.
+ * - `control`: landed on a button or link, so the gesture keeps its hands off
+ *   entirely — see `isControl`.
+ */
+export type PointerOutcome = 'captured' | 'video' | 'control';
+
+/**
+ * Controls that live INSIDE the stage — Replay on the end card, the motion
+ * photo badge — must keep working.
+ *
+ * setPointerCapture on the stage retargets the pointerup that follows, and the
+ * browser then fires `click` on the capturing element rather than on the
+ * button that was pressed. The button simply never hears about it, which is
+ * what stopped Replay working, on mouse and touch alike.
+ */
+function isControl(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    target.closest('button, a, input, select, textarea, [role="button"]') !== null
+  );
+}
+
+/**
  * Pinch / scroll-wheel / double-tap zoom with pan, plus swipe-to-navigate at
  * 1x, over one "stage" element whose media sits centred inside it. Shared by
  * the asset viewer and the slideshow so both feel the same under the fingers.
@@ -53,10 +78,12 @@ export class ZoomGesture {
     return this.didDrag || this.didPinch;
   }
 
-  /** Returns false (untouched) for video targets so the host can handle them. */
-  pointerDown(event: PointerEvent): boolean {
+  pointerDown(event: PointerEvent): PointerOutcome {
+    if (isControl(event.target)) {
+      return 'control';
+    }
     if ((event.target as HTMLElement).tagName === 'VIDEO') {
-      return false;
+      return 'video';
     }
     const stage = event.currentTarget as HTMLElement;
     this.captureOrigin(stage);
@@ -71,7 +98,7 @@ export class ZoomGesture {
       this.didPinch = false;
       this.beginGesture(null);
     }
-    return true;
+    return 'captured';
   }
 
   pointerMove(event: PointerEvent): void {
@@ -138,7 +165,7 @@ export class ZoomGesture {
 
   /** Double tap / double click toggles between fitted and zoomed-in. */
   doubleClick(event: MouseEvent): boolean {
-    if ((event.target as HTMLElement).tagName === 'VIDEO') {
+    if (isControl(event.target) || (event.target as HTMLElement).tagName === 'VIDEO') {
       return false;
     }
     if (this.zoom() > MIN_ZOOM) {

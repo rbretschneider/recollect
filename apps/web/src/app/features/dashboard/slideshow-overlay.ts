@@ -413,7 +413,10 @@ export class SlideshowOverlay implements OnDestroy {
 
   onPointerDown(event: PointerEvent): void {
     this.didSwipe = false;
-    if (!this.gesture.pointerDown(event)) {
+    // 'control' — Replay on the end card — is left alone: capturing the
+    // pointer here would make the browser fire the click on the stage instead
+    // of on the button, which is exactly how Replay stopped working.
+    if (this.gesture.pointerDown(event) === 'video') {
       this.videoSwipeStartX = event.clientX;
     }
   }
