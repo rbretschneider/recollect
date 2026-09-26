@@ -66,15 +66,8 @@
           <span class="choice-title">Just this photo</span>
           <span class="choice-sub">A link to the one photo on screen.</span>
         </button>
-        <button
-          type="button"
-          class="choice"
-          [disabled]="resolvingCollection()"
-          (click)="shareWholeCollection()"
-        >
-          <span class="choice-title">
-            {{ resolvingCollection() ? 'Preparing…' : 'The whole ' + collectionNoun() }}
-          </span>
+        <button type="button" class="choice" (click)="shareWholeCollection()">
+          <span class="choice-title">The whole {{ collectionNoun() }}</span>
           <span class="choice-sub">
             All {{ slides().length }} photos, as one shared page.
           </span>
@@ -95,6 +88,8 @@
         variant="icon"
         [targetType]="target.targetType"
         [targetId]="target.targetId"
+        [internalPath]="collectionInternalPath()"
+        [resolveTarget]="materialiseAlbum"
       />
     }
   </div>

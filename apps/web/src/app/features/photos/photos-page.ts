@@ -13,7 +13,7 @@ import {
 import { describeError } from '../../core/describe-error';
 import { ActivityService } from '../../core/activity.service';
 import { MediaFilter, PhotosApiService } from '../../core/api/photos-api.service';
-import { TimelineAsset } from '../../core/api/api-models';
+import { TimelineAsset, toViewerAsset } from '../../core/api/api-models';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { TrashApiService } from '../../core/api/trash-api.service';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
@@ -152,6 +152,12 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
         if (changed || !this.hasLoadedFirstPage) {
           void this.refreshFromStart();
         }
+        // A shared link to one photo opens it straight away — it must not
+        // wait on the grid behind it.
+        const assetId = params.get('asset');
+        if (assetId && this.viewerIndex() === null) {
+          this.openDeepLinkedAsset(assetId);
+        }
       });
     this.observer = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting)) {
@@ -176,15 +182,55 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
     );
   }
 
+  /**
+   * What the viewer is showing: the grid normally, or the single photo a
+   * shared `?asset=` link asked for.
+   */
+  private readonly deepLinkedAsset = signal<TimelineAsset | null>(null);
+  readonly viewerAssets = computed<TimelineAsset[]>(() => {
+    const single = this.deepLinkedAsset();
+    return single ? [single] : this.items();
+  });
+
   openViewer(asset: TimelineAsset): void {
     const index = this.items().findIndex((item) => item.id === asset.id);
     if (index >= 0) {
+      this.deepLinkedAsset.set(null);
       this.viewerIndex.set(index);
     }
   }
 
+  /**
+   * A household link to one photo (`/photos?asset=<id>`).
+   *
+   * It opens on that photo alone rather than hunting for it through the
+   * timeline: the photo might be ten thousand rows down, and paging there
+   * would make the thing you were sent the slowest part of arriving. The
+   * viewer fetches its own detail, so a bare id is enough to render.
+   */
+  private openDeepLinkedAsset(assetId: string): void {
+    const known = this.items().find((item) => item.id === assetId);
+    if (known) {
+      this.deepLinkedAsset.set(null);
+      this.viewerIndex.set(this.items().indexOf(known));
+      return;
+    }
+    this.deepLinkedAsset.set(toViewerAsset(assetId));
+    this.viewerIndex.set(0);
+  }
+
   closeViewer(): void {
     this.viewerIndex.set(null);
+    this.deepLinkedAsset.set(null);
+    // Drop ?asset= so closing doesn't leave a URL that reopens on refresh.
+    if (this.route.snapshot.queryParamMap.get('asset')) {
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { asset: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
   }
 
   /** Whether the signed-in user holds the delete grant. */

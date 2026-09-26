@@ -156,3 +156,34 @@
     }
   }
 }
+
+// Two ways to share, in the order they are actually wanted: the household
+// link needs no server, no token and no cleanup, so it leads.
+.share-content {
+  .household,
+  .public-heading {
+    h3,
+    &.public-heading {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin: 0 0 0.35rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+  }
+
+  .household {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .divider {
+    width: 100%;
+    height: 1px;
+    margin: 0.35rem 0;
+    border: none;
+    background: var(--border);
+  }
+}

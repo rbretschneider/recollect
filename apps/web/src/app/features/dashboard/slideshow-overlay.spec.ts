@@ -21,6 +21,7 @@ const LOOKBACK: SlideshowCollection = {
   kind: 'place',
   memoryId: null,
   assetIds: ['asset-1', 'asset-2'],
+  internalPath: '/lookback?day=09-25&year=2021',
 };
 
 function stageOf(fixture: ComponentFixture<SlideshowOverlay>): HTMLElement {
@@ -124,29 +125,45 @@ describe('SlideshowOverlay', () => {
       fixture.componentInstance.openShareChoice();
       fixture.detectChanges();
 
-      const shared = fixture.componentInstance.shareWholeCollection();
-
-      // A place moment has to be materialised as an album first.
-      const create = http.expectOne('/api/v1/albums');
-      expect(create.request.method).toBe('POST');
-      create.flush({ albumId: 'album-9' });
-      await shared;
+      await fixture.componentInstance.shareWholeCollection();
       fixture.detectChanges();
       await fixture.whenStable();
-      fixture.detectChanges();
-
-      // The panel asks for the target's existing links as it opens — proof it
-      // really opened rather than quietly doing nothing.
-      const links = http.expectOne('/api/v1/sharing/album/album-9');
-      expect(links.request.method).toBe('GET');
-      links.flush({ links: [] });
       fixture.detectChanges();
 
       expect(fixture.componentInstance.shareChoiceOpen()).toBe(false);
       expect(document.body.querySelector('app-sheet')).not.toBeNull();
     });
 
-    it('shares a memory moment directly, without creating an album', async () => {
+    // A look-back is computed, so a PUBLIC token needs an album to point at.
+    // Sending the family a link must not conjure one: the household link is
+    // just the look-back's own URL, and stray albums are litter.
+    it('creates no album merely to offer a household link', async () => {
+      await fixture.componentInstance.shareWholeCollection();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      http.expectNone('/api/v1/albums');
+      // Nothing exists to have links for yet, so nothing is asked about them.
+      http.expectNone((request) => request.url.startsWith('/api/v1/sharing/'));
+    });
+
+    it('puts the household link on the clipboard without being asked', async () => {
+      const written: string[] = [];
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: (text: string) => (written.push(text), Promise.resolve()) },
+      });
+
+      await fixture.componentInstance.shareWholeCollection();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(written).toEqual([`${location.origin}/lookback?day=09-25&year=2021`]);
+    });
+
+    it('shares a memory moment against the memory itself', async () => {
       fixture.componentRef.setInput('collection', {
         ...LOOKBACK,
         kind: 'memory',

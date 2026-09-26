@@ -27,6 +27,13 @@ export interface SlideshowCollection {
   /** Set for memory moments — shared directly, no album needed. */
   memoryId: string | null;
   assetIds: string[];
+  /**
+   * Where a signed-in household member should land for this collection. A
+   * look-back has no row of its own, so its page URL stands in — and sending
+   * the family a link must not create an album just to have something to
+   * point at.
+   */
+  internalPath?: string;
 }
 
 /** How long each photo holds the screen. Videos hold until they finish. */
@@ -106,7 +113,6 @@ export class SlideshowOverlay implements OnDestroy {
   private readonly collectionShare = viewChild<ShareButton>('collectionShare');
 
   readonly shareChoiceOpen = signal(false);
-  readonly resolvingCollection = signal(false);
   /** "Open the collection's share panel as soon as that button exists." */
   private readonly pendingCollectionShare = signal(false);
   /** Resolved lazily — a place/person moment only becomes an album if asked. */
@@ -115,6 +121,26 @@ export class SlideshowOverlay implements OnDestroy {
   );
 
   readonly currentAssetId = computed<string | null>(() => this.current()?.id ?? null);
+
+  /**
+   * Turns a computed look-back into a real album, so a public token has
+   * something to point at. Passed to the share panel rather than called up
+   * front: choosing to expose it is what creates the album, and a household
+   * link never does.
+   */
+  readonly materialiseAlbum = async (): Promise<string> => {
+    const coll = this.collection();
+    if (!coll) {
+      throw new Error('Nothing to share.');
+    }
+    const { albumId } = await this.albums.create(coll.title, coll.assetIds);
+    return albumId;
+  };
+
+  /** Where a household member lands for the whole collection. */
+  readonly collectionInternalPath = computed<string | null>(
+    () => this.collection()?.internalPath ?? null,
+  );
   readonly collectionNoun = computed<string>(() =>
     this.collection()?.kind === 'memory' ? 'memory' : 'look-back',
   );
@@ -212,25 +238,17 @@ export class SlideshowOverlay implements OnDestroy {
    */
   async shareWholeCollection(): Promise<void> {
     const coll = this.collection();
-    if (!coll || this.resolvingCollection()) {
+    if (!coll) {
       return;
     }
-    if (!this.collectionTarget()) {
-      this.resolvingCollection.set(true);
-      try {
-        if (coll.kind === 'memory' && coll.memoryId) {
-          this.collectionTarget.set({ targetType: 'memory', targetId: coll.memoryId });
-        } else {
-          const { albumId } = await this.albums.create(coll.title, coll.assetIds);
-          this.collectionTarget.set({ targetType: 'album', targetId: albumId });
-        }
-      } catch (error) {
-        this.toasts.error(describeError(error, "Couldn't prepare that for sharing."));
-        return;
-      } finally {
-        this.resolvingCollection.set(false);
-      }
-    }
+    // A memory already IS a shareable thing. Anything else is computed, and
+    // is materialised only if someone actually creates a public link — see
+    // `materialiseAlbum`, handed to the share panel as its resolver.
+    this.collectionTarget.set(
+      coll.kind === 'memory' && coll.memoryId
+        ? { targetType: 'memory', targetId: coll.memoryId }
+        : { targetType: 'album', targetId: '' },
+    );
     this.shareChoiceOpen.set(false);
     // Don't race the renderer. This share button only comes into existence
     // once its target is set, and one microtask is not a promise that Angular

@@ -117,6 +117,11 @@ export class DashboardPage implements OnInit {
       kind: moment.kind,
       memoryId: moment.memoryId,
       assetIds: moment.items.map((item) => item.id),
+      // The full look-back page is where a link should land, not the dashboard.
+      internalPath:
+        moment.kind === 'memory' && moment.memoryId
+          ? `/memories/${moment.memoryId}`
+          : `/lookback?${new URLSearchParams({ day: this.todayMmDd, year: String(moment.year), moment: moment.key })}`,
     });
   }
 
@@ -188,9 +193,15 @@ export class DashboardPage implements OnInit {
     this.viewerAssets.update((assets) => assets.filter((asset) => asset.id !== assetId));
   }
 
+  /** MM-DD for today, shared by the look-back query and its shareable links. */
+  private get todayMmDd(): string {
+    const now = new Date();
+    return `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  }
+
   protected load(): void {
     const now = new Date();
-    const day = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const day = this.todayMmDd;
 
     this.photosPending.set(true);
     this.allLoaded.set(false);

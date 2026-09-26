@@ -18,6 +18,46 @@
 @if (isOpen()) {
   <app-sheet [sheetTitle]="'Share this ' + targetLabel" (closed)="close()">
     <div class="share-content">
+    <!-- The household link first, and already copied: it needs no server, no
+         token and no cleanup, and it is what most sharing actually is. -->
+    <section class="household">
+      <h3>
+        <app-icon name="user" [size]="16" aria-hidden="true" />
+        Anyone in the household
+      </h3>
+      <p class="hint" role="status">
+        @switch (internalCopied()) {
+          @case ('copied') {
+            Link copied — they sign in and land right here.
+          }
+          @case ('failed') {
+            Copy this link — they sign in and land right here.
+          }
+          @default {
+            A link for someone who already has an account.
+          }
+        }
+      </p>
+      <div class="link-row">
+        <div class="link-info">
+          <input type="text" readonly [value]="internalUrl()" aria-label="Household link" />
+        </div>
+        @if (canSendNatively) {
+          <button type="button" class="small" (click)="sendInternal()">Send</button>
+        }
+        <button type="button" class="small" (click)="copyInternal()">
+          {{ internalCopied() === 'copied' ? 'Copied!' : 'Copy' }}
+        </button>
+      </div>
+    </section>
+
+    <hr class="divider" />
+
+    <h3 class="public-heading">
+      <app-icon name="share" [size]="16" aria-hidden="true" />
+      Anyone with the link
+    </h3>
+
     @if (isShared()) {
       <!-- Already public: manage the existing link — never offer to create another. -->
       <p class="status" role="status">

@@ -354,7 +354,7 @@
 
 @if (viewerIndex() !== null) {
   <app-asset-viewer
-    [assets]="items()"
+    [assets]="viewerAssets()"
     [startIndex]="viewerIndex()!"
     (closed)="closeViewer()"
     (deleted)="onViewerDeleted($event)"

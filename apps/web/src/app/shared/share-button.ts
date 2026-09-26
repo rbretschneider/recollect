@@ -33,7 +33,21 @@ export class ShareButton {
   private readonly toasts = inject(ToastService);
 
   readonly targetType = input.required<'memory' | 'album' | 'asset'>();
-  readonly targetId = input.required<string>();
+  /** Empty only for things that have no row until someone asks — see `resolveTarget`. */
+  readonly targetId = input<string>('');
+  /**
+   * Called the first time a PUBLIC link is actually needed, for content that
+   * is computed rather than stored. A look-back has no row to point a token
+   * at, so one is materialised on demand — but only when someone chooses to
+   * expose it, never just to send the family a link.
+   */
+  readonly resolveTarget = input<(() => Promise<string>) | null>(null);
+  /**
+   * Where a signed-in household member should land. Derived from the target
+   * for the things that have their own route; passed explicitly for the ones
+   * that don't, like a look-back.
+   */
+  readonly internalPath = input<string | null>(null);
   /** For memories: whether the shared page includes journal text. */
   readonly includeJournal = input<boolean>(false);
   /** 'overlay': circular chrome; 'icon': bordered icon; 'labeled': icon over a tiny label. */
@@ -52,16 +66,89 @@ export class ShareButton {
   readonly isBusy = signal(false);
   readonly copiedLinkId = signal<string | null>(null);
 
+  /** A target materialised by `resolveTarget`; empty until one is needed. */
+  private readonly resolvedId = signal('');
+  private readonly effectiveId = computed(() => this.resolvedId() || this.targetId());
+
+  /** How the household link fared — the sheet says so rather than a toast. */
+  readonly internalCopied = signal<'copied' | 'failed' | null>(null);
+
+  /**
+   * The link for someone who already has an account. It is just an app URL:
+   * every route is behind the auth guard, which carries a returnUrl through
+   * sign-in, so they land exactly here. Nothing is exposed, nothing is minted,
+   * and there is nothing to revoke afterwards.
+   */
+  readonly internalUrl = computed(() => {
+    const explicit = this.internalPath();
+    if (explicit) {
+      return `${location.origin}${explicit}`;
+    }
+    const id = this.effectiveId();
+    switch (this.targetType()) {
+      case 'memory':
+        return `${location.origin}/memories/${id}`;
+      case 'album':
+        return `${location.origin}/albums/${id}`;
+      default:
+        return `${location.origin}/photos?asset=${id}`;
+    }
+  });
+
   /** Already public? Then the sheet manages the link — it never offers "create". */
   readonly isShared = computed(() => this.links().length > 0);
 
   readonly expiryOptions = EXPIRY_OPTIONS;
   selectedExpiryHours: number | null = 24 * 7;
 
+  /**
+   * Opens the sheet with the household link ALREADY on the clipboard.
+   *
+   * Sending a family member a link is far and away the common case, and it
+   * needs no server round trip, so it should not cost a tap. The copy happens
+   * first, inside the tap that opened this, because Safari only grants
+   * clipboard access within the gesture itself.
+   */
   async open(): Promise<void> {
     this.isOpen.set(true);
-    const { links } = await this.api.listFor(this.targetType(), this.targetId());
-    this.links.set(links);
+    this.internalCopied.set(null);
+    const copying = this.copyInternal();
+    const id = this.effectiveId();
+    // Nothing is shared yet for a target that does not exist; don't ask.
+    if (id) {
+      const { links } = await this.api.listFor(this.targetType(), id);
+      this.links.set(links);
+    }
+    await copying;
+  }
+
+  /**
+   * Hands the link to the OS share sheet where there is one — on a phone that
+   * is straight into Messages — and falls back to the clipboard elsewhere.
+   */
+  async copyInternal(): Promise<void> {
+    const url = this.internalUrl();
+    try {
+      await navigator.clipboard.writeText(url);
+      this.internalCopied.set('copied');
+    } catch {
+      // No clipboard access (insecure origin, permissions): the sheet shows
+      // the URL in a selectable field, so this is a downgrade, not a dead end.
+      this.internalCopied.set('failed');
+    }
+  }
+
+  /** The phone route: straight into Messages rather than via the clipboard. */
+  get canSendNatively(): boolean {
+    return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  }
+
+  async sendInternal(): Promise<void> {
+    try {
+      await navigator.share({ url: this.internalUrl() });
+    } catch {
+      // Dismissed, or unavailable after all. It is already on the clipboard.
+    }
   }
 
   close(): void {
@@ -99,11 +186,10 @@ export class ShareButton {
    */
   async createLink(): Promise<void> {
     this.isBusy.set(true);
-    const created = this.api.createLink(
-      this.targetType(),
-      this.targetId(),
-      this.includeJournal(),
-      this.selectedExpiryHours,
+    // Materialising happens here and only here: choosing to expose something
+    // is what creates the album a look-back needs, not merely opening this.
+    const created = this.ensureTarget().then((id) =>
+      this.api.createLink(this.targetType(), id, this.includeJournal(), this.selectedExpiryHours),
     );
     let copied = false;
     try {
@@ -138,13 +224,33 @@ export class ShareButton {
     }
   }
 
-  /** Extend / change an existing link's expiration — no new link is made. */
+  /** Resolves the public target, materialising it the first time it is needed. */
+  private async ensureTarget(): Promise<string> {
+    const existing = this.effectiveId();
+    if (existing) {
+      return existing;
+    }
+    const resolve = this.resolveTarget();
+    if (!resolve) {
+      throw new Error('This has nothing to share publicly.');
+    }
+    const id = await resolve();
+    this.resolvedId.set(id);
+    return id;
+  }
+
+  /**
+   * Extend / change an existing link's expiration — no new link is made. The
+   * link goes back on the clipboard, because changing how long it lasts is
+   * usually the prelude to sending it again.
+   */
   async extend(link: ShareLinkView): Promise<void> {
     this.isBusy.set(true);
     try {
       const { link: updated } = await this.api.updateExpiry(link.id, this.selectedExpiryHours);
       this.links.update((existing) => existing.map((item) => (item.id === updated.id ? updated : item)));
       this.changed.emit();
+      await this.copy(updated);
     } finally {
       this.isBusy.set(false);
     }
@@ -165,8 +271,13 @@ export class ShareButton {
   }
 
   async copy(link: ShareLinkView): Promise<void> {
-    await navigator.clipboard.writeText(this.urlFor(link));
-    this.copiedLinkId.set(link.id);
-    setTimeout(() => this.copiedLinkId.set(null), 2000);
+    try {
+      await navigator.clipboard.writeText(this.urlFor(link));
+      this.copiedLinkId.set(link.id);
+      setTimeout(() => this.copiedLinkId.set(null), 2000);
+    } catch {
+      // No clipboard access. The URL is on screen and selectable, and a
+      // failed copy must not take down whatever asked for it.
+    }
   }
 }

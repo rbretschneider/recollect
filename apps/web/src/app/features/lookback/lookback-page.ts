@@ -128,7 +128,30 @@ export class LookbackPage implements OnInit {
       kind: moment.kind,
       memoryId: moment.memoryId,
       assetIds: moment.items.map((item) => item.id),
+      internalPath: this.momentPath(moment),
     });
+  }
+
+  /**
+   * A household link to one look-back moment.
+   *
+   * A memory moment has a real page, so it gets one. Anything else is
+   * computed from clustering each time it is asked for, and has no row to
+   * link to — so the link pins the day, and names the moment so this page can
+   * open that stack if it still resolves. Best effort by design: if the
+   * clustering has since moved, they land on the same day's look-backs rather
+   * than on an error.
+   */
+  private momentPath(moment: OnThisDayMoment): string {
+    if (moment.kind === 'memory' && moment.memoryId) {
+      return `/memories/${moment.memoryId}`;
+    }
+    const params = new URLSearchParams({
+      day: this.day,
+      year: String(this.year),
+      moment: moment.key,
+    });
+    return `/lookback?${params.toString()}`;
   }
 
   closeSlideshow(): void {
@@ -167,6 +190,14 @@ export class LookbackPage implements OnInit {
         ),
       );
       this.moments.set(res.moments);
+      // A shared link named a moment: open that stack straight into the show.
+      const wanted = params.get('moment');
+      if (wanted) {
+        const moment = res.moments.find((candidate) => candidate.key === wanted);
+        if (moment) {
+          this.openSlideshow(moment);
+        }
+      }
     } catch {
       this.loadFailed.set(true);
     } finally {
