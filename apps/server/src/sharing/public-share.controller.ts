@@ -3,6 +3,8 @@ import type { Response } from 'express';
 import { AssetMediaStreamer } from '../assets/asset-media-streamer';
 import { Public } from '../auth/decorators/public.decorator';
 import { FaceCropService } from '../people/face-crop.service';
+import { LibraryService } from '../library/library.service';
+import { sharedWithFor } from '../library/public-name';
 import { SharedView, SharingService } from './sharing.service';
 
 /**
@@ -15,12 +17,19 @@ export class PublicShareController {
     private readonly sharing: SharingService,
     private readonly media: AssetMediaStreamer,
     private readonly crops: FaceCropService,
+    private readonly library: LibraryService,
   ) {}
 
   @Public()
   @Get(':token')
-  async view(@Param('token') token: string): Promise<SharedView> {
-    return this.sharing.getSharedView(token);
+  async view(@Param('token') token: string): Promise<SharedView & { sharedFrom: string }> {
+    // Whose library this is, so the page says the same thing the link preview
+    // did rather than quietly disagreeing with it.
+    const [view, { name }] = await Promise.all([
+      this.sharing.getSharedView(token),
+      this.library.getPublicName(),
+    ]);
+    return { ...view, sharedFrom: sharedWithFor(name) };
   }
 
   /** Face-crop avatar for the shared memory's "Who was there" — scoped to the

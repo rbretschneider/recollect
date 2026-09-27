@@ -109,6 +109,34 @@
         }
       </div>
 
+      <!-- Whose library this is, in the words an outsider should read. -->
+      <div class="card">
+        <label class="public-name" for="public-name">
+          What to call this library when you share
+          <input
+            id="public-name"
+            name="publicName"
+            [ngModel]="publicNameDraft()"
+            (ngModelChange)="publicNameDraft.set($event)"
+            placeholder="The Bretschneiders"
+            maxlength="60"
+            autocomplete="off"
+          />
+        </label>
+        <p class="muted">
+          Shows on link previews and at the foot of anything you share publicly:
+          “{{ publicNamePreview() }}”. Leave it empty to keep the plain wording.
+        </p>
+        <button
+          type="button"
+          class="outline"
+          [disabled]="isSavingPublicName()"
+          (click)="savePublicName()"
+        >
+          {{ isSavingPublicName() ? 'Saving…' : 'Save name' }}
+        </button>
+      </div>
+
       @for (user of users(); track user.id) {
         <div class="card row" [class.disabled-member]="user.disabled">
           <div class="info">

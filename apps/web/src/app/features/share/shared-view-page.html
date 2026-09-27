@@ -28,7 +28,7 @@
         <img [src]="thumbUrl(shared.assetIds[0], 1440)" [alt]="shared.title" />
       </button>
       <p class="single-meta">{{ shared.title }}</p>
-      <footer>Shared with Recollect</footer>
+      <footer>{{ shared.sharedFrom }}</footer>
     </main>
   } @else {
   <main class="shared">
@@ -127,7 +127,7 @@
       </section>
     }
 
-    <footer>Shared with Recollect</footer>
+    <footer>{{ shared.sharedFrom }}</footer>
   </main>
   }
 }

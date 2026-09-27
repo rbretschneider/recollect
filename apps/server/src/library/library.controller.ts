@@ -15,6 +15,8 @@ import { RequireAdmin } from '../auth/decorators/require-admin.decorator';
 import { CreateRootRequestDto } from './dto/create-root-request.dto';
 import { SetRootEnabledRequestDto } from './dto/set-root-enabled-request.dto';
 import { SetScheduleRequestDto } from './dto/set-schedule-request.dto';
+import { SetPublicNameRequestDto } from './dto/set-public-name-request.dto';
+import type { PublicName } from './public-name';
 import type { ScanSchedule } from './scan-schedule';
 import {
   BrowseListing,
@@ -64,6 +66,21 @@ export class LibraryController {
     @Body() body: SetRootEnabledRequestDto,
   ): Promise<{ root: LibraryRootView }> {
     return { root: await this.library.setRootEnabled(id, body.enabled) };
+  }
+
+  /**
+   * The household's public name. Readable by any signed-in member so the
+   * settings screen can show it; only an admin can change it.
+   */
+  @Get('public-name')
+  async getPublicName(): Promise<PublicName> {
+    return this.library.getPublicName();
+  }
+
+  @RequireAdmin()
+  @Patch('public-name')
+  async setPublicName(@Body() body: SetPublicNameRequestDto): Promise<PublicName> {
+    return this.library.setPublicName(body.name);
   }
 
   @RequireAdmin()

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { describeError } from '../../core/describe-error';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -18,6 +18,7 @@ import { BackButton } from '../../shared/back-button';
 import { Sheet } from '../../shared/sheet';
 import { ToastService } from '../../shared/toast.service';
 import { PushNotificationsService } from '../../core/push-notifications.service';
+import { LibraryApiService } from '../../core/api/library-api.service';
 import { BackupApiService, BackupStatus } from '../../core/api/backup-api.service';
 
 /** Admin settings: cameras and household members. The library has its own page. */
@@ -39,6 +40,40 @@ export class SettingsPage implements OnInit {
   private readonly toasts = inject(ToastService);
   readonly push = inject(PushNotificationsService);
   private readonly backupApi = inject(BackupApiService);
+  private readonly libraryApi = inject(LibraryApiService);
+
+  /**
+   * What outsiders see this household called. Public surfaces only: link
+   * previews and the foot of a shared page. Inside the app it stays Recollect.
+   */
+  readonly publicNameDraft = signal('');
+  readonly isSavingPublicName = signal(false);
+
+  /**
+   * The exact line a stranger will read, updating as you type — naming your
+   * own family should not be a guess about how it will come out.
+   */
+  readonly publicNamePreview = computed(() => {
+    const name = this.publicNameDraft().trim();
+    return name ? `Shared from ${name}` : 'Shared with Recollect';
+  });
+
+  async savePublicName(): Promise<void> {
+    if (this.isSavingPublicName()) {
+      return;
+    }
+    this.isSavingPublicName.set(true);
+    try {
+      // The server trims and caps it, so take back what it actually stored.
+      const { name } = await this.libraryApi.setPublicName(this.publicNameDraft());
+      this.publicNameDraft.set(name);
+      this.toasts.success(name ? `Shared links will say “${name}”.` : 'Name cleared.');
+    } catch (error) {
+      this.toasts.error(describeError(error, "Couldn't save that name."));
+    } finally {
+      this.isSavingPublicName.set(false);
+    }
+  }
 
   /** Scheduled-backup state (admin only). */
   readonly backup = signal<BackupStatus | null>(null);
@@ -79,6 +114,11 @@ export class SettingsPage implements OnInit {
       this.backup.set({ ...status, settings });
       this.toasts.success('Backup settings saved.');
       await this.reloadBackup();
+      // A garnish on a settings screen: if it fails, the field just starts empty.
+      const stored = await this.libraryApi.getPublicName().catch(() => null);
+      if (stored) {
+        this.publicNameDraft.set(stored.name);
+      }
     } catch (error) {
       this.toasts.error(this.messageFrom(error, "Couldn't save the backup settings."));
       await this.reloadBackup();

@@ -227,6 +227,8 @@ export interface ShareLinkView {
 /** Mirrors the server's SharedView. */
 export interface SharedView {
   targetType: 'memory' | 'album' | 'asset';
+  /** Whose library this came from, as the footer shows it. */
+  sharedFrom: string;
   title: string;
   description: string | null;
   startAt: string | null;

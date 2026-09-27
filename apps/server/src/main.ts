@@ -14,6 +14,9 @@ import { AppModule } from './app.module';
 import { APP_CONFIG, AppConfig, loadAppConfig } from './config/app-config';
 import { ContributionsService } from './contributions/contributions.service';
 import { SharingService } from './sharing/sharing.service';
+import { LibraryService } from './library/library.service';
+import { sharedFromFor, siteNameFor } from './library/public-name';
+import { unfurlTags } from './unfurl-tags';
 import { HttpExceptionLogFilter } from './logging/http-exception-log.filter';
 import { RotatingFileLogger } from './logging/rotating-file-logger';
 
@@ -40,35 +43,6 @@ async function runMigrations(config: AppConfig): Promise<void> {
   } finally {
     await pool.end();
   }
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;');
-}
-
-/** The og:/twitter: block that makes a pasted link unfurl in chats and socials. */
-function unfurlTags(title: string, description: string, imageUrl: string | null): string {
-  const safeTitle = escapeHtml(title);
-  const tags = [
-    `<meta property="og:site_name" content="Recollect">`,
-    `<meta property="og:type" content="website">`,
-    `<meta property="og:title" content="${safeTitle}">`,
-    `<meta property="og:description" content="${escapeHtml(description)}">`,
-  ];
-  if (imageUrl) {
-    tags.push(
-      `<meta property="og:image" content="${escapeHtml(imageUrl)}">`,
-      `<meta name="twitter:card" content="summary_large_image">`,
-    );
-  } else {
-    tags.push(`<meta name="twitter:card" content="summary">`);
-  }
-  tags.push(`<meta name="twitter:title" content="${safeTitle}">`);
-  return tags.join('');
 }
 
 /**
@@ -108,6 +82,7 @@ function serveWebApp(app: NestExpressApplication, config: AppConfig): void {
   // Resolved lazily so a failed lookup degrades to the plain shell, never a 500.
   const sharing = app.get(SharingService, { strict: false });
   const contributions = app.get(ContributionsService, { strict: false });
+  const library = app.get(LibraryService, { strict: false });
   const indexPath = join(config.webDistDir, 'index.html');
   app.use(
     (
@@ -131,15 +106,19 @@ function serveWebApp(app: NestExpressApplication, config: AppConfig): void {
         const origin = `${req.protocol}://${req.get('host') ?? ''}`;
         let tags: string | null = null;
         try {
+          // What the household calls itself, so a link says whose it is.
+          const { name } = await library.getPublicName();
+          const siteName = siteNameFor(name);
           if (shareToken) {
             const meta = await sharing.getShareMeta(shareToken);
             if (meta) {
               tags = unfurlTags(
                 meta.title,
-                'Shared from our family photo home.',
+                sharedFromFor(name),
                 meta.coverAssetId
                   ? `${origin}/api/v1/share/${shareToken}/assets/${meta.coverAssetId}/thumb/720`
                   : null,
+                siteName,
               );
             }
           } else if (contributeToken) {
@@ -151,6 +130,7 @@ function serveWebApp(app: NestExpressApplication, config: AppConfig): void {
               cover
                 ? `${origin}/api/v1/contribute/${contributeToken}/assets/${cover}/thumb/720`
                 : null,
+              siteName,
             );
           }
         } catch {

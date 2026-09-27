@@ -13,6 +13,7 @@ import {
   SCAN_SCHEDULE_KEY,
   ScanSchedule,
 } from './scan-schedule';
+import { normalizePublicName, PUBLIC_NAME_KEY, PublicName } from './public-name';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { SCAN_ROOT_JOB } from './library-job-types';
 import { isFilesystemRoot } from './filesystem-root';
@@ -249,6 +250,23 @@ export class LibraryService {
       .insert(appSetting)
       .values({ key, value })
       .onConflictDoUpdate({ target: appSetting.key, set: { value, updatedAt: new Date() } });
+  }
+
+  /**
+   * What this household calls itself on anything an outsider sees. Read on
+   * every share-page request, which is rare (link-preview bots and the people
+   * they send), so it is deliberately not cached — a rename takes effect at
+   * once rather than whenever a cache felt like expiring.
+   */
+  async getPublicName(): Promise<PublicName> {
+    const stored = await this.getSetting<PublicName>(PUBLIC_NAME_KEY);
+    return { name: stored?.name ?? '' };
+  }
+
+  async setPublicName(raw: string): Promise<PublicName> {
+    const name = normalizePublicName(raw);
+    await this.setSetting(PUBLIC_NAME_KEY, { name });
+    return { name };
   }
 
   /** The automatic-scan schedule, with when it fires next (server-local time). */

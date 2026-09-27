@@ -44,6 +44,17 @@ export class LibraryApiService {
     return firstValueFrom(this.http.get<ScanScheduleView>('/api/v1/library/schedule'));
   }
 
+  /** What outsiders see this household called on a shared link. */
+  getPublicName(): Promise<{ name: string }> {
+    return firstValueFrom(this.http.get<{ name: string }>('/api/v1/library/public-name'));
+  }
+
+  setPublicName(name: string): Promise<{ name: string }> {
+    return firstValueFrom(
+      this.http.patch<{ name: string }>('/api/v1/library/public-name', { name }),
+    );
+  }
+
   setSchedule(schedule: ScanScheduleView['schedule']): Promise<ScanScheduleView> {
     return firstValueFrom(
       this.http.patch<ScanScheduleView>('/api/v1/library/schedule', schedule),

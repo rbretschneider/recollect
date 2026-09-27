@@ -19,6 +19,8 @@ import type { Request, Response } from 'express';
 import { AssetMediaStreamer } from '../assets/asset-media-streamer';
 import { Public } from '../auth/decorators/public.decorator';
 import { ContributionUploadGuard } from './contribution-upload.guard';
+import { LibraryService } from '../library/library.service';
+import { sharedWithFor } from '../library/public-name';
 import { ContributeView, ContributionsService } from './contributions.service';
 
 /** The shape multer hands us after streaming to the staging temp dir. */
@@ -38,12 +40,19 @@ export class PublicContributeController {
   constructor(
     private readonly contributions: ContributionsService,
     private readonly media: AssetMediaStreamer,
+    private readonly library: LibraryService,
   ) {}
 
   @Public()
   @Get(':token')
-  async view(@Param('token') token: string): Promise<ContributeView> {
-    return this.contributions.getContributeView(token);
+  async view(@Param('token') token: string): Promise<ContributeView & { sharedFrom: string }> {
+    // Who is asking for the photos: handing them to a family you recognise is
+    // a much easier thing to be asked than handing them to a product name.
+    const [view, { name }] = await Promise.all([
+      this.contributions.getContributeView(token),
+      this.library.getPublicName(),
+    ]);
+    return { ...view, sharedFrom: sharedWithFor(name) };
   }
 
   @Public()

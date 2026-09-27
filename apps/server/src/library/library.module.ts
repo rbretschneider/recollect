@@ -23,6 +23,6 @@ import { ScanSchedulerService } from './scan-scheduler.service';
     IngestFileHandler,
     ReprocessAssetHandler,
   ],
-  exports: [IngestService],
+  exports: [IngestService, LibraryService],
 })
 export class LibraryModule {}
