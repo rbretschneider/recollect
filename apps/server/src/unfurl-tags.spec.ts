@@ -8,10 +8,12 @@ import { sharedFromFor, siteNameFor } from './library/public-name';
  */
 describe('unfurlTags', () => {
   it('carries the household name as the site name', () => {
-    const tags = unfurlTags('Acadia, 2021', sharedFromFor('The Bretschneiders'), null, siteNameFor('The Bretschneiders'));
+    const tags = unfurlTags('Acadia, 2021', sharedFromFor('The Smiths'), null, siteNameFor('The Smiths'));
 
-    expect(tags).toContain('<meta property="og:site_name" content="The Bretschneiders">');
-    expect(tags).toContain('<meta property="og:description" content="Shared from The Bretschneiders.">');
+    expect(tags).toContain('<meta property="og:site_name" content="The Smiths">');
+    expect(tags).toContain(
+      '<meta property="og:description" content="Shared from The Smiths, a Recollect photo library.">',
+    );
   });
 
   it('falls back to the product name when unnamed', () => {

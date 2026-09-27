@@ -1,7 +1,7 @@
 /** Where the household's name is stored in app_setting. */
 export const PUBLIC_NAME_KEY = 'library.publicName';
 
-/** Long enough for "The Bretschneider Family", short enough for a link preview. */
+/** Long enough for "The Smith Family", short enough for a link preview. */
 export const PUBLIC_NAME_MAX = 60;
 
 /**
@@ -19,6 +19,18 @@ export interface PublicName {
 export const DEFAULT_SITE_NAME = 'Recollect';
 export const DEFAULT_SHARED_FROM = 'Shared from our family photo home.';
 
+/**
+ * The line itself, without trailing punctuation so both a footer and a
+ * sentence can use it.
+ *
+ * A comma rather than a possessive: turning an arbitrary name into one means
+ * guessing between Smith's and Smiths', and getting somebody's own family name
+ * wrong is a worse outcome than a slightly longer line.
+ */
+function sharedFromLine(name: string): string {
+  return `Shared from ${name}, a Recollect photo library`;
+}
+
 /** Trimmed, collapsed and capped; whitespace-only is the same as unset. */
 export function normalizePublicName(raw: string): string {
   return raw.replace(/\s+/g, ' ').trim().slice(0, PUBLIC_NAME_MAX);
@@ -31,14 +43,14 @@ export function siteNameFor(name: string): string {
 
 /**
  * The line under a shared link's title. Named or not, it says where this came
- * from — "Shared from the Bretschneiders" rather than a product name, because
- * what reassures someone opening a link is whose it is.
+ * from — the family, not just a product name, because what reassures someone
+ * opening a link is whose it is.
  */
 export function sharedFromFor(name: string): string {
-  return name ? `Shared from ${name}.` : DEFAULT_SHARED_FROM;
+  return name ? `${sharedFromLine(name)}.` : DEFAULT_SHARED_FROM;
 }
 
 /** The footer on a public page, and the invitation on a contribute page. */
 export function sharedWithFor(name: string): string {
-  return name ? `Shared from ${name}` : `Shared with ${DEFAULT_SITE_NAME}`;
+  return name ? sharedFromLine(name) : `Shared with ${DEFAULT_SITE_NAME}`;
 }

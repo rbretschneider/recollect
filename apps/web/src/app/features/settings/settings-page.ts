@@ -52,10 +52,13 @@ export class SettingsPage implements OnInit {
   /**
    * The exact line a stranger will read, updating as you type — naming your
    * own family should not be a guess about how it will come out.
+   *
+   * Mirrors `sharedWithFor` on the server, which is the source of truth and
+   * has the tests; this copy only has to survive until you press Save.
    */
   readonly publicNamePreview = computed(() => {
     const name = this.publicNameDraft().trim();
-    return name ? `Shared from ${name}` : 'Shared with Recollect';
+    return name ? `Shared from ${name}, a Recollect photo library` : 'Shared with Recollect';
   });
 
   async savePublicName(): Promise<void> {

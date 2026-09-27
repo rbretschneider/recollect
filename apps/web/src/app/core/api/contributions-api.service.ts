@@ -21,7 +21,7 @@ export interface PoolItem {
 /** What the public guest page renders. */
 export interface ContributeView {
   albumTitle: string;
-  /** Whose library is asking, e.g. "Shared from the Bretschneiders". */
+  /** Whose library is asking, e.g. "Shared from The Smiths, a Recollect photo library". */
   sharedFrom: string;
   poolView: boolean;
   expiresAt: string;

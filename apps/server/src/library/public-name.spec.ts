@@ -16,7 +16,7 @@ import {
 describe('public name', () => {
   describe('normalizing', () => {
     it('trims and collapses whitespace', () => {
-      expect(normalizePublicName('  The   Bretschneiders  ')).toBe('The Bretschneiders');
+      expect(normalizePublicName('  The   Smiths  ')).toBe('The Smiths');
     });
 
     it('treats whitespace-only as unset', () => {
@@ -36,9 +36,16 @@ describe('public name', () => {
 
   describe('the wording', () => {
     it('names the household everywhere once it is set', () => {
-      expect(siteNameFor('The Bretschneiders')).toBe('The Bretschneiders');
-      expect(sharedFromFor('The Bretschneiders')).toBe('Shared from The Bretschneiders.');
-      expect(sharedWithFor('The Bretschneiders')).toBe('Shared from The Bretschneiders');
+      expect(siteNameFor('The Smiths')).toBe('The Smiths');
+      expect(sharedFromFor('The Smiths')).toBe('Shared from The Smiths, a Recollect photo library.');
+      expect(sharedWithFor('The Smiths')).toBe('Shared from The Smiths, a Recollect photo library');
+    });
+
+    // No possessive: guessing between Smith's and Smiths' for an arbitrary
+    // family name is a good way to get somebody's own name wrong.
+    it('does not try to make a possessive out of the name', () => {
+      expect(sharedWithFor('The Smiths')).not.toContain("Smiths'");
+      expect(sharedWithFor('The Smiths')).not.toContain("Smith's");
     });
 
     // A server that has never been named must not render blanks at someone.
