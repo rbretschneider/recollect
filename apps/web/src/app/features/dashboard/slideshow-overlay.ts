@@ -10,6 +10,7 @@ import { ConfirmService } from '../../shared/confirm.service';
 import { ToastService } from '../../shared/toast.service';
 import { closeOnBrowserBack } from '../../shared/close-on-back';
 import { ZoomGesture } from '../../shared/zoom-gesture';
+import { holdScreenAwake } from '../../shared/wake-lock';
 
 /** One slide. */
 export interface SlideItem {
@@ -336,8 +337,16 @@ export class SlideshowOverlay implements OnDestroy {
       this.startMusic();
     }
     // Android/browser Back closes the show, never the page underneath.
-    closeOnBrowserBack(inject(DestroyRef), () => this.close());
+    const destroyRef = inject(DestroyRef);
+    closeOnBrowserBack(destroyRef, () => this.close());
+    // Watching is not touching, and the phone's idle timer cannot tell the
+    // difference. Held only while slides are actually advancing: pausing
+    // usually means you have looked away, and the end card means it's over.
+    holdScreenAwake(this.isPlaying, destroyRef);
   }
+
+  /** The show is actually running — not paused, not finished. */
+  readonly isPlaying = computed(() => !this.isPaused() && !this.isFinished());
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
