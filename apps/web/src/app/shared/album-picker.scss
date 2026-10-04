@@ -12,6 +12,9 @@
 
 .list {
   display: grid;
+  // Same floor as the sheet body above it: album titles are nowrap, and a long
+  // one would otherwise widen this column and push the list past the screen.
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.3rem;
 
   button {
@@ -49,6 +52,9 @@
 
     .title {
       flex: 1;
+      // Without this a flex item refuses to shrink below its text, so the
+      // ellipsis never engages and the row grows instead.
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
