@@ -31,6 +31,7 @@ import { EditToggle } from '../../shared/edit-toggle';
 import { Icon } from '../../shared/icon';
 import { SafeResourcePipe } from '../../shared/safe-resource.pipe';
 import { ShareButton } from '../../shared/share-button';
+import { AssetPicker } from '../../shared/asset-picker';
 import { AssetViewer } from '../viewer/asset-viewer';
 import { SlideItem, SlideshowOverlay } from '../dashboard/slideshow-overlay';
 
@@ -43,6 +44,7 @@ const GRID_PAGE_SIZE = 24;
 @Component({
   selector: 'app-memory-detail-page',
   imports: [AccountBadge, MenuButton, PageLoading, LoadError, BackButton,
+    AssetPicker,
     AssetViewer,
     SlideshowOverlay,
     EditToggle,
@@ -183,6 +185,37 @@ export class MemoryDetailPage implements OnInit {
    * is the count you can see.
    */
   readonly allAssetIds = computed<string[]>(() => this.detail()?.assetIds ?? []);
+
+  // --- Adding photos to an existing memory ------------------------------
+
+  readonly isPickingAssets = signal(false);
+  /** What the picker shows as already in, so they can't be added twice. */
+  readonly assetIdSet = computed<ReadonlySet<string>>(() => new Set(this.allAssetIds()));
+
+  /**
+   * Attaches the picked photos. The grid is reloaded rather than patched in
+   * place: the server also widens the memory's date span to cover them, so the
+   * header would otherwise disagree with its own contents.
+   */
+  async addAssetsToMemory(assetIds: string[]): Promise<void> {
+    this.isPickingAssets.set(false);
+    const memoryId = this.detail()?.id;
+    if (!memoryId || assetIds.length === 0) {
+      return;
+    }
+    try {
+      await this.api.addAssets(memoryId, assetIds);
+      this.toasts.success(
+        `Added ${assetIds.length === 1 ? 'a photo' : `${assetIds.length} photos`}.`,
+      );
+      await this.load();
+    } catch (error) {
+      this.toasts.error(describeError(error, 'Couldn’t add those photos.'), {
+        label: 'Retry',
+        run: () => void this.addAssetsToMemory(assetIds),
+      });
+    }
+  }
 
   /** Render a screenful first; a hundred tiles is payload nobody asked for. */
   readonly showAllPhotos = signal(false);

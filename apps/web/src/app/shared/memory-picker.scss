@@ -1,0 +1,101 @@
+// Chrome (scrim, panel, motion, close) lives in <app-sheet>. These styles only
+// dress the projected content — the filter box and the results list. Kept in
+// step with album-picker.scss so the two pickers read as one control.
+.filter {
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border-radius: var(--radius-2);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.list {
+  display: grid;
+  // Floor the column: a long memory title is nowrap, and an auto column would
+  // widen to fit it and push this list off the screen. See sheet.scss.
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.3rem;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    min-height: 52px;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2);
+    background: var(--surface-raised);
+    color: var(--text);
+    font-size: 0.95rem;
+    text-align: left;
+    cursor: pointer;
+
+    img {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-1);
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .cover-fallback {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-1);
+      background: var(--surface);
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    // A memory carries its date span under the title, so the two stack.
+    .text {
+      flex: 1;
+      // Without this a flex item refuses to shrink below its text, so the
+      // ellipsis never engages and the row grows instead.
+      min-width: 0;
+      display: grid;
+      gap: 0.1rem;
+    }
+
+    .title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .span {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .count {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      flex-shrink: 0;
+    }
+
+    &.create .title {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    &:disabled {
+      opacity: 0.6;
+    }
+  }
+
+  .hint {
+    margin: 0;
+    padding: 0.75rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-align: center;
+  }
+}

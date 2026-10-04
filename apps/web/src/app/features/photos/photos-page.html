@@ -298,51 +298,27 @@
 </main>
 
 @if (isSelecting() && selectedIds().size > 0) {
-  <div class="action-bar" role="toolbar" aria-label="Selection actions">
-    <!-- Count already lives in the select-mode header; keep the bar to actions. -->
-    <!-- One album action: the picker adds to an existing album, or creates a new
-         one when you type a name it doesn't recognize. -->
-    <button type="button" (click)="startAlbumPick()">Add to album</button>
-    <button type="button" (click)="isNamingCreation.set('memory')">New memory</button>
-    @if (canDelete) {
-      <button type="button" class="danger" (click)="deleteSelected()">Move to Trash</button>
-    }
-  </div>
-}
-
-@if (isNamingCreation(); as kind) {
-  <app-sheet
-    [sheetTitle]="kind === 'album' ? 'New album from selection' : 'New memory from selection'"
-    (closed)="isNamingCreation.set(null)"
-  >
-    <form class="create-from-selection" (ngSubmit)="createFromSelection()">
-      <p class="hint">
-        {{ selectedIds().size }} {{ selectedIds().size === 1 ? 'photo' : 'photos' }} →
-        {{ kind === 'album' ? 'a new album.' : 'a new memory, ready to write.' }}
-      </p>
-      <input
-        name="creationTitle"
-        [(ngModel)]="creationTitleDraft"
-        [placeholder]="kind === 'album' ? 'Album name' : 'Name the moment'"
-        maxlength="200"
-        autocomplete="off"
-      />
-      <div class="actions">
-        <button type="button" class="ghost" (click)="isNamingCreation.set(null)">Cancel</button>
-        <button
-          type="submit"
-          class="primary"
-          [disabled]="isCreating() || !creationTitleDraft.trim()"
-        >
-          {{ isCreating() ? 'Creating…' : (kind === 'album' ? 'Create album' : 'Create memory') }}
-        </button>
-      </div>
-    </form>
-  </app-sheet>
+  <!-- Count already lives in the select-mode header; the bar stays actions only.
+       Both pickers create on demand, so naming a new album or memory happens
+       inside them rather than through a sheet of its own. -->
+  <app-selection-bar
+    [canDelete]="canDelete"
+    (addToAlbum)="startAlbumPick()"
+    (addToMemory)="startMemoryPick()"
+    (deleteSelected)="deleteSelected()"
+  />
 }
 
 @if (isPickingAlbum()) {
   <app-album-picker (picked)="addSelectionToAlbum($event)" (cancelled)="cancelAlbumPick()" />
+}
+
+@if (isPickingMemory()) {
+  <app-memory-picker
+    [assetIds]="selectedIdList()"
+    (picked)="addSelectionToMemory($event)"
+    (cancelled)="cancelMemoryPick()"
+  />
 }
 
 @if (undoIds().length > 0) {
