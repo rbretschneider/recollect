@@ -301,12 +301,13 @@
   <!-- Count already lives in the select-mode header; the bar stays actions only.
        Both pickers create on demand, so naming a new album or memory happens
        inside them rather than through a sheet of its own. -->
-  <app-selection-bar
-    [canDelete]="canDelete"
-    (addToAlbum)="startAlbumPick()"
-    (addToMemory)="startMemoryPick()"
-    (deleteSelected)="deleteSelected()"
-  />
+  <app-selection-bar>
+    <button type="button" (click)="startAlbumPick()">Add to album</button>
+    <button type="button" (click)="startMemoryPick()">Add to memory</button>
+    @if (canDelete) {
+      <button type="button" class="danger" (click)="deleteSelected()">Move to Trash</button>
+    }
+  </app-selection-bar>
 }
 
 @if (isPickingAlbum()) {

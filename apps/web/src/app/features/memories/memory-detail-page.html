@@ -153,34 +153,6 @@
         </button>
       </section>
 
-      <section class="caption-editor" aria-label="Caption photos">
-        <h2>Caption the photos</h2>
-        <p class="hint">
-          Tap the photos that go together, then write one caption for them — like
-          “the rocks were sweet” across three climbing shots. Skip the ones that
-          speak for themselves.
-        </p>
-        <div class="caption-grid">
-          @for (assetId of memory.assetIds; track assetId) {
-            <button
-              type="button"
-              class="cap-tile"
-              [class.selected]="captionSelection().has(assetId)"
-              [class.captioned]="!!memory.captions[assetId]"
-              [attr.aria-pressed]="captionSelection().has(assetId)"
-              (click)="toggleCaptionSelect(assetId)"
-            >
-              <img [src]="thumbUrl(assetId, 720)" alt="" loading="lazy" />
-              @if (captionSelection().has(assetId)) {
-                <span class="tick" aria-hidden="true">✓</span>
-              }
-              @if (memory.captions[assetId]; as caption) {
-                <span class="tile-caption">{{ caption }}</span>
-              }
-            </button>
-          }
-        </div>
-      </section>
     } @else {
       <!-- Read mode: a blog post. The journal is the spine; captioned photos
            nestle into the gaps between its paragraphs, and the rest wait at the
@@ -289,14 +261,35 @@
          quotes but before the map. Read mode used to show less here than edit
          mode did, which made the photos feel like a footnote to their own
          memory. -->
-    @if (!editMode.isEditing() && allAssetIds().length > 0) {
+    <!-- ONE grid, in both modes. It used to be two that looked the same and
+         behaved differently, which is why there was nowhere to put "remove". -->
+    @if (allAssetIds().length > 0) {
       <section class="all-photos" aria-label="All photos">
         <h2>Photos</h2>
-        <p class="span">{{ photoSpanLabel() }}</p>
+        @if (editMode.isEditing() && !isSelecting()) {
+          <p class="hint">Press and hold a photo to caption or remove it.</p>
+        } @else {
+          <p class="span">{{ photoSpanLabel() }}</p>
+        }
         <div class="photo-grid">
           @for (assetId of gridAssetIds(); track assetId) {
-            <button type="button" aria-label="Open photo" (click)="openViewer(assetId)">
+            <button
+              type="button"
+              [class.selected]="isPhotoSelected(assetId)"
+              [class.captioned]="!!memory.captions[assetId]"
+              [attr.aria-pressed]="isSelecting() ? isPhotoSelected(assetId) : null"
+              aria-label="Open photo"
+              appLongPress
+              (longPress)="onPhotoLongPress(assetId)"
+              (click)="onPhotoClick(assetId)"
+            >
               <img [src]="thumbUrl(assetId, 240)" alt="" loading="lazy" decoding="async" />
+              @if (isSelecting()) {
+                <span class="pick" aria-hidden="true">{{ isPhotoSelected(assetId) ? '✓' : '' }}</span>
+              }
+              @if (memory.captions[assetId]; as caption) {
+                <span class="tile-caption">{{ caption }}</span>
+              }
             </button>
           }
         </div>
@@ -327,21 +320,35 @@
     }
   </main>
 
-  <!-- Floating bar: appears the moment photos are selected for a shared caption. -->
-  @if (editMode.isEditing() && captionSelection().size > 0) {
-    <div class="caption-apply-bar" role="group" aria-label="Caption selected photos">
-      <span class="count">{{ captionSelection().size }} selected</span>
-      <input
-        name="groupCaption"
-        [(ngModel)]="captionGroupDraft"
-        placeholder="Write their caption…"
-        maxlength="500"
-        autocomplete="off"
-        (keydown.enter)="applyGroupCaption()"
-      />
-      <button type="button" class="ghost" (click)="clearCaptionSelection()">Cancel</button>
-      <button type="button" class="primary" (click)="applyGroupCaption()">Apply</button>
-    </div>
+  <!-- The verbs for whatever is selected, in the same floating bar the
+       timeline and search use. Captioning opens a field here rather than on a
+       page of its own. -->
+  @if (isSelecting() && captionSelection().size > 0) {
+    @if (isCaptioning()) {
+      <div class="caption-apply-bar" role="group" aria-label="Caption selected photos">
+        <span class="count">{{ captionSelection().size }} selected</span>
+        <input
+          name="groupCaption"
+          [(ngModel)]="captionGroupDraft"
+          placeholder="Write their caption…"
+          maxlength="500"
+          autocomplete="off"
+          (keydown.enter)="applyGroupCaption()"
+        />
+        <button type="button" class="ghost" (click)="isCaptioning.set(false)">Back</button>
+        <button type="button" class="primary" (click)="applyGroupCaption()">Apply</button>
+      </div>
+    } @else {
+      <app-selection-bar label="Photo actions">
+        <button type="button" (click)="startCaptioning()">
+          Caption {{ captionSelection().size }}
+        </button>
+        <button type="button" class="danger" (click)="removeSelectedFromMemory()">
+          Remove from memory
+        </button>
+        <button type="button" (click)="endSelecting()">Done</button>
+      </app-selection-bar>
+    }
   }
 } @else if (loadFailed()) {
   <app-load-error message="Couldn’t load this memory." (retry)="load()" />

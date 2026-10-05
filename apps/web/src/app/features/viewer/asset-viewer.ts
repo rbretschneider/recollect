@@ -65,6 +65,14 @@ export class AssetViewer implements OnInit, OnDestroy {
   readonly startIndex = input.required<number>();
   /** Base URL for media routes; share pages point this at their token scope. */
   readonly mediaBase = input<string>('/api/v1/assets');
+  /** Lets a public share offer downloads; the library always allows them. */
+  readonly allowDownload = input<boolean>(false);
+  /**
+   * Where "save this photo" points. The library has a route that serves the
+   * file as an attachment; a share link streams the original through its own
+   * token instead, since a guest can't reach the library route at all.
+   */
+  readonly downloadRoute = input<'download' | 'original'>('download');
   /** Info sheet requires the authed detail endpoint; share pages disable it. */
   readonly allowInfo = input<boolean>(true);
   /** Optional per-asset captions (memory scrapbook). Shown over the photo. */
@@ -466,6 +474,14 @@ export class AssetViewer implements OnInit, OnDestroy {
     return this.allowInfo() && this.canWrite;
   }
 
+  /**
+   * Saving a photo. Household members always can; a share link can opt in, so
+   * "can you send me that one?" has an answer that isn't a screenshot.
+   */
+  get canDownload(): boolean {
+    return this.allowInfo() || this.allowDownload();
+  }
+
   /** Opens the 360° view: full-sphere pan/zoom via pannellum (bundled). */
   async openSphere(): Promise<void> {
     const asset = this.current();
@@ -736,7 +752,7 @@ export class AssetViewer implements OnInit, OnDestroy {
       return;
     }
     const anchor = document.createElement('a');
-    anchor.href = `/api/v1/assets/${asset.id}/download`;
+    anchor.href = `${this.mediaBase()}/${asset.id}/${this.downloadRoute()}`;
     anchor.download = '';
     anchor.click();
   }

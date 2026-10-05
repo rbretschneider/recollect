@@ -31,21 +31,49 @@
       <footer>{{ shared.sharedFrom }}</footer>
     </main>
   } @else {
-  <main class="shared">
-    <header>
-      <h1>{{ shared.title }}</h1>
-      @if (formatSpan(shared); as span) {
-        <p class="span">{{ span }}</p>
-      }
-      @if (shared.description) {
-        <p class="description">{{ shared.description }}</p>
-      }
-      @if (shared.assetIds.length > 1) {
-        <button type="button" class="play" (click)="showSlideshow.set(true)">
-          ▶ Play slideshow
+  <main class="shared" [class.gallery]="isGallery()">
+    @if (isGallery() && heroAssetId(); as hero) {
+      <!-- A gallery opens on a photograph, not on text over black. The grid
+           below renders from its own thumbnails and never waits on this. -->
+      <header class="hero">
+        <button type="button" class="hero-photo" aria-label="Open photo" (click)="openViewerForAsset(hero)">
+          <img [src]="thumbUrl(hero, 1440)" [alt]="shared.title" fetchpriority="high" />
         </button>
-      }
-    </header>
+        <div class="hero-text">
+          <h1>{{ shared.title }}</h1>
+          <p class="meta">
+            @if (formatSpan(shared); as span) {
+              <span>{{ span }}</span>
+            }
+            <span>{{ shared.assetIds.length }} {{ shared.assetIds.length === 1 ? 'photo' : 'photos' }}</span>
+          </p>
+          @if (shared.description) {
+            <p class="description">{{ shared.description }}</p>
+          }
+          <p class="from">{{ shared.sharedFrom }}</p>
+          @if (shared.assetIds.length > 1) {
+            <button type="button" class="play" (click)="showSlideshow.set(true)">
+              ▶ Play slideshow
+            </button>
+          }
+        </div>
+      </header>
+    } @else {
+      <header>
+        <h1>{{ shared.title }}</h1>
+        @if (formatSpan(shared); as span) {
+          <p class="span">{{ span }}</p>
+        }
+        @if (shared.description) {
+          <p class="description">{{ shared.description }}</p>
+        }
+        @if (shared.assetIds.length > 1) {
+          <button type="button" class="play" (click)="showSlideshow.set(true)">
+            ▶ Play slideshow
+          </button>
+        }
+      </header>
+    }
 
     @if (shared.people.length > 0) {
       <section class="who" aria-label="Who was there">
@@ -104,7 +132,19 @@
       </blockquote>
     }
 
-    @if (looseAssetIds().length > 0) {
+    @if (isGallery()) {
+      <!-- The photographs ARE the page here, so they render as a grid rather
+           than hiding behind a stack that has to be tapped. -->
+      <section class="gallery-grid" aria-label="Photos">
+        @for (assetId of view()!.assetIds; track assetId) {
+          <button type="button" aria-label="Open photo" (click)="openViewerForAsset(assetId)">
+            <img [src]="thumbUrl(assetId, 720)" alt="" loading="lazy" decoding="async" />
+          </button>
+        }
+      </section>
+    } @else if (looseAssetIds().length > 0) {
+      <!-- After a story, the uncaptioned extras stay a stack: they are the
+           footnote to the writing, not the point of the page. -->
       <section class="more-photos" aria-label="More photos">
         <button type="button" class="stack" (click)="openViewerForAsset(looseAssetIds()[0])">
           <span class="fan">
@@ -119,11 +159,6 @@
             <span class="sub">tap to browse — swipe &amp; zoom at your own pace</span>
           </span>
         </button>
-        @if (shared.assetIds.length > 1) {
-          <button type="button" class="play-here" (click)="showSlideshow.set(true)">
-            ▶ Play slideshow
-          </button>
-        }
       </section>
     }
 
@@ -148,6 +183,8 @@
     [mediaBase]="mediaBase"
     [captions]="captions()"
     [allowInfo]="false"
+    [allowDownload]="true"
+    downloadRoute="original"
     (closed)="closeViewer()"
   />
 }

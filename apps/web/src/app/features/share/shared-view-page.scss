@@ -369,3 +369,124 @@
     color: var(--text-muted);
   }
 }
+
+// --- Gallery mode: a shared album, or a memory shared before it was written --
+//
+// The essay layout above assumes a journal. Without one it collapsed to a
+// title and a polaroid stack, so these styles give the photographs the page.
+
+.shared.gallery {
+  // The grid earns the width the essay column deliberately gives up — the
+  // single-photo view already makes the same trade.
+  max-width: 72rem;
+
+  .hero {
+    position: relative;
+    margin-bottom: 1.5rem;
+    border-radius: 1rem;
+    overflow: hidden;
+
+    .hero-photo {
+      display: block;
+      width: 100%;
+      padding: 0;
+      border: none;
+      background: var(--surface);
+      cursor: pointer;
+
+      img {
+        display: block;
+        width: 100%;
+        // Tall enough to read as a cover, short enough that the grid under it
+        // is still reachable without much scrolling on a phone.
+        aspect-ratio: 16 / 10;
+        // On a wide screen that ratio alone made a 700px cover on a 900px
+        // window, putting every photo below the fold — which is the problem
+        // this page was supposed to fix. The cover never takes more than half
+        // the screen, so the grid is always visible underneath it.
+        max-height: 50vh;
+        object-fit: cover;
+      }
+    }
+
+    .hero-text {
+      position: absolute;
+      inset: auto 0 0;
+      padding: 3.5rem 1.25rem 1.1rem;
+      // The photo underneath is arbitrary, so the text carries its own
+      // legibility rather than trusting the image to be dark at the bottom.
+      background: linear-gradient(to top, rgb(0 0 0 / 85%), rgb(0 0 0 / 0%));
+      color: white;
+      // The gradient must not swallow taps meant for the photo behind it.
+      pointer-events: none;
+
+      h1 {
+        margin: 0;
+        font-size: 1.6rem;
+        line-height: 1.2;
+        text-shadow: 0 1px 12px rgb(0 0 0 / 60%);
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.15rem 0.6rem;
+        margin: 0.35rem 0 0;
+        font-size: 0.85rem;
+        opacity: 0.85;
+      }
+
+      .description {
+        margin: 0.4rem 0 0;
+        font-size: 0.9rem;
+        opacity: 0.9;
+      }
+
+      .from {
+        margin: 0.5rem 0 0;
+        font-size: 0.75rem;
+        opacity: 0.7;
+      }
+
+      .play {
+        margin-top: 0.8rem;
+        pointer-events: auto;
+      }
+    }
+  }
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.35rem;
+  padding: 0 0.75rem;
+
+  button {
+    padding: 0;
+    border: none;
+    border-radius: 0.4rem;
+    overflow: hidden;
+    background: var(--surface);
+    cursor: pointer;
+    aspect-ratio: 1;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+  }
+}
+
+@media (max-width: 30rem) {
+  .gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    padding: 0 0.4rem;
+  }
+
+  .shared.gallery .hero .hero-text h1 {
+    font-size: 1.3rem;
+  }
+}

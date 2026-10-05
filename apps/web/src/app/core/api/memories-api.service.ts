@@ -101,6 +101,13 @@ export class MemoriesApiService {
     );
   }
 
+  /** Takes one photo out of a memory. The photo itself is untouched. */
+  removeAsset(memoryId: string, assetId: string): Promise<void> {
+    return firstValueFrom(
+      this.http.delete<void>(`/api/v1/memories/${memoryId}/assets/${assetId}`),
+    );
+  }
+
   /** Attaches photos to an existing memory. */
   addAssets(memoryId: string, assetIds: string[]): Promise<void> {
     return firstValueFrom(

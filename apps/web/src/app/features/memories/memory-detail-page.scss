@@ -596,9 +596,14 @@
     font-family: Georgia, 'Times New Roman', serif;
     font-size: 1.1rem;
     line-height: 1.7;
-    resize: none;
-    overflow: hidden;
+    resize: vertical;
     min-height: 6.5rem;
+    // The field grows to fit, but never past a screenful — a long journal
+    // would otherwise push the photos below it miles down the page. Past that
+    // it scrolls, which is also the backstop: if sizing ever fails again, the
+    // writing is still reachable instead of silently cut off.
+    max-height: 70vh;
+    overflow-y: auto;
 
     &::placeholder {
       color: var(--text-muted);
@@ -629,100 +634,8 @@
   }
 }
 
-// Edit mode: every photo shown in full (no scroll strip), tap to select, then
-// caption the selection together.
-.caption-editor {
-  max-width: 38rem;
-  margin: 0 auto;
-  padding: 1.5rem 1.5rem 0;
-
-  h2 {
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-    margin: 0 0 0.35rem;
-  }
-
-  .hint {
-    margin: 0 0 0.85rem;
-    font-size: 0.85rem;
-    line-height: 1.45;
-    color: var(--text-muted);
-  }
-
-  .caption-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
-    gap: 0.5rem;
-  }
-
-  .cap-tile {
-    position: relative;
-    padding: 0;
-    border: 2px solid transparent;
-    border-radius: 0.7rem;
-    overflow: hidden;
-    background: var(--surface);
-    cursor: pointer;
-    aspect-ratio: 1;
-
-    img {
-      display: block;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: opacity 0.15s ease;
-    }
-
-    // A captioned photo carries a soft accent edge so you can see at a glance
-    // which shots already have words.
-    &.captioned {
-      border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-    }
-
-    &.selected {
-      border-color: var(--accent);
-
-      img {
-        opacity: 0.72;
-      }
-    }
-
-    .tick {
-      position: absolute;
-      top: 0.35rem;
-      right: 0.35rem;
-      width: 22px;
-      height: 22px;
-      display: grid;
-      place-items: center;
-      border-radius: 50%;
-      background: var(--accent);
-      color: var(--accent-contrast);
-      font-size: 0.8rem;
-      font-weight: 700;
-    }
-
-    .tile-caption {
-      position: absolute;
-      inset: auto 0 0;
-      padding: 1.25rem 0.4rem 0.4rem;
-      background: linear-gradient(transparent, rgb(0 0 0 / 80%));
-      color: white;
-      font-size: 0.72rem;
-      line-height: 1.25;
-      text-align: left;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-  }
-}
-
-// The floating bar that appears once photos are picked — write one caption for
-// all of them. Portals visually above the page like the app's other action bars.
+// The caption field, shown once "Caption" is chosen for a selection — write
+// one caption for all of them. Sits where the app's other action bars sit.
 .caption-apply-bar {
   position: fixed;
   inset: auto 0 0;
@@ -811,5 +724,54 @@
     color: var(--text);
     font-size: 0.95rem;
     cursor: pointer;
+  }
+}
+
+// Selecting photos in the one grid. The tick reads over the thumbnail without
+// hiding the photo being picked — same language as the timeline and search.
+.all-photos .photo-grid button {
+  position: relative;
+
+  &.selected img {
+    opacity: 0.65;
+    scale: 0.92;
+    transition: scale 0.12s ease, opacity 0.12s ease;
+  }
+
+  .pick {
+    position: absolute;
+    inset: 0.3rem 0.3rem auto auto;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid white;
+    background: rgb(0 0 0 / 35%);
+    color: white;
+    font-size: 0.75rem;
+    line-height: 1;
+  }
+
+  &.selected .pick {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-contrast);
+  }
+
+  // A photo that already carries words says so, so you can see at a glance
+  // what still needs captioning.
+  .tile-caption {
+    position: absolute;
+    inset: auto 0 0;
+    padding: 0.5rem 0.35rem 0.25rem;
+    background: linear-gradient(to top, rgb(0 0 0 / 80%), rgb(0 0 0 / 0%));
+    color: white;
+    font-size: 0.65rem;
+    line-height: 1.25;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }

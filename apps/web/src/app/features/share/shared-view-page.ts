@@ -113,6 +113,24 @@ export class SharedViewPage implements OnInit {
     return flow;
   });
 
+  /**
+   * Whether this link is a gallery rather than a story.
+   *
+   * The page was built as an essay — journal paragraphs with captioned photos
+   * woven between them, and whatever was left over parked in a polaroid stack
+   * at the end. An album has no journal and no captions, so every section
+   * collapsed and all of its photos fell into that "leftovers" stack: fifty
+   * photos behind one thumbnail you had to tap. The same happened to any
+   * memory shared before its journal was written.
+   *
+   * So the decision is made on what the link actually contains, not on what
+   * kind of thing it points at: no story, no essay — show the photographs.
+   */
+  readonly isGallery = computed(() => this.storyFlow().length === 0);
+
+  /** The photo the gallery opens on; the rest follow in the grid. */
+  readonly heroAssetId = computed<string | null>(() => this.view()?.assetIds[0] ?? null);
+
   /** Uncaptioned photos — the tappable polaroid stack at the end. */
   readonly looseAssetIds = computed<string[]>(() => {
     const view = this.view();
