@@ -18,7 +18,11 @@ import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ShareButton } from '../../shared/share-button';
+import { AlbumPicker } from '../../shared/album-picker';
+import { MemoryPick, MemoryPicker } from '../../shared/memory-picker';
 import { PhotosApiService } from '../../core/api/photos-api.service';
+import { AlbumsApiService } from '../../core/api/albums-api.service';
+import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { TrashApiService } from '../../core/api/trash-api.service';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { ConfirmService } from '../../shared/confirm.service';
@@ -42,7 +46,7 @@ const ROTATE_SETTLE_MS = 900;
  */
 @Component({
   selector: 'app-asset-viewer',
-  imports: [Icon, RouterLink, ShareButton, FormsModule, Sheet],
+  imports: [AlbumPicker, Icon, MemoryPicker, RouterLink, ShareButton, FormsModule, Sheet],
   templateUrl: './asset-viewer.html',
   styleUrl: './asset-viewer.scss',
 })
@@ -50,6 +54,8 @@ export class AssetViewer implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthStateService);
   private readonly photosApi = inject(PhotosApiService);
+  private readonly albumsApi = inject(AlbumsApiService);
+  private readonly memoriesApi = inject(MemoriesApiService);
   private readonly trashApi = inject(TrashApiService);
   private readonly confirms = inject(ConfirmService);
   private readonly toasts = inject(ToastService);
@@ -511,7 +517,75 @@ export class AssetViewer implements OnInit, OnDestroy {
 
   /** Only offer the overflow when it would actually hold something. */
   get hasMoreActions(): boolean {
-    return this.canRotate || this.canDelete;
+    return this.canRotate || this.canDelete || this.canFile;
+  }
+
+  /**
+   * Filing the photo you are looking at. Available wherever the viewer is —
+   * a search hit, a person, a memory — so finding a photo and keeping it are
+   * never two separate journeys. Never on a public share, which has no user.
+   */
+  get canFile(): boolean {
+    return this.canWrite;
+  }
+
+  readonly isPickingAlbum = signal(false);
+  readonly isPickingMemory = signal(false);
+
+  /** The one photo on screen, as the pickers want it. */
+  readonly currentIds = computed<string[]>(() => {
+    const asset = this.current();
+    return asset ? [asset.id] : [];
+  });
+
+  startAlbumPick(): void {
+    this.actionsOpen.set(false);
+    this.isPickingAlbum.set(true);
+  }
+
+  startMemoryPick(): void {
+    this.actionsOpen.set(false);
+    this.isPickingMemory.set(true);
+  }
+
+  async addCurrentToAlbum(albumId: string): Promise<void> {
+    const ids = this.currentIds();
+    this.isPickingAlbum.set(false);
+    if (ids.length === 0) {
+      return;
+    }
+    try {
+      await this.albumsApi.addAssets(albumId, ids);
+      this.toasts.success('Added to the album.');
+    } catch (error) {
+      this.toasts.error(describeError(error, 'Couldn’t add that photo to the album.'), {
+        label: 'Retry',
+        run: () => void this.addCurrentToAlbum(albumId),
+      });
+    }
+  }
+
+  async addCurrentToMemory(pick: MemoryPick): Promise<void> {
+    const ids = this.currentIds();
+    this.isPickingMemory.set(false);
+    // A new memory was created around this photo already; adding it again
+    // would be a second write for no change.
+    if (pick.alreadyAdded) {
+      this.toasts.success('Memory created.');
+      return;
+    }
+    if (ids.length === 0) {
+      return;
+    }
+    try {
+      await this.memoriesApi.addAssets(pick.memoryId, ids);
+      this.toasts.success('Added to the memory.');
+    } catch (error) {
+      this.toasts.error(describeError(error, 'Couldn’t add that photo to the memory.'), {
+        label: 'Retry',
+        run: () => void this.addCurrentToMemory(pick),
+      });
+    }
   }
 
   /** Runs an overflow action and closes the sheet behind it. */

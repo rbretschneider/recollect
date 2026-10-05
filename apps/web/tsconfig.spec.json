@@ -4,7 +4,11 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "types": [
-      "vitest/globals"
+      "vitest/globals",
+      // Specs run in Node, so a test may read a source file off disk — the
+      // only way to assert on a stylesheet here, since jsdom has no layout
+      // engine and the test build does not attach component CSS.
+      "node"
     ]
   },
   "include": [

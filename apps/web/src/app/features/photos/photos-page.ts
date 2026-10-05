@@ -20,7 +20,8 @@ import { AlbumsApiService } from '../../core/api/albums-api.service';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
 import { formatDuration } from '../../core/format-duration';
 import { AlbumPicker } from '../../shared/album-picker';
-import { Sheet } from '../../shared/sheet';
+import { MemoryPick, MemoryPicker } from '../../shared/memory-picker';
+import { SelectionBar } from '../../shared/selection-bar';
 import { ActivitySpinner } from '../../shared/activity-spinner';
 import { AccountBadge } from '../../shared/account-badge';
 import { Brand } from '../../shared/brand';
@@ -31,7 +32,6 @@ import { LongPressDirective } from '../../shared/long-press.directive';
 import { AssetViewer } from '../viewer/asset-viewer';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
 
 /** One day's worth of photos in the grid. */
 interface DayGroup {
@@ -68,11 +68,11 @@ const PAGE_SIZE = 100;
     AssetViewer,
     AccountBadge,
     Brand,
-    FormsModule,
     Icon,
     LongPressDirective,
+    MemoryPicker,
     RouterLink,
-    Sheet,
+    SelectionBar,
   ],
   templateUrl: './photos-page.html',
   styleUrl: './photos-page.scss',
@@ -256,37 +256,56 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
     const ids = [...this.selectedIds()];
     this.isPickingAlbum.set(false);
     this.cancelSelecting();
-    if (ids.length > 0) {
+    if (ids.length === 0) {
+      return;
+    }
+    try {
       await this.albumsApi.addAssets(albumId, ids);
+      this.toasts.success(`Added ${ids.length === 1 ? 'a photo' : `${ids.length} photos`}.`);
+    } catch (error) {
+      this.toasts.error(describeError(error, 'Couldn’t add those to the album.'), {
+        label: 'Retry',
+        run: () => void this.albumsApi.addAssets(albumId, ids),
+      });
     }
   }
 
-  /** Which "new from selection" sheet is open, if any. */
-  readonly isNamingCreation = signal<'album' | 'memory' | null>(null);
-  readonly isCreating = signal(false);
-  creationTitleDraft = '';
+  readonly isPickingMemory = signal(false);
+  /** The selection as the memory picker wants it, for creating around. */
+  readonly selectedIdList = computed<string[]>(() => [...this.selectedIds()]);
 
-  /** Turns the current selection into a brand-new album or memory. */
-  async createFromSelection(): Promise<void> {
-    const kind = this.isNamingCreation();
-    const title = this.creationTitleDraft.trim();
+  startMemoryPick(): void {
+    this.isPickingMemory.set(true);
+  }
+
+  cancelMemoryPick(): void {
+    this.isPickingMemory.set(false);
+  }
+
+  /**
+   * Files the selection into a memory. A memory the picker just created already
+   * holds these photos — it is created around them, which is what gives it its
+   * date span — so that case opens it rather than writing them twice.
+   */
+  async addSelectionToMemory(pick: MemoryPick): Promise<void> {
     const ids = [...this.selectedIds()];
-    if (!kind || title.length === 0 || ids.length === 0 || this.isCreating()) {
+    this.isPickingMemory.set(false);
+    this.cancelSelecting();
+    if (pick.alreadyAdded) {
+      await this.router.navigate(['/memories', pick.memoryId], { queryParams: { new: 1 } });
       return;
     }
-    this.isCreating.set(true);
+    if (ids.length === 0) {
+      return;
+    }
     try {
-      if (kind === 'album') {
-        const { albumId } = await this.albumsApi.create(title, ids);
-        await this.router.navigate(['/albums', albumId]);
-      } else {
-        const { memoryId } = await this.memoriesApi.createMemory(title, ids);
-        await this.router.navigate(['/memories', memoryId], { queryParams: { new: 1 } });
-      }
-    } finally {
-      this.isCreating.set(false);
-      this.isNamingCreation.set(null);
-      this.creationTitleDraft = '';
+      await this.memoriesApi.addAssets(pick.memoryId, ids);
+      this.toasts.success(`Added ${ids.length === 1 ? 'a photo' : `${ids.length} photos`}.`);
+    } catch (error) {
+      this.toasts.error(describeError(error, 'Couldn’t add those to the memory.'), {
+        label: 'Retry',
+        run: () => void this.memoriesApi.addAssets(pick.memoryId, ids),
+      });
     }
   }
 

@@ -78,50 +78,6 @@
   cursor: pointer;
 }
 
-.action-bar {
-  position: fixed;
-  inset: auto 0.75rem calc(0.75rem + env(safe-area-inset-bottom));
-  z-index: 6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  // Never clip a control: on a narrow phone the row wraps instead of pushing
-  // "Move to Trash" off the edge.
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0 auto;
-  max-width: 30rem;
-  padding: 0.6rem 0.85rem;
-  border-radius: 0.9rem;
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  box-shadow: 0 6px 24px rgb(0 0 0 / 40%);
-  transition: translate 0.2s ease, opacity 0.2s ease;
-
-  @starting-style {
-    translate: 0 0.75rem;
-    opacity: 0;
-  }
-
-  button {
-    min-height: 44px;
-    padding: 0 0.9rem;
-    border: 1px solid var(--border);
-    border-radius: 0.5rem;
-    background: var(--surface);
-    color: var(--text);
-    font-size: 0.9rem;
-    white-space: nowrap;
-    cursor: pointer;
-  }
-
-  .danger {
-    border: none;
-    background: var(--danger);
-    color: var(--danger-contrast);
-    font-weight: 600;
-  }
-}
 
 .snackbar {
   position: fixed;
@@ -507,58 +463,6 @@
   }
 }
 
-
-// The "new album/memory from selection" naming sheet.
-.create-from-selection {
-  display: grid;
-  gap: 0.75rem;
-
-  .hint {
-    margin: 0;
-    font-size: 0.85rem;
-    color: var(--text-muted);
-  }
-
-  input {
-    width: 100%;
-    min-height: 48px;
-    padding: 0 0.9rem;
-    border: 1px solid var(--border);
-    border-radius: 0.7rem;
-    background: var(--surface-raised);
-    color: var(--text);
-    font-size: 1rem;
-  }
-
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.6rem;
-
-    .primary {
-      min-height: 44px;
-      padding: 0 1.1rem;
-      border: none;
-      border-radius: 0.6rem;
-      background: var(--accent);
-      color: var(--accent-contrast);
-      font-weight: 600;
-      cursor: pointer;
-
-      &:disabled {
-        opacity: 0.6;
-      }
-    }
-
-    .ghost {
-      min-height: 44px;
-      border: none;
-      background: none;
-      color: var(--text-muted);
-      cursor: pointer;
-    }
-  }
-}
 
 // Grid controls, parked with the grid instead of the header.
 .grid-toolbar {

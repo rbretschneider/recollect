@@ -101,6 +101,13 @@ export class MemoriesApiService {
     );
   }
 
+  /** Attaches photos to an existing memory. */
+  addAssets(memoryId: string, assetIds: string[]): Promise<void> {
+    return firstValueFrom(
+      this.http.post<void>(`/api/v1/memories/${memoryId}/assets`, { assetIds }),
+    );
+  }
+
   createMemory(title: string, assetIds: string[]): Promise<{ memoryId: string }> {
     return firstValueFrom(
       this.http.post<{ memoryId: string }>('/api/v1/memories', { title, assetIds }),

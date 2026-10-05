@@ -367,6 +367,16 @@
 @if (actionsOpen()) {
   <app-sheet sheetTitle="Photo actions" [seeThrough]="true" (closed)="actionsOpen.set(false)">
     <div class="photo-actions">
+      <!-- Filing leads: it is the reason the sheet is usually opened from a
+           search result, and it is the only non-destructive thing here. -->
+      @if (canFile) {
+        <button type="button" class="action" (click)="startAlbumPick()">
+          <app-icon name="images" [size]="18" aria-hidden="true" /> Add to album
+        </button>
+        <button type="button" class="action" (click)="startMemoryPick()">
+          <app-icon name="sparkles" [size]="18" aria-hidden="true" /> Add to memory
+        </button>
+      }
       @if (canRotate) {
         <button type="button" class="action" (click)="runAction('ccw')">
           <span class="glyph" aria-hidden="true">↺</span> Rotate left
@@ -382,4 +392,16 @@
       }
     </div>
   </app-sheet>
+}
+
+@if (isPickingAlbum()) {
+  <app-album-picker (picked)="addCurrentToAlbum($event)" (cancelled)="isPickingAlbum.set(false)" />
+}
+
+@if (isPickingMemory()) {
+  <app-memory-picker
+    [assetIds]="currentIds()"
+    (picked)="addCurrentToMemory($event)"
+    (cancelled)="isPickingMemory.set(false)"
+  />
 }

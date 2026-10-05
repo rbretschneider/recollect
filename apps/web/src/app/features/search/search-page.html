@@ -1,5 +1,20 @@
 <app-topbar />
 
+@if (isSelecting()) {
+  <!-- Same bargain as the timeline: the count and the way out live together
+       above the results, the actions float at the bottom. -->
+  <div class="select-banner" role="status">
+    <span aria-live="polite">
+      @if (selectedIds().size === 0) {
+        Select photos to add to an album or memory
+      } @else {
+        {{ selectedIds().size }} selected
+      }
+    </span>
+    <button type="button" (click)="cancelSelecting()">Cancel</button>
+  </div>
+}
+
 <main class="search">
   <div class="box">
     <input
@@ -116,8 +131,20 @@
         <h2>Looks like “{{ r.query }}”</h2>
         <div class="grid">
           @for (hit of r.semantic; track hit.id; let index = $index) {
-            <button type="button" class="tile" aria-label="Open photo" (click)="openSemanticViewer(index)">
+            <button
+              type="button"
+              class="tile"
+              [class.selected]="isSelected(hit.id)"
+              [attr.aria-pressed]="isSelecting() ? isSelected(hit.id) : null"
+              aria-label="Open photo"
+              appLongPress
+              (longPress)="onHitLongPress(hit.id)"
+              (click)="onHitClick('semantic', index, hit.id)"
+            >
               <img [src]="thumbUrl(hit.id)" alt="" loading="lazy" />
+              @if (isSelecting()) {
+                <span class="pick" aria-hidden="true">{{ isSelected(hit.id) ? '✓' : '' }}</span>
+              }
             </button>
           }
         </div>
@@ -131,10 +158,22 @@
         }
         <div class="grid">
           @for (hit of r.assets; track hit.id; let index = $index) {
-            <button type="button" class="tile" [attr.aria-label]="hit.fileName || 'Open photo'" (click)="openViewer(index)">
+            <button
+              type="button"
+              class="tile"
+              [class.selected]="isSelected(hit.id)"
+              [attr.aria-pressed]="isSelecting() ? isSelected(hit.id) : null"
+              [attr.aria-label]="hit.fileName || 'Open photo'"
+              appLongPress
+              (longPress)="onHitLongPress(hit.id)"
+              (click)="onHitClick('assets', index, hit.id)"
+            >
               <img [src]="thumbUrl(hit.id)" alt="" loading="lazy" />
               @if (hit.mediaType === 'video') {
                 <span class="badge">▶</span>
+              }
+              @if (isSelecting()) {
+                <span class="pick" aria-hidden="true">{{ isSelected(hit.id) ? '✓' : '' }}</span>
               }
             </button>
           }
@@ -148,6 +187,28 @@
     </p>
   }
 </main>
+
+@if (isSelecting() && selectedIds().size > 0) {
+  <app-selection-bar
+    (addToAlbum)="isPickingAlbum.set(true)"
+    (addToMemory)="isPickingMemory.set(true)"
+  />
+}
+
+@if (isPickingAlbum()) {
+  <app-album-picker
+    (picked)="addSelectionToAlbum($event)"
+    (cancelled)="isPickingAlbum.set(false)"
+  />
+}
+
+@if (isPickingMemory()) {
+  <app-memory-picker
+    [assetIds]="selectedIdList()"
+    (picked)="addSelectionToMemory($event)"
+    (cancelled)="isPickingMemory.set(false)"
+  />
+}
 
 @if (viewerIndex() !== null) {
   <app-asset-viewer

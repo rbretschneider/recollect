@@ -144,6 +144,15 @@
         </div>
       </section>
 
+      <!-- A memory could be written and captioned but never added to: the one
+           thing it could not do was grow. -->
+      <section class="add-photos" aria-label="Add photos">
+        <button type="button" class="add-photos-btn" (click)="isPickingAssets.set(true)">
+          <app-icon name="images" [size]="18" aria-hidden="true" />
+          Add photos to this memory
+        </button>
+      </section>
+
       <section class="caption-editor" aria-label="Caption photos">
         <h2>Caption the photos</h2>
         <p class="hint">
@@ -338,6 +347,14 @@
   <app-load-error message="Couldn’t load this memory." (retry)="load()" />
 } @else {
   <app-page-loading label="Loading memory…" />
+}
+
+@if (isPickingAssets()) {
+  <app-asset-picker
+    [excludeIds]="assetIdSet()"
+    (picked)="addAssetsToMemory($event)"
+    (cancelled)="isPickingAssets.set(false)"
+  />
 }
 
 @if (viewerIndex() !== null) {
