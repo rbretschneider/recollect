@@ -23,7 +23,7 @@
         <app-share-button variant="overlay" targetType="asset" [targetId]="sharedAsset.id" />
       }
     }
-    @if (allowInfo()) {
+    @if (canDownload) {
       <button type="button" class="icon" aria-label="Download" (click)="downloadCurrent()">
         <app-icon name="download" />
       </button>
