@@ -151,6 +151,14 @@
       <!-- After a story, the uncaptioned extras stay a stack: they are the
            footnote to the writing, not the point of the page. -->
       <section class="more-photos" aria-label="More photos">
+        <!-- The header's play button is thousands of pixels up by the time you
+             have read the story, so the offer is repeated where the photos
+             actually are. The two are never on screen together. -->
+        @if (shared.assetIds.length > 1) {
+          <button type="button" class="play-here" (click)="showSlideshow.set(true)">
+            ▶ Play slideshow
+          </button>
+        }
         <button type="button" class="stack" (click)="openViewerForAsset(looseAssetIds()[0])">
           <span class="fan">
             @for (assetId of loosePreview(); track assetId; let i = $index) {
