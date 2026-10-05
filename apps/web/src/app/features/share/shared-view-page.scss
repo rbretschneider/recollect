@@ -198,33 +198,45 @@
     max-width: 38rem;
     margin: 1rem auto 0;
 
+    // One big door at the end of the story. The fan used to be four cards at
+    // thumbnail size overlapping almost exactly, so it read as a single photo
+    // with a white border — a decorative icon where an invitation belonged.
+    // Three larger cards, spread far enough apart to be three photographs.
     .stack {
-      display: flex;
-      align-items: center;
-      gap: 1.25rem;
+      display: grid;
+      justify-items: center;
+      gap: 0.9rem;
       width: 100%;
-      padding: 0.5rem;
+      padding: 1rem 0.5rem 1.25rem;
       border: none;
       background: none;
       color: var(--text);
       cursor: pointer;
+
+      // The whole thing is one target, so it should feel like one.
+      &:hover .fan,
+      &:focus-visible .fan {
+        scale: 1.02;
+      }
     }
 
     .fan {
       position: relative;
-      flex-shrink: 0;
-      width: 8rem;
-      height: 7rem;
+      width: min(21rem, 100%);
+      height: 12.5rem;
+      transition: scale var(--dur-base, 0.22s) ease;
     }
 
     .polaroid {
       position: absolute;
-      inset: 0.25rem auto auto 0.5rem;
-      width: 6.4rem;
-      padding: 0.3rem 0.3rem 1rem;
+      top: 0.4rem;
+      left: 50%;
+      width: 9.5rem;
+      margin-left: -4.75rem;
+      padding: 0.35rem 0.35rem 1.15rem;
       background: #f4f1ea;
       border-radius: 2px;
-      box-shadow: 0 6px 16px rgb(0 0 0 / 45%);
+      box-shadow: 0 8px 22px rgb(0 0 0 / 50%);
 
       img {
         display: block;
@@ -234,38 +246,27 @@
         background: #ddd;
       }
 
-      &[data-card='0'] { rotate: -5deg; z-index: 4; }
-      &[data-card='1'] { rotate: 4deg; translate: 8px 3px; z-index: 3; }
-      &[data-card='2'] { rotate: -9deg; translate: -6px 6px; z-index: 2; }
-      &[data-card='3'] { rotate: 8deg; translate: 4px 8px; z-index: 1; }
+      // Spread wide enough that each card shows about half of itself. The
+      // first photo sits on top and square-on, since it is the one the button
+      // opens; its neighbours lean away behind it.
+      &[data-card='0'] { rotate: -2deg; z-index: 3; }
+      &[data-card='1'] { rotate: 7deg; translate: 5.4rem 0.5rem; z-index: 2; }
+      &[data-card='2'] { rotate: -8deg; translate: -5.4rem 0.7rem; z-index: 1; }
     }
 
     .stack-label {
       display: grid;
       gap: 0.15rem;
-      text-align: left;
+      text-align: center;
 
       strong {
-        font-size: 1rem;
+        font-size: 1.05rem;
       }
 
       .sub {
         font-size: 0.8rem;
         color: var(--text-muted);
       }
-    }
-
-    .play-here {
-      margin: 0.5rem 0 0 0.5rem;
-      min-height: 40px;
-      padding: 0 1.1rem;
-      border: 1px solid var(--border);
-      border-radius: 2rem;
-      background: var(--surface-raised);
-      color: var(--text);
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
     }
   }
 
@@ -489,4 +490,11 @@
   .shared.gallery .hero .hero-text h1 {
     font-size: 1.3rem;
   }
+}
+
+// Attribution and the link's own lifespan, together at the foot of the page.
+.shared footer .expiry {
+  display: block;
+  margin-top: 0.2rem;
+  opacity: 0.75;
 }

@@ -137,8 +137,33 @@ export class SharedViewPage implements OnInit {
     return view ? view.assetIds.filter((id) => !view.captions[id]) : [];
   });
 
-  /** Up to four fanned previews for the end-of-story stack. */
-  readonly loosePreview = computed<string[]>(() => this.looseAssetIds().slice(0, 4));
+  /**
+   * Three fanned previews for the end-of-story stack.
+   *
+   * It used to fan four at thumbnail size, overlapping so tightly that the
+   * whole thing read as one photo with a white border rather than a pile of
+   * photographs — a decorative icon where an invitation was wanted. Three
+   * bigger cards, spread wider, actually look like what they are.
+   */
+  readonly loosePreview = computed<string[]>(() => this.looseAssetIds().slice(0, 3));
+
+  /**
+   * "Viewable until 11 October 2026" — a visitor should know the link has an
+   * end before they bookmark it and come back to a dead page. Null when the
+   * link never expires, in which case the page says nothing.
+   */
+  readonly expiryLabel = computed<string | null>(() => {
+    const expiresAt = this.view()?.expiresAt;
+    if (!expiresAt) {
+      return null;
+    }
+    const formatted = new Intl.DateTimeFormat(undefined, {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date(expiresAt));
+    return `Viewable until ${formatted}`;
+  });
 
   /** Opens the viewer at a given asset id (captioned figures are clickable). */
   openViewerForAsset(assetId: string): void {

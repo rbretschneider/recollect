@@ -29,6 +29,8 @@ export interface ShareLinkView {
 /** The public payload rendered for anyone opening a share link. */
 export interface SharedView {
   targetType: ShareTargetType;
+  /** When the link stops working, so a visitor knows before they rely on it. */
+  expiresAt: string | null;
   title: string;
   description: string | null;
   startAt: string | null;
@@ -131,6 +133,7 @@ export class SharingService {
       }
       return {
         targetType: 'asset',
+        expiresAt: link.expiresAt?.toISOString() ?? null,
         title: row.capturedAt.toLocaleDateString('en-US', {
           month: 'long',
           day: 'numeric',
@@ -151,6 +154,7 @@ export class SharingService {
       const detail = await this.memories.getDetail(link.targetId);
       return {
         targetType: 'memory',
+        expiresAt: link.expiresAt?.toISOString() ?? null,
         title: detail.title,
         description: detail.description,
         startAt: detail.startAt,
@@ -179,6 +183,7 @@ export class SharingService {
     const detail = await this.albums.getDetail(link.targetId);
     return {
       targetType: 'album',
+      expiresAt: link.expiresAt?.toISOString() ?? null,
       title: detail.title,
       description: detail.description,
       startAt: null,

@@ -229,6 +229,8 @@ export interface SharedView {
   targetType: 'memory' | 'album' | 'asset';
   /** Whose library this came from, as the footer shows it. */
   sharedFrom: string;
+  /** When the link stops working; null when it never does. */
+  expiresAt: string | null;
   title: string;
   description: string | null;
   startAt: string | null;

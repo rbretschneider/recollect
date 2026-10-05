@@ -28,7 +28,12 @@
         <img [src]="thumbUrl(shared.assetIds[0], 1440)" [alt]="shared.title" />
       </button>
       <p class="single-meta">{{ shared.title }}</p>
-      <footer>{{ shared.sharedFrom }}</footer>
+      <footer>
+        <span>{{ shared.sharedFrom }}</span>
+        @if (expiryLabel(); as expiry) {
+          <span class="expiry">{{ expiry }}</span>
+        }
+      </footer>
     </main>
   } @else {
   <main class="shared" [class.gallery]="isGallery()">
@@ -162,7 +167,12 @@
       </section>
     }
 
-    <footer>{{ shared.sharedFrom }}</footer>
+    <footer>
+        <span>{{ shared.sharedFrom }}</span>
+        @if (expiryLabel(); as expiry) {
+          <span class="expiry">{{ expiry }}</span>
+        }
+      </footer>
   </main>
   }
 }
