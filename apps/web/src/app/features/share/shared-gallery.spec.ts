@@ -30,6 +30,7 @@ describe('a shared link without a story shows its photos', () => {
       startAt: '2025-10-03T12:00:00.000Z',
       endAt: '2025-10-04T12:00:00.000Z',
       assetIds: ['a1', 'a2', 'a3'],
+      expiresAt: null,
       captions: {},
       journal: [],
       quotes: [],
@@ -96,5 +97,72 @@ describe('a shared link without a story shows its photos', () => {
     page.view.set(viewOf({ assetIds: [] }));
 
     expect(page.heroAssetId()).toBeNull();
+  });
+});
+
+/**
+ * A link that stops working should say so while it still works. Someone who
+ * bookmarks a shared memory and comes back in a month deserves to have been
+ * warned, rather than meeting "this link is no longer available".
+ */
+describe('a shared link says when it expires', () => {
+  let fixture: ComponentFixture<SharedViewPage>;
+  let page: SharedViewPage;
+
+  function viewOf(partial: Partial<SharedView>): SharedView {
+    return {
+      targetType: 'memory',
+      title: 'NH Duck Race Weekend',
+      description: null,
+      startAt: null,
+      endAt: null,
+      assetIds: ['a1'],
+      expiresAt: null,
+      captions: {},
+      journal: [],
+      quotes: [],
+      people: [],
+      mediaItems: [],
+      sharedFrom: 'Shared from The Bretschneiders',
+      ...partial,
+    } as SharedView;
+  }
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [SharedViewPage],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(SharedViewPage);
+    page = fixture.componentInstance;
+  });
+
+  afterEach(() => fixture?.destroy());
+
+  it('says when the link stops working', () => {
+    page.view.set(viewOf({ expiresAt: '2026-10-11T12:00:00.000Z' }));
+
+    expect(page.expiryLabel()).toMatch(/^Viewable until /);
+    expect(page.expiryLabel()).toContain('2026');
+  });
+
+  // A link with no end should not invent one, or claim to last forever.
+  it('says nothing when the link never expires', () => {
+    page.view.set(viewOf({ expiresAt: null }));
+
+    expect(page.expiryLabel()).toBeNull();
+  });
+
+  it('says nothing before the link has loaded', () => {
+    expect(page.expiryLabel()).toBeNull();
+  });
+
+  // Three cards, not four: four at thumbnail size overlapped so tightly the
+  // fan read as one photo with a white border.
+  it('fans three photos so the stack looks like a pile of photographs', () => {
+    page.view.set(viewOf({ assetIds: ['a1', 'a2', 'a3', 'a4', 'a5'] }));
+
+    expect(page.loosePreview()).toEqual(['a1', 'a2', 'a3']);
   });
 });
