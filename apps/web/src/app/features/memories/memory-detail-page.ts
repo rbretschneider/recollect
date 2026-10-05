@@ -33,6 +33,8 @@ import { Icon } from '../../shared/icon';
 import { SafeResourcePipe } from '../../shared/safe-resource.pipe';
 import { ShareButton } from '../../shared/share-button';
 import { AssetPicker } from '../../shared/asset-picker';
+import { SelectionBar } from '../../shared/selection-bar';
+import { LongPressDirective } from '../../shared/long-press.directive';
 import { AssetViewer } from '../viewer/asset-viewer';
 import { SlideItem, SlideshowOverlay } from '../dashboard/slideshow-overlay';
 
@@ -47,6 +49,8 @@ const GRID_PAGE_SIZE = 24;
   imports: [AccountBadge, MenuButton, PageLoading, LoadError, BackButton,
     AssetPicker,
     AssetViewer,
+    LongPressDirective,
+    SelectionBar,
     SlideshowOverlay,
     EditToggle,
     FormsModule,
@@ -303,7 +307,91 @@ export class MemoryDetailPage implements OnInit {
     return flow;
   });
 
-  // --- Edit-mode captioning: select any number of photos, caption them once ---
+  // --- Selecting photos: one grid, one gesture, several verbs ---------------
+  //
+  // The page used to carry two grids that looked identical and behaved
+  // differently: read mode opened a photo, edit mode selected it for a
+  // caption. Which one you were touching depended on invisible state, and
+  // because the edit grid's tap was spent on captioning there was nowhere to
+  // put "remove" — so for a long time you simply couldn't take a photo out of
+  // a memory.
+  //
+  // Now there is one grid. Tap opens, press-and-hold selects, exactly as on
+  // the timeline and in search, and the verbs live together in the bar that
+  // appears. Selection still requires edit mode: taking photos out of a
+  // shared memory is a structural change, and the app is read-only until the
+  // pencil is tapped.
+
+  readonly isSelecting = signal(false);
+
+  /** True while a caption is being written for the current selection. */
+  readonly isCaptioning = signal(false);
+
+  /** Press-and-hold a photo to start selecting, as everywhere else. */
+  onPhotoLongPress(assetId: string): void {
+    if (!this.editMode.isEditing() || this.isSelecting()) {
+      return;
+    }
+    this.isSelecting.set(true);
+    this.toggleCaptionSelect(assetId);
+  }
+
+  /** In selection mode a tap picks the photo; otherwise it opens it. */
+  onPhotoClick(assetId: string): void {
+    if (this.isSelecting()) {
+      this.toggleCaptionSelect(assetId);
+      return;
+    }
+    void this.openViewer(assetId);
+  }
+
+  isPhotoSelected(assetId: string): boolean {
+    return this.captionSelection().has(assetId);
+  }
+
+  /** Opens the caption field for whatever is selected. */
+  startCaptioning(): void {
+    this.isCaptioning.set(true);
+  }
+
+  /**
+   * Takes the selected photos out of this memory. The photos themselves are
+   * untouched — they stay in the library, and in every album they belong to.
+   */
+  async removeSelectedFromMemory(): Promise<void> {
+    const detail = this.detail();
+    const ids = [...this.captionSelection()];
+    if (!detail || ids.length === 0) {
+      return;
+    }
+    const confirmed = await this.confirms.ask({
+      title: `Remove ${ids.length === 1 ? 'this photo' : `these ${ids.length} photos`} from the memory?`,
+      message:
+        'They stay in your library and in any albums they belong to — this only takes them out of this memory.',
+      confirmLabel: 'Remove',
+    });
+    if (!confirmed) {
+      return;
+    }
+    this.endSelecting();
+    try {
+      await Promise.all(ids.map((id) => this.api.removeAsset(detail.id, id)));
+      this.toasts.success(`Removed ${ids.length === 1 ? 'a photo' : `${ids.length} photos`}.`);
+      await this.load();
+    } catch (error) {
+      this.toasts.error(describeError(error, 'Couldn’t remove those photos.'), {
+        label: 'Retry',
+        run: () => void this.removeSelectedFromMemory(),
+      });
+    }
+  }
+
+  /** Leaves selection mode and drops whatever was picked. */
+  endSelecting(): void {
+    this.isSelecting.set(false);
+    this.isCaptioning.set(false);
+    this.clearCaptionSelection();
+  }
 
   /** Photos currently selected for a shared caption. */
   readonly captionSelection = signal<ReadonlySet<string>>(new Set());
@@ -350,6 +438,8 @@ export class MemoryDetailPage implements OnInit {
     this.detail.set({ ...detail, captions });
     this.captionSelection.set(new Set());
     this.captionGroupDraft = '';
+    this.isSelecting.set(false);
+    this.isCaptioning.set(false);
   }
 
   /** Clears the current caption selection without changing anything. */

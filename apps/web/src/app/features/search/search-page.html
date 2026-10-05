@@ -189,10 +189,12 @@
 </main>
 
 @if (isSelecting() && selectedIds().size > 0) {
-  <app-selection-bar
-    (addToAlbum)="isPickingAlbum.set(true)"
-    (addToMemory)="isPickingMemory.set(true)"
-  />
+  <app-selection-bar>
+    <!-- No Trash here: finding something is not the moment to be offered a
+         way to destroy it. -->
+    <button type="button" (click)="isPickingAlbum.set(true)">Add to album</button>
+    <button type="button" (click)="isPickingMemory.set(true)">Add to memory</button>
+  </app-selection-bar>
 }
 
 @if (isPickingAlbum()) {
