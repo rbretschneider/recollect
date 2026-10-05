@@ -2,6 +2,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   OnInit,
@@ -574,6 +575,40 @@ export class MemoryDetailPage implements OnInit {
     element.style.height = `${element.scrollHeight}px`;
   }
 
+  /**
+   * Size the journal field whenever it appears or its text changes.
+   *
+   * The field only exists while editing, and edit mode always starts off — so
+   * growing it once during load() ran against a textarea that wasn't in the
+   * DOM yet, and tapping the pencil later produced a four-row box that nothing
+   * ever resized. With overflow hidden there was no scrollbar either, so a
+   * journal of any length was cut off mid-sentence with no way to reach the
+   * rest of it.
+   *
+   * Tracking both the element and the draft covers either order: entering edit
+   * mode after the text loaded, and the text arriving while already editing.
+   */
+  private readonly growWhenEditorAppears = effect(() => {
+    const element = this.editor()?.nativeElement;
+    const draft = this.journalDraft();
+    if (!element) {
+      return;
+    }
+    // After the binding has written `draft` into the DOM — scrollHeight is
+    // measured from the rendered value, not the one about to be set.
+    setTimeout(() => {
+      this.autoGrow(element);
+      if (this.isFreshlyCreated) {
+        // A brand-new memory lands you in the journal, cursor blinking: the
+        // point of making it was to write, so no hunting for the box.
+        this.isFreshlyCreated = false;
+        element.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        element.focus({ preventScroll: true });
+      }
+    });
+    void draft;
+  });
+
   async openViewer(assetId: string): Promise<void> {
     const detail = this.detail();
     if (!detail) {
@@ -616,20 +651,9 @@ export class MemoryDetailPage implements OnInit {
       this.journalDraft.set(
         detail.journal.find((entry) => entry.authorUserId === this.auth.user()?.id)?.bodyMd ?? '',
       );
-      // Existing writing must be fully visible, not clipped at the min height.
-      setTimeout(() => {
-        const element = this.editor()?.nativeElement;
-        if (element) {
-          this.autoGrow(element);
-          // A brand-new memory lands you in the journal, cursor blinking: the
-          // point of making it was to write, so no hunting for the box.
-          if (this.isFreshlyCreated) {
-            this.isFreshlyCreated = false;
-            element.scrollIntoView({ block: 'center', behavior: 'smooth' });
-            element.focus({ preventScroll: true });
-          }
-        }
-      });
+      // Sizing and the fresh-memory focus are handled by the effect above,
+      // which fires whenever the field actually appears — this ran while edit
+      // mode was still off, so the textarea it looked for was never there.
     } catch {
       this.loadFailed.set(true);
     }

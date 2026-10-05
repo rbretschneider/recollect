@@ -596,9 +596,14 @@
     font-family: Georgia, 'Times New Roman', serif;
     font-size: 1.1rem;
     line-height: 1.7;
-    resize: none;
-    overflow: hidden;
+    resize: vertical;
     min-height: 6.5rem;
+    // The field grows to fit, but never past a screenful — a long journal
+    // would otherwise push the photos below it miles down the page. Past that
+    // it scrolls, which is also the backstop: if sizing ever fails again, the
+    // writing is still reachable instead of silently cut off.
+    max-height: 70vh;
+    overflow-y: auto;
 
     &::placeholder {
       color: var(--text-muted);
