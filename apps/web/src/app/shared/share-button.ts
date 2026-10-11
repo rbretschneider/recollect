@@ -102,30 +102,26 @@ export class ShareButton {
   selectedExpiryHours: number | null = 24 * 7;
 
   /**
-   * Opens the sheet with the household link ALREADY on the clipboard.
+   * Opens the sheet. Nothing is copied.
    *
-   * Sending a family member a link is far and away the common case, and it
-   * needs no server round trip, so it should not cost a tap. The copy happens
-   * first, inside the tap that opened this, because Safari only grants
-   * clipboard access within the gesture itself.
+   * This used to put the household link straight on the clipboard to save a
+   * tap, and it backfired: Android answers every clipboard write with a system
+   * toast pinned to the bottom of the screen, which landed squarely on top of
+   * "Create public link" and the labels explaining it. The one rule in this
+   * panel now is that nothing reaches the clipboard until someone taps Copy.
    */
   async open(): Promise<void> {
     this.isOpen.set(true);
     this.internalCopied.set(null);
-    const copying = this.copyInternal();
     const id = this.effectiveId();
     // Nothing is shared yet for a target that does not exist; don't ask.
     if (id) {
       const { links } = await this.api.listFor(this.targetType(), id);
       this.links.set(links);
     }
-    await copying;
   }
 
-  /**
-   * Hands the link to the OS share sheet where there is one — on a phone that
-   * is straight into Messages — and falls back to the clipboard elsewhere.
-   */
+  /** Copies the household link — only ever from the Copy button's own tap. */
   async copyInternal(): Promise<void> {
     const url = this.internalUrl();
     try {
@@ -138,7 +134,10 @@ export class ShareButton {
     }
   }
 
-  /** The phone route: straight into Messages rather than via the clipboard. */
+  /**
+   * The phone route: hands the link to the OS share sheet, straight into
+   * Messages, rather than going via the clipboard at all.
+   */
   get canSendNatively(): boolean {
     return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
   }
@@ -147,7 +146,8 @@ export class ShareButton {
     try {
       await navigator.share({ url: this.internalUrl() });
     } catch {
-      // Dismissed, or unavailable after all. It is already on the clipboard.
+      // Dismissed, or unavailable after all. The URL is on screen either way,
+      // with Copy next to it.
     }
   }
 
@@ -172,53 +172,28 @@ export class ShareButton {
   }
 
   /**
-   * The single, deliberate action that makes this content public - and it
-   * puts the link on the clipboard in the same tap, because "create, then
-   * find the Copy button" is two taps for the one thing anyone wants next.
+   * The single, deliberate action that makes this content public.
    *
-   * The link doesn't exist until the server answers, and iOS Safari only lets a
-   * page write the clipboard inside the tap itself, not after an await. Its
-   * sanctioned way round that is a ClipboardItem whose text is a promise:
-   * the write starts synchronously in the gesture and is filled in when the
-   * request returns. Browsers that don't take a promise there fall through to a
-   * plain write after the fact, which they allow. If neither works, the Copy
-   * button is still there as it always was.
+   * It no longer copies the new link for you. Saving that one tap cost a whole
+   * Android system clipboard toast parked over this very row, hiding the link
+   * it had just made and the controls around it. The link appears in the panel
+   * with Copy beside it, and copying is the user's tap to make.
    */
   async createLink(): Promise<void> {
     this.isBusy.set(true);
-    // Materialising happens here and only here: choosing to expose something
-    // is what creates the album a look-back needs, not merely opening this.
-    const created = this.ensureTarget().then((id) =>
-      this.api.createLink(this.targetType(), id, this.includeJournal(), this.selectedExpiryHours),
-    );
-    let copied = false;
     try {
-      if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
-        const text = created.then(({ link }) => new Blob([this.urlFor(link)], { type: 'text/plain' }));
-        text.catch(() => undefined); // a failed create is reported below, not as an unhandled rejection here
-        await navigator.clipboard.write([new ClipboardItem({ 'text/plain': text })]);
-        copied = true;
-      }
-    } catch {
-      // Fall through - some browsers reject a promise-valued item.
-    }
-    try {
-      const { link } = await created;
-      if (!copied) {
-        try {
-          await navigator.clipboard.writeText(this.urlFor(link));
-          copied = true;
-        } catch {
-          // No clipboard access; the Copy button remains.
-        }
-      }
+      // Materialising happens here and only here: choosing to expose something
+      // is what creates the album a look-back needs, not merely opening this.
+      const id = await this.ensureTarget();
+      const { link } = await this.api.createLink(
+        this.targetType(),
+        id,
+        this.includeJournal(),
+        this.selectedExpiryHours,
+      );
       this.links.update((existing) => [link, ...existing]);
       this.changed.emit();
-      if (copied) {
-        this.toasts.success('Link copied — ready to paste.');
-        this.copiedLinkId.set(link.id);
-        setTimeout(() => this.copiedLinkId.set(null), 2000);
-      }
+      this.toasts.success('Public link created.');
     } finally {
       this.isBusy.set(false);
     }
@@ -240,9 +215,8 @@ export class ShareButton {
   }
 
   /**
-   * Extend / change an existing link's expiration — no new link is made. The
-   * link goes back on the clipboard, because changing how long it lasts is
-   * usually the prelude to sending it again.
+   * Extend / change an existing link's expiration — no new link is made, and
+   * nothing is copied: same rule as everywhere else in this panel.
    */
   async extend(link: ShareLinkView): Promise<void> {
     this.isBusy.set(true);
@@ -250,7 +224,7 @@ export class ShareButton {
       const { link: updated } = await this.api.updateExpiry(link.id, this.selectedExpiryHours);
       this.links.update((existing) => existing.map((item) => (item.id === updated.id ? updated : item)));
       this.changed.emit();
-      await this.copy(updated);
+      this.toasts.success('Expiration updated.');
     } finally {
       this.isBusy.set(false);
     }

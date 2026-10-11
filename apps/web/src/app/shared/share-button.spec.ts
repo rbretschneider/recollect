@@ -8,8 +8,14 @@ import { ShareButton } from './share-button';
  *
  * The household link is the common one — a family member already has an
  * account, so the link is just an app URL behind the auth guard. It costs no
- * server round trip, mints no token and leaves nothing to revoke, so it is
- * copied the moment the sheet opens and it must never create anything.
+ * server round trip, mints no token and leaves nothing to revoke, and it must
+ * never create anything.
+ *
+ * THE RULE, and the regression these guard: nothing in this panel touches the
+ * clipboard unless someone taps Copy. Opening the sheet and creating a link
+ * both used to copy on your behalf, and Android answers every clipboard write
+ * with a system toast pinned to the bottom of the screen — which sat right on
+ * top of "Create public link" and the text explaining what it would do.
  */
 describe('ShareButton', () => {
   let fixture: ComponentFixture<ShareButton>;
@@ -49,10 +55,26 @@ describe('ShareButton', () => {
   }
 
   describe('the household link', () => {
-    it('is the memory’s own page, copied as the sheet opens', async () => {
+    // THE REGRESSION: opening the sheet copied for you, and Android's toast
+    // then covered the controls the sheet had just opened to offer.
+    it('is not copied merely by opening the sheet', async () => {
       const opened = open({ targetType: 'memory', targetId: 'memory-1' });
       http.expectOne('/api/v1/sharing/memory/memory-1').flush({ links: [] });
       await opened;
+
+      expect(written).toEqual([]);
+      expect(fixture.componentInstance.internalCopied()).toBeNull();
+      // It is on screen, ready for the Copy button next to it.
+      expect(fixture.componentInstance.internalUrl()).toBe(
+        `${location.origin}/memories/memory-1`,
+      );
+    });
+
+    it('is the memory’s own page when Copy is tapped', async () => {
+      const opened = open({ targetType: 'memory', targetId: 'memory-1' });
+      http.expectOne('/api/v1/sharing/memory/memory-1').flush({ links: [] });
+      await opened;
+      await fixture.componentInstance.copyInternal();
 
       expect(written).toEqual([`${location.origin}/memories/memory-1`]);
       expect(fixture.componentInstance.internalCopied()).toBe('copied');
@@ -62,6 +84,7 @@ describe('ShareButton', () => {
       const opened = open({ targetType: 'album', targetId: 'album-1' });
       http.expectOne('/api/v1/sharing/album/album-1').flush({ links: [] });
       await opened;
+      await fixture.componentInstance.copyInternal();
 
       expect(written).toEqual([`${location.origin}/albums/album-1`]);
     });
@@ -71,6 +94,7 @@ describe('ShareButton', () => {
       const opened = open({ targetType: 'asset', targetId: 'asset-1' });
       http.expectOne('/api/v1/sharing/asset/asset-1').flush({ links: [] });
       await opened;
+      await fixture.componentInstance.copyInternal();
 
       expect(written).toEqual([`${location.origin}/photos?asset=asset-1`]);
     });
@@ -82,6 +106,7 @@ describe('ShareButton', () => {
         internalPath: '/lookback?day=09-25&year=2021',
       });
       await opened;
+      await fixture.componentInstance.copyInternal();
 
       expect(written).toEqual([`${location.origin}/lookback?day=09-25&year=2021`]);
     });
@@ -95,6 +120,7 @@ describe('ShareButton', () => {
       const opened = open({ targetType: 'memory', targetId: 'memory-1' });
       http.expectOne('/api/v1/sharing/memory/memory-1').flush({ links: [] });
       await opened;
+      await fixture.componentInstance.copyInternal();
 
       expect(fixture.componentInstance.internalCopied()).toBe('failed');
       // The sheet is still open with the URL on screen to copy by hand.
@@ -132,11 +158,12 @@ describe('ShareButton', () => {
       expect(resolved).toBe(1);
     });
 
-    it('puts a newly created link on the clipboard', async () => {
+    // THE REGRESSION: this copied the new link for you, so Android's toast
+    // landed on the row that had just appeared with the link in it.
+    it('shows a newly created link without copying it', async () => {
       const opened = open({ targetType: 'memory', targetId: 'memory-1' });
       http.expectOne('/api/v1/sharing/memory/memory-1').flush({ links: [] });
       await opened;
-      written.length = 0;
 
       const creating = fixture.componentInstance.createLink();
       await flush();
@@ -145,23 +172,35 @@ describe('ShareButton', () => {
         .flush({ link: { id: 'link-1', token: 'tok', expiresAt: null, viewCount: 0 } });
       await creating;
 
-      expect(written).toEqual([`${location.origin}/s/tok`]);
+      expect(written).toEqual([]);
+      expect(fixture.componentInstance.links().map((link) => link.id)).toEqual(['link-1']);
     });
 
-    it('re-copies after the expiry is changed', async () => {
+    it('copies a public link when its Copy button is tapped', async () => {
       const opened = open({ targetType: 'memory', targetId: 'memory-1' });
       http
         .expectOne('/api/v1/sharing/memory/memory-1')
         .flush({ links: [{ id: 'link-1', token: 'tok', expiresAt: null, viewCount: 0 }] });
       await opened;
-      written.length = 0;
+
+      await fixture.componentInstance.copy(fixture.componentInstance.links()[0]);
+
+      expect(written).toEqual([`${location.origin}/s/tok`]);
+    });
+
+    it('does not copy when the expiry is changed', async () => {
+      const opened = open({ targetType: 'memory', targetId: 'memory-1' });
+      http
+        .expectOne('/api/v1/sharing/memory/memory-1')
+        .flush({ links: [{ id: 'link-1', token: 'tok', expiresAt: null, viewCount: 0 }] });
+      await opened;
 
       const extending = fixture.componentInstance.extend(fixture.componentInstance.links()[0]);
       const update = http.expectOne('/api/v1/sharing/link-1');
       update.flush({ link: { id: 'link-1', token: 'tok', expiresAt: null, viewCount: 0 } });
       await extending;
 
-      expect(written).toEqual([`${location.origin}/s/tok`]);
+      expect(written).toEqual([]);
     });
   });
 });

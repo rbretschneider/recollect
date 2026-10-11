@@ -18,8 +18,9 @@
 @if (isOpen()) {
   <app-sheet [sheetTitle]="'Share this ' + targetLabel" (closed)="close()">
     <div class="share-content">
-    <!-- The household link first, and already copied: it needs no server, no
-         token and no cleanup, and it is what most sharing actually is. -->
+    <!-- The household link first: it needs no server, no token and no cleanup,
+         and it is what most sharing actually is. Copying it is a tap, never
+         automatic — see `open()` and Android's clipboard toast. -->
     <section class="household">
       <h3>
         <app-icon name="user" [size]="16" aria-hidden="true" />
