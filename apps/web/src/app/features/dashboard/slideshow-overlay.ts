@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, effect, HostListener, inject, input, OnDestroy, output, signal, viewChild } from '@angular/core';
+import { Component, computed, DestroyRef, effect, ElementRef, HostListener, inject, input, OnDestroy, output, signal, viewChild } from '@angular/core';
 import { describeError } from '../../core/describe-error';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
 import { TrashApiService } from '../../core/api/trash-api.service';
@@ -112,6 +112,12 @@ export class SlideshowOverlay implements OnDestroy {
   private readonly toasts = inject(ToastService);
   private readonly photoShare = viewChild<ShareButton>('photoShare');
   private readonly collectionShare = viewChild<ShareButton>('collectionShare');
+  /**
+   * The playing video, when the slide is one. A signal query, because the
+   * element is recreated for every slide — so this follows the slide rather
+   * than holding a reference to a video that has already been thrown away.
+   */
+  private readonly videoEl = viewChild<ElementRef<HTMLVideoElement>>('slideVideo');
 
   readonly shareChoiceOpen = signal(false);
   /** "Open the collection's share panel as soon as that button exists." */
@@ -330,6 +336,24 @@ export class SlideshowOverlay implements OnDestroy {
         } else {
           void this.audio.play().catch(() => undefined);
         }
+      }
+    });
+    // Pause means PAUSE. The video used to be plain `autoplay` with nothing
+    // bound to it, so pausing stopped the timer and the music and left the
+    // clip running — and a three-second clip was gone before you could reach
+    // anything. The element is recreated per slide, so this is driven off the
+    // query rather than a stashed reference.
+    effect(() => {
+      const video = this.videoEl()?.nativeElement;
+      if (!video) {
+        return;
+      }
+      if (this.isPlaying()) {
+        // Resumes where it stopped; `play()` on an already-playing element is
+        // a no-op, so a slide that is merely re-rendered isn't restarted.
+        void video.play().catch(() => undefined);
+      } else {
+        video.pause();
       }
     });
     // Kick the music off the open tap — but never gate anything on it.

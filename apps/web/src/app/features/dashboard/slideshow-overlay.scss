@@ -137,24 +137,14 @@
     }
   }
 
-  .paused-hint {
-    position: absolute;
-    bottom: 3rem;
-    padding: 0.4rem 1rem;
-    border-radius: 2rem;
-    background: rgb(0 0 0 / 55%);
-    color: white;
-    font-size: 0.85rem;
-  }
-
   // Scrapbook caption over the foot of the slide, on a fade-to-black gradient so
-  // it stays readable. Bottom padding clears the progress dots below.
+  // it stays readable. Bottom padding clears the Pause pill and the dots below.
   .caption-band {
     position: absolute;
     inset: auto 0 0;
     z-index: 1;
     margin: 0;
-    padding: 3rem 1.5rem 2rem;
+    padding: 3rem 1.5rem 5.2rem;
     background: linear-gradient(transparent, rgb(0 0 0 / 80%));
     color: white;
     font-size: 1rem;
@@ -162,6 +152,37 @@
     text-align: center;
     text-shadow: 0 1px 4px rgb(0 0 0 / 70%);
     pointer-events: none;
+  }
+}
+
+// The pause control: labelled, bottom-centre, above the dots, and on screen
+// for the whole show. A bare glyph was not enough — this is the control a
+// three-second video has to be stoppable with, so it says what it does.
+.playpause {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 42px;
+  padding: 0 1.1rem;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 2rem;
+  background: rgb(0 0 0 / 55%);
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+
+  // Paused: the one thing you are now looking for is how to start it again.
+  &.resumable {
+    border-color: white;
+    background: white;
+    color: #111;
   }
 }
 

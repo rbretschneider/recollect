@@ -27,6 +27,8 @@ export type IconName =
   | 'users'
   | 'sparkles'
   | 'images'
+  | 'pause'
+  | 'play'
   | 'search';
 
 /**
@@ -189,6 +191,19 @@ export type IconName =
         @case ('video') {
           <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" />
           <rect x="2" y="6" width="14" height="12" rx="2" />
+        }
+        <!-- Filled, not stroked: these two sit on a small pill over photos,
+             where an outline reads as a smudge rather than a transport control. -->
+        @case ('pause') {
+          <rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor" stroke="none" />
+          <rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor" stroke="none" />
+        }
+        @case ('play') {
+          <path
+            fill="currentColor"
+            stroke="none"
+            d="M6.5 4.4a1 1 0 0 1 1.53-.85l10.5 7.6a1 1 0 0 1 0 1.7l-10.5 7.6a1 1 0 0 1-1.53-.85z"
+          />
         }
       }
     </svg>

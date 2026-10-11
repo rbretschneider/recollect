@@ -7,12 +7,20 @@ import { SlideItem, SlideshowCollection, SlideshowOverlay } from './slideshow-ov
 /**
  * Regression cover for the slideshow overlay.
  *
- * Both cases here shipped broken: the un-zoom that crawled for six seconds,
- * and "share the whole look-back" that did nothing at all.
+ * Every case here shipped broken: the un-zoom that crawled for six seconds,
+ * "share the whole look-back" that did nothing at all, and a Pause that
+ * stopped the slide clock while leaving the video playing — with no button on
+ * screen to reach it with in the first place.
  */
 
 const SLIDES: SlideItem[] = [
   { id: 'asset-1', mediaType: 'image' },
+  { id: 'asset-2', mediaType: 'image' },
+];
+
+/** A video first, because that is the slide Pause used to ignore. */
+const VIDEO_SLIDES: SlideItem[] = [
+  { id: 'clip-1', mediaType: 'video' },
   { id: 'asset-2', mediaType: 'image' },
 ];
 
@@ -117,6 +125,100 @@ describe('SlideshowOverlay', () => {
     });
   });
 
+  describe('pausing', () => {
+    /** The labelled pill: the only thing on screen that says you can pause. */
+    function pauseButton(): HTMLButtonElement {
+      return fixture.nativeElement.querySelector('.playpause') as HTMLButtonElement;
+    }
+
+    /**
+     * Element-own play/pause, so the video's own calls are counted apart from
+     * the background music's — both ride the same prototype stubs.
+     */
+    function trackPlayback(video: HTMLVideoElement): string[] {
+      const calls: string[] = [];
+      video.play = () => (calls.push('play'), Promise.resolve());
+      video.pause = () => void calls.push('pause');
+      return calls;
+    }
+
+    // THE REGRESSION: pause was tap-the-middle-of-the-stage and the spacebar,
+    // neither of which is visible. A three-second clip was over before anyone
+    // could find it, so there was no way to hold it and reach Share.
+    it('offers a labelled pause control throughout the show', () => {
+      const button = pauseButton();
+      expect(button).not.toBeNull();
+      expect(button.textContent).toContain('Pause');
+
+      button.click();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.isPaused()).toBe(true);
+      // Paused, it becomes the way back in rather than vanishing.
+      expect(pauseButton().textContent).toContain('Play');
+
+      pauseButton().click();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.isPaused()).toBe(false);
+    });
+
+    // THE REGRESSION: the <video> was plain `autoplay` with nothing bound to
+    // it, so pausing stopped the slide timer and the music and let the clip
+    // play on to the end.
+    it('pauses the video itself, not just the slide clock', () => {
+      fixture.componentRef.setInput('items', VIDEO_SLIDES);
+      fixture.detectChanges();
+
+      const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+      expect(video).not.toBeNull();
+      const calls = trackPlayback(video);
+
+      pauseButton().click();
+      fixture.detectChanges();
+
+      expect(calls).toEqual(['pause']);
+
+      pauseButton().click();
+      fixture.detectChanges();
+
+      // Resumed where it stopped — no reload, no restart.
+      expect(calls).toEqual(['pause', 'play']);
+      expect(video.hasAttribute('src')).toBe(true);
+    });
+
+    // Opening Share is the whole reason she was reaching for Pause.
+    it('holds the video while the share sheet is open', () => {
+      fixture.componentRef.setInput('items', VIDEO_SLIDES);
+      fixture.detectChanges();
+
+      const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+      const calls = trackPlayback(video);
+
+      fixture.componentInstance.openShareChoice();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.isPaused()).toBe(true);
+      expect(calls).toEqual(['pause']);
+    });
+
+    it('stops the video on the end card', () => {
+      fixture.componentRef.setInput('items', [VIDEO_SLIDES[0]]);
+      fixture.detectChanges();
+
+      const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+      const calls = trackPlayback(video);
+
+      // A one-slide show: the video ending is the end of the show.
+      video.dispatchEvent(new Event('ended'));
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.isFinished()).toBe(true);
+      expect(calls).toEqual(['pause']);
+      // The pill steps aside for Replay rather than competing with it.
+      expect(pauseButton()).toBeNull();
+    });
+  });
+
   describe('sharing the whole collection', () => {
     // THE REGRESSION: this share button is rendered only once its target is
     // set, and the old code awaited a single microtask before reaching for the
@@ -148,7 +250,10 @@ describe('SlideshowOverlay', () => {
       http.expectNone((request) => request.url.startsWith('/api/v1/sharing/'));
     });
 
-    it('puts the household link on the clipboard without being asked', async () => {
+    // THE REGRESSION: the share panel used to copy the household link as it
+    // opened, and Android's clipboard toast then covered the very buttons it
+    // had opened to offer — including "Create public link".
+    it('copies nothing just by opening the share panel', async () => {
       const written: string[] = [];
       Object.defineProperty(navigator, 'clipboard', {
         configurable: true,
@@ -160,7 +265,7 @@ describe('SlideshowOverlay', () => {
       await fixture.whenStable();
       fixture.detectChanges();
 
-      expect(written).toEqual([`${location.origin}/lookback?day=09-25&year=2021`]);
+      expect(written).toEqual([]);
     });
 
     it('shares a memory moment against the memory itself', async () => {

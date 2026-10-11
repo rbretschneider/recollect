@@ -121,7 +121,10 @@
           draggable="false"
         />
       } @else {
+        <!-- #slideVideo: Pause has to reach the clip itself, not just the
+             slide timer — see the playback effect in the component. -->
         <video
+          #slideVideo
           class="slide"
           [src]="videoUrl(item.id)"
           autoplay
@@ -135,9 +138,6 @@
       @if (!isFinished()) {
         <figcaption class="caption-band" aria-live="polite">{{ caption }}</figcaption>
       }
-    }
-    @if (isPaused() && !isFinished()) {
-      <div class="paused-hint" aria-live="polite">Paused — tap to resume</div>
     }
     @if (isFinished()) {
       <div class="end-card" aria-live="polite">
@@ -169,6 +169,24 @@
       (click)="next(); $event.stopPropagation()"
     >
       ›
+    </button>
+  }
+
+  <!-- Pause, said out loud. Tap-the-middle-of-the-stage was the only way to
+       stop the show, and nothing on screen said so — a three-second video was
+       over before anyone found it. Labelled, always on screen, and it holds
+       the video on its frame as well as the slide clock. -->
+  @if (!isFinished()) {
+    <button
+      type="button"
+      class="playpause"
+      [class.resumable]="isPaused()"
+      [attr.aria-pressed]="isPaused()"
+      [attr.aria-label]="isPaused() ? 'Resume slideshow' : 'Pause slideshow'"
+      (click)="togglePause(); $event.stopPropagation()"
+    >
+      <app-icon [name]="isPaused() ? 'play' : 'pause'" [size]="17" aria-hidden="true" />
+      <span class="playpause-label">{{ isPaused() ? 'Play' : 'Pause' }}</span>
     </button>
   }
 
