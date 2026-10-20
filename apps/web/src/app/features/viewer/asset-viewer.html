@@ -164,11 +164,31 @@
       }
     </div>
 
+    <!-- The chip is what you see; with a mouse the button around it is the
+         whole side column, so stepping on is not a 44px aiming exercise. It
+         collapses back to the chip while zoomed, where the sides are picture
+         to drag, not buttons. -->
     @if (index() > 0) {
-      <button type="button" class="nav prev" aria-label="Previous" (click)="previous()">‹</button>
+      <button
+        type="button"
+        class="nav prev"
+        [class.compact]="zoom() > 1"
+        aria-label="Previous"
+        (click)="previous()"
+      >
+        <span class="chip" aria-hidden="true">‹</span>
+      </button>
     }
     @if (index() < assets().length - 1) {
-      <button type="button" class="nav next" aria-label="Next" (click)="next()">›</button>
+      <button
+        type="button"
+        class="nav next"
+        [class.compact]="zoom() > 1"
+        aria-label="Next"
+        (click)="next()"
+      >
+        <span class="chip" aria-hidden="true">›</span>
+      </button>
     }
 
     <!-- A memory's caption for this photo wins; otherwise the item's own title. -->

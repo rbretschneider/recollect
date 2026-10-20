@@ -269,6 +269,11 @@ export class SlideshowOverlay implements OnDestroy {
   readonly isPaused = signal(false);
   /** True after the last slide: the show stops and offers a replay. */
   readonly isFinished = signal(false);
+  /**
+   * The end card dismissed by hand, so the last photo is left alone. Tapping
+   * the stage brings it back; starting or replaying the show resets it.
+   */
+  readonly endCardHidden = signal(false);
 
   /**
    * Trashed during this show. `items` is an input and stays as the caller gave
@@ -442,6 +447,7 @@ export class SlideshowOverlay implements OnDestroy {
     // The end is the end: stop and offer a replay instead of looping.
     if (this.index() >= this.slides().length - 1) {
       this.isFinished.set(true);
+      this.endCardHidden.set(false);
       return;
     }
     this.index.update((value) => value + 1);
@@ -450,6 +456,7 @@ export class SlideshowOverlay implements OnDestroy {
   previous(): void {
     if (this.isFinished()) {
       this.isFinished.set(false);
+      this.endCardHidden.set(false);
       return;
     }
     this.index.update((value) => Math.max(0, value - 1));
@@ -457,8 +464,14 @@ export class SlideshowOverlay implements OnDestroy {
 
   replay(): void {
     this.isFinished.set(false);
+    this.endCardHidden.set(false);
     this.isPaused.set(false);
     this.index.set(0);
+  }
+
+  /** Take the end card off the last photo, leaving the picture by itself. */
+  hideEndCard(): void {
+    this.endCardHidden.set(true);
   }
 
   togglePause(): void {
@@ -545,6 +558,12 @@ export class SlideshowOverlay implements OnDestroy {
     // steer by zones. Zoomed in, the sides are picture, not buttons.
     if (this.didSwipe || this.gesture.consumedClick || this.gesture.isZoomed()) {
       this.didSwipe = false;
+      return;
+    }
+    // End card hidden by hand: the next tap anywhere is asking for it back,
+    // not for the zones — there is nothing left to step to or pause.
+    if (this.isFinished() && this.endCardHidden()) {
+      this.endCardHidden.set(false);
       return;
     }
     const width = (event.currentTarget as HTMLElement).clientWidth;
