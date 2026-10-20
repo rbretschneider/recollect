@@ -286,6 +286,82 @@ describe('SlideshowOverlay', () => {
     });
   });
 
+  describe('the end of the show', () => {
+    /** Run to the last slide and past it, which is what finishes the show. */
+    function playToTheEnd(): void {
+      const overlay = fixture.componentInstance;
+      overlay.next();
+      overlay.next();
+      fixture.detectChanges();
+    }
+
+    function endCard(): HTMLElement | null {
+      return fixture.nativeElement.querySelector('.end-card');
+    }
+
+    it('offers Hide next to Replay', () => {
+      playToTheEnd();
+
+      expect(fixture.componentInstance.isFinished()).toBe(true);
+      const actions = endCard()?.querySelectorAll('.end-actions button') ?? [];
+      expect(Array.from(actions).map((b) => b.textContent?.trim())).toEqual(['↺ Replay', 'Hide']);
+    });
+
+    // THE COMPLAINT: at the end there was no way to get the buttons off the
+    // last photo — the only thing you might actually want to look at.
+    it('takes the end card off the photo when Hide is pressed', () => {
+      playToTheEnd();
+
+      (endCard()?.querySelector('.hide-end') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(endCard()).toBeNull();
+      expect(fixture.componentInstance.isFinished()).toBe(true);
+    });
+
+    it('brings the end card back on the next tap of the stage', () => {
+      playToTheEnd();
+      fixture.componentInstance.hideEndCard();
+      fixture.detectChanges();
+
+      stageOf(fixture).click();
+      fixture.detectChanges();
+
+      expect(endCard()).not.toBeNull();
+      // The tap asked for the card back, not for a step or a pause.
+      expect(fixture.componentInstance.index()).toBe(SLIDES.length - 1);
+      expect(fixture.componentInstance.isPaused()).toBe(false);
+    });
+
+    it('shows the end card again after a replay runs out', () => {
+      playToTheEnd();
+      fixture.componentInstance.hideEndCard();
+      fixture.componentInstance.replay();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.endCardHidden()).toBe(false);
+
+      playToTheEnd();
+
+      expect(endCard()).not.toBeNull();
+    });
+  });
+
+  // THE COMPLAINT: on desktop only the glyph itself answered the click, so
+  // skipping a photo meant aiming at a 44px chip. The visible chip is now a
+  // child of a much larger button.
+  it('puts the arrow glyph in a chip inside the button', () => {
+    const next = fixture.nativeElement.querySelector('.nav.next') as HTMLButtonElement;
+
+    const ownText = Array.from(next.childNodes)
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .map((node) => node.textContent?.trim())
+      .join('');
+    expect(ownText).toBe('');
+    const chip = next.querySelector('.chip') as HTMLElement;
+    expect(chip.textContent?.trim()).toBe('›');
+    expect(next.getAttribute('aria-label')).toBe('Next photo');
+  });
+
   afterEach(() => {
     // Defensive: a failure in setup must not be masked by teardown blowing up
     // and leaving the TestBed instantiated for every later case.

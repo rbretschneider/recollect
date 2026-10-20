@@ -262,31 +262,75 @@
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  min-width: 44px;
-  min-height: 64px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  padding: 0;
   border: none;
-  background: rgb(0 0 0 / 30%);
-  color: white;
-  font-size: 2rem;
+  background: none;
   cursor: pointer;
-  border-radius: 0.5rem;
+
+  .chip {
+    display: grid;
+    place-items: center;
+    min-width: 44px;
+    min-height: 64px;
+    border-radius: 0.5rem;
+    background: rgb(0 0 0 / 30%);
+    color: white;
+    font-size: 2rem;
+    line-height: 1;
+    transition: background-color 0.15s ease;
+  }
 
   &.prev {
     left: 0.5rem;
+    justify-content: flex-start;
   }
 
   &.next {
     right: 0.5rem;
+    justify-content: flex-end;
+  }
+
+  // With a mouse, the chip alone is a small target for something you press
+  // over and over. Give the arrow the whole side column to catch clicks, clear
+  // of the top chrome and the caption, and leave the chip as the only part of
+  // it you can see.
+  @media (width >= 48rem) {
+    &:not(.compact) {
+      top: 4rem;
+      bottom: 5rem;
+      width: min(18%, 11rem);
+      transform: none;
+
+      &.prev {
+        left: 0;
+        padding-left: 0.5rem;
+      }
+
+      &.next {
+        right: 0;
+        padding-right: 0.5rem;
+      }
+    }
+
+    &:hover .chip,
+    &:focus-visible .chip {
+      background: rgb(0 0 0 / 55%);
+    }
   }
 
   // Shown on touch too. Swiping works, but nothing on screen says so, which
   // leaves a first-time user with no visible way to move between photos.
   // Slightly smaller and dimmer on a phone so they never fight the picture.
   @media (width < 48rem) {
-    min-width: 40px;
-    min-height: 56px;
-    font-size: 1.7rem;
-    background: rgb(0 0 0 / 22%);
+    .chip {
+      min-width: 40px;
+      min-height: 56px;
+      font-size: 1.7rem;
+      background: rgb(0 0 0 / 22%);
+    }
   }
 }
 
