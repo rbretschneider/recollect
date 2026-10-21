@@ -299,46 +299,34 @@ describe('SlideshowOverlay', () => {
       return fixture.nativeElement.querySelector('.end-card');
     }
 
-    it('offers Hide next to Replay', () => {
+    it('shows only Replay on the end card', () => {
       playToTheEnd();
 
       expect(fixture.componentInstance.isFinished()).toBe(true);
       const actions = endCard()?.querySelectorAll('.end-actions button') ?? [];
-      expect(Array.from(actions).map((b) => b.textContent?.trim())).toEqual(['↺ Replay', 'Hide']);
+      expect(Array.from(actions).map((b) => b.textContent?.trim())).toEqual(['↺ Replay']);
     });
 
-    // THE COMPLAINT: at the end there was no way to get the buttons off the
-    // last photo — the only thing you might actually want to look at.
-    it('takes the end card off the photo when Hide is pressed', () => {
+    it('keeps the end card when the stage is tapped after the show ends', () => {
       playToTheEnd();
-
-      (endCard()?.querySelector('.hide-end') as HTMLButtonElement).click();
-      fixture.detectChanges();
-
-      expect(endCard()).toBeNull();
-      expect(fixture.componentInstance.isFinished()).toBe(true);
-    });
-
-    it('brings the end card back on the next tap of the stage', () => {
-      playToTheEnd();
-      fixture.componentInstance.hideEndCard();
-      fixture.detectChanges();
 
       stageOf(fixture).click();
       fixture.detectChanges();
 
       expect(endCard()).not.toBeNull();
-      // The tap asked for the card back, not for a step or a pause.
-      expect(fixture.componentInstance.index()).toBe(SLIDES.length - 1);
-      expect(fixture.componentInstance.isPaused()).toBe(false);
+      expect(fixture.componentInstance.isFinished()).toBe(true);
     });
 
-    it('shows the end card again after a replay runs out', () => {
+    it('replay removes the end card, restarts the show, and the card returns at the end', () => {
       playToTheEnd();
-      fixture.componentInstance.hideEndCard();
-      fixture.componentInstance.replay();
+      expect(endCard()).not.toBeNull();
+
+      (endCard()?.querySelector('.replay') as HTMLButtonElement).click();
       fixture.detectChanges();
-      expect(fixture.componentInstance.endCardHidden()).toBe(false);
+
+      expect(endCard()).toBeNull();
+      expect(fixture.componentInstance.index()).toBe(0);
+      expect(fixture.componentInstance.isFinished()).toBe(false);
 
       playToTheEnd();
 

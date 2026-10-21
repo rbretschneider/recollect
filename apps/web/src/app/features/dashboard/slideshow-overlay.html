@@ -139,22 +139,13 @@
         <figcaption class="caption-band" aria-live="polite">{{ caption }}</figcaption>
       }
     }
-    <!-- The end sits at the foot of the picture, not across it, and Hide takes
-         it away entirely so the last photo is just a photo. Tapping the stage
-         brings it back. -->
-    @if (isFinished() && !endCardHidden()) {
+    <!-- The end sits at the foot of the picture, not across it. -->
+    @if (isFinished()) {
       <div class="end-card" aria-live="polite">
         <p>That's everything ✨</p>
         <div class="end-actions">
           <button type="button" class="replay" (click)="replay(); $event.stopPropagation()">
             ↺ Replay
-          </button>
-          <button
-            type="button"
-            class="hide-end"
-            (click)="hideEndCard(); $event.stopPropagation()"
-          >
-            Hide
           </button>
         </div>
       </div>
