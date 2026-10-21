@@ -307,14 +307,43 @@ describe('SlideshowOverlay', () => {
       expect(Array.from(actions).map((b) => b.textContent?.trim())).toEqual(['↺ Replay']);
     });
 
-    it('keeps the end card when the stage is tapped after the show ends', () => {
+    /** Tap the stage at a horizontal position, on a stage fixed at 300px wide. */
+    function tapStageAt(clientX: number): void {
+      const stage = stageOf(fixture);
+      Object.defineProperty(stage, 'clientWidth', { value: 300, configurable: true });
+      stage.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX }));
+      fixture.detectChanges();
+    }
+
+    it('keeps the end card on a middle tap, which still toggles pause as before', () => {
       playToTheEnd();
 
-      stageOf(fixture).click();
-      fixture.detectChanges();
+      tapStageAt(150);
+      expect(endCard()).not.toBeNull();
+      expect(fixture.componentInstance.isFinished()).toBe(true);
+      expect(fixture.componentInstance.isPaused()).toBe(true);
+
+      tapStageAt(150);
+      expect(endCard()).not.toBeNull();
+      expect(fixture.componentInstance.isPaused()).toBe(false);
+    });
+
+    it('keeps the end card on a right-third tap', () => {
+      playToTheEnd();
+
+      tapStageAt(290);
 
       expect(endCard()).not.toBeNull();
       expect(fixture.componentInstance.isFinished()).toBe(true);
+    });
+
+    it('steps back on a left-third tap, which removes the end card as navigation', () => {
+      playToTheEnd();
+
+      tapStageAt(10);
+
+      expect(fixture.componentInstance.isFinished()).toBe(false);
+      expect(endCard()).toBeNull();
     });
 
     it('replay removes the end card, restarts the show, and the card returns at the end', () => {
