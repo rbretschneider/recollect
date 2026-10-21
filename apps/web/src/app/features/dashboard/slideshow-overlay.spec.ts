@@ -299,46 +299,63 @@ describe('SlideshowOverlay', () => {
       return fixture.nativeElement.querySelector('.end-card');
     }
 
-    it('offers Hide next to Replay', () => {
+    it('shows only Replay on the end card', () => {
       playToTheEnd();
 
       expect(fixture.componentInstance.isFinished()).toBe(true);
       const actions = endCard()?.querySelectorAll('.end-actions button') ?? [];
-      expect(Array.from(actions).map((b) => b.textContent?.trim())).toEqual(['↺ Replay', 'Hide']);
+      expect(Array.from(actions).map((b) => b.textContent?.trim())).toEqual(['↺ Replay']);
     });
 
-    // THE COMPLAINT: at the end there was no way to get the buttons off the
-    // last photo — the only thing you might actually want to look at.
-    it('takes the end card off the photo when Hide is pressed', () => {
+    /** Tap the stage at a horizontal position, on a stage fixed at 300px wide. */
+    function tapStageAt(clientX: number): void {
+      const stage = stageOf(fixture);
+      Object.defineProperty(stage, 'clientWidth', { value: 300, configurable: true });
+      stage.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX }));
+      fixture.detectChanges();
+    }
+
+    it('keeps the end card on a middle tap, which still toggles pause as before', () => {
       playToTheEnd();
 
-      (endCard()?.querySelector('.hide-end') as HTMLButtonElement).click();
-      fixture.detectChanges();
-
-      expect(endCard()).toBeNull();
-      expect(fixture.componentInstance.isFinished()).toBe(true);
-    });
-
-    it('brings the end card back on the next tap of the stage', () => {
-      playToTheEnd();
-      fixture.componentInstance.hideEndCard();
-      fixture.detectChanges();
-
-      stageOf(fixture).click();
-      fixture.detectChanges();
-
+      tapStageAt(150);
       expect(endCard()).not.toBeNull();
-      // The tap asked for the card back, not for a step or a pause.
-      expect(fixture.componentInstance.index()).toBe(SLIDES.length - 1);
+      expect(fixture.componentInstance.isFinished()).toBe(true);
+      expect(fixture.componentInstance.isPaused()).toBe(true);
+
+      tapStageAt(150);
+      expect(endCard()).not.toBeNull();
       expect(fixture.componentInstance.isPaused()).toBe(false);
     });
 
-    it('shows the end card again after a replay runs out', () => {
+    it('keeps the end card on a right-third tap', () => {
       playToTheEnd();
-      fixture.componentInstance.hideEndCard();
-      fixture.componentInstance.replay();
+
+      tapStageAt(290);
+
+      expect(endCard()).not.toBeNull();
+      expect(fixture.componentInstance.isFinished()).toBe(true);
+    });
+
+    it('steps back on a left-third tap, which removes the end card as navigation', () => {
+      playToTheEnd();
+
+      tapStageAt(10);
+
+      expect(fixture.componentInstance.isFinished()).toBe(false);
+      expect(endCard()).toBeNull();
+    });
+
+    it('replay removes the end card, restarts the show, and the card returns at the end', () => {
+      playToTheEnd();
+      expect(endCard()).not.toBeNull();
+
+      (endCard()?.querySelector('.replay') as HTMLButtonElement).click();
       fixture.detectChanges();
-      expect(fixture.componentInstance.endCardHidden()).toBe(false);
+
+      expect(endCard()).toBeNull();
+      expect(fixture.componentInstance.index()).toBe(0);
+      expect(fixture.componentInstance.isFinished()).toBe(false);
 
       playToTheEnd();
 
