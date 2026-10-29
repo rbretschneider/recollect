@@ -20,6 +20,7 @@ import { firstValueFrom } from 'rxjs';
 import { ShareButton } from '../../shared/share-button';
 import { AlbumPicker } from '../../shared/album-picker';
 import { MemoryPick, MemoryPicker } from '../../shared/memory-picker';
+import { AssetDetailApiService } from '../../core/api/asset-detail-api.service';
 import { PhotosApiService } from '../../core/api/photos-api.service';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
@@ -54,6 +55,7 @@ export class AssetViewer implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthStateService);
   private readonly photosApi = inject(PhotosApiService);
+  private readonly assetDetailApi = inject(AssetDetailApiService);
   private readonly albumsApi = inject(AlbumsApiService);
   private readonly memoriesApi = inject(MemoriesApiService);
   private readonly trashApi = inject(TrashApiService);
@@ -978,9 +980,7 @@ export class AssetViewer implements OnInit, OnDestroy {
   private async loadDetail(assetId: string): Promise<void> {
     this.detailLoading.set(true);
     try {
-      const detail = await firstValueFrom(
-        this.http.get<AssetDetail>(`/api/v1/assets/${assetId}/detail`),
-      );
+      const detail = await this.assetDetailApi.get(assetId);
       if (this.current()?.id === assetId) {
         this.detail.set(detail);
       }
