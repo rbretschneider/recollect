@@ -201,6 +201,24 @@
     </button>
   }
 
+  <!-- Details for the photo on screen. A sibling of the stage, not a child, so
+       the stage's tap and swipe handlers never see its events; stopPropagation
+       keeps the click from reaching anything above as well. Stills only. -->
+  @if (canShowInfo()) {
+    <button
+      #infoButton
+      type="button"
+      class="info-btn"
+      [attr.inert]="infoOpen() ? '' : null"
+      aria-label="Image info"
+      aria-haspopup="dialog"
+      [attr.aria-expanded]="infoOpen()"
+      (click)="openInfo(); $event.stopPropagation()"
+    >
+      <app-icon name="info" [size]="20" aria-hidden="true" />
+    </button>
+  }
+
   <!-- Modal: the scrim catches every tap that is not on the panel, and a tap
        on it closes the panel rather than steering the show underneath. -->
   @if (infoOpen()) {

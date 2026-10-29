@@ -740,6 +740,182 @@ describe('SlideshowOverlay', () => {
       });
     });
 
+    describe('the info button', () => {
+      function infoButton(): HTMLButtonElement | null {
+        return fixture.nativeElement.querySelector('[aria-label="Image info"]');
+      }
+
+      function signInAs(permission: 'read' | 'write' | 'delete' | null): void {
+        TestBed.inject(AuthStateService).user.set(permission ? userWithPermission(permission) : null);
+        fixture.detectChanges();
+      }
+
+      describe('AC-1: shown to a signed-in user on every image', () => {
+        it('shows the button on the first image and still after moving on', () => {
+          expect(infoButton(), 'the button must show on the first image').not.toBeNull();
+
+          overlay().next();
+          fixture.detectChanges();
+
+          expect(infoButton(), 'the button must follow the show to the next image').not.toBeNull();
+        });
+
+        it('shows the button to a read-only member as well', () => {
+          signInAs('read');
+
+          expect(infoButton()).not.toBeNull();
+        });
+      });
+
+      describe('AC-2: never shown or focusable otherwise', () => {
+        it('renders no button for an anonymous visitor when the page opted in', () => {
+          signInAs(null);
+
+          expect(infoButton()).toBeNull();
+          const focusable = fixture.nativeElement.querySelectorAll('button:not([disabled])');
+          const labels = Array.from(focusable).map((b) => (b as HTMLElement).getAttribute('aria-label'));
+          expect(labels, 'nothing in the tab order may open the details').not.toContain('Image info');
+        });
+
+        it('renders no button for a signed-in user when the page did not opt in', () => {
+          fixture.componentRef.setInput('allowInfo', false);
+          fixture.detectChanges();
+
+          expect(infoButton()).toBeNull();
+        });
+
+        it('renders no button for a signed-in user on a shared link', () => {
+          // Shared pages point the media routes at their token scope and never
+          // opt in, whatever session the visitor happens to have.
+          fixture.componentRef.setInput('allowInfo', false);
+          fixture.componentRef.setInput('mediaBase', '/api/v1/shares/token-1/assets');
+          fixture.detectChanges();
+
+          expect(infoButton()).toBeNull();
+        });
+
+        it('renders no button on a video slide, and brings it back on the next image', () => {
+          fixture.componentRef.setInput('items', VIDEO_SLIDES);
+          fixture.detectChanges();
+          expect(infoButton()).toBeNull();
+
+          overlay().next();
+          fixture.detectChanges();
+
+          expect(infoButton()).not.toBeNull();
+        });
+
+        it('removes the button when the user signs out mid-show', () => {
+          signInAs(null);
+
+          expect(infoButton()).toBeNull();
+        });
+      });
+
+      describe('AC-3: activating it opens the info for the current image', () => {
+        it('opens the panel for the slide on screen when clicked, after moving on', async () => {
+          overlay().next();
+          fixture.detectChanges();
+
+          infoButton()?.click();
+          fixture.detectChanges();
+          http.expectOne('/api/v1/assets/asset-2/detail').flush({ ...FIXTURE_DETAIL, id: 'asset-2' });
+          await vi.advanceTimersByTimeAsync(0);
+          fixture.detectChanges();
+
+          expect(overlay().infoOpen()).toBe(true);
+          expect(panelOf()?.asset().id).toBe('asset-2');
+        });
+
+        it('leaves pause and info state alone on a Space keydown from the button', () => {
+          const button = infoButton() as HTMLButtonElement;
+          const event = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+
+          button.dispatchEvent(event);
+          fixture.detectChanges();
+
+          expect(overlay().isPaused(), 'Space on the button must not toggle pause').toBe(false);
+          expect(overlay().infoOpen()).toBe(false);
+          expect(event.defaultPrevented, 'the native click must stay available').toBe(false);
+        });
+
+        it('leaves pause and info state alone on an Enter keydown from the button', () => {
+          const button = infoButton() as HTMLButtonElement;
+
+          button.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+          fixture.detectChanges();
+
+          expect(overlay().isPaused()).toBe(false);
+          expect(overlay().infoOpen()).toBe(false);
+        });
+      });
+
+      describe('AC-9: does not trigger the stage behaviours', () => {
+        it('sits outside the stage', () => {
+          expect(stageOf(fixture).contains(infoButton()), 'the button must not be inside .stage').toBe(false);
+        });
+
+        it('does not steer, pause or start a gesture when pressed', () => {
+          const button = infoButton() as HTMLButtonElement;
+          Object.defineProperty(stageOf(fixture), 'clientWidth', { value: 300, configurable: true });
+
+          button.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 290 }));
+          button.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 290 }));
+          button.click();
+          fixture.detectChanges();
+
+          expect(overlay().index()).toBe(0);
+          expect(overlay().gesture.isActive()).toBe(false);
+          // The only effect is the one asked for: info opened, show held.
+          expect(overlay().infoOpen()).toBe(true);
+          http.expectOne('/api/v1/assets/asset-1/detail');
+        });
+
+        it('stops the click from bubbling past the button', () => {
+          const reached = vi.fn();
+          fixture.nativeElement.addEventListener('click', reached);
+
+          infoButton()?.click();
+
+          expect(reached).not.toHaveBeenCalled();
+          http.expectOne('/api/v1/assets/asset-1/detail');
+        });
+      });
+
+      describe('AC-10: accessible name, state and focus', () => {
+        it('is a labelled button that is not disabled', () => {
+          const button = infoButton() as HTMLButtonElement;
+
+          expect(button.tagName).toBe('BUTTON');
+          expect(button.getAttribute('type')).toBe('button');
+          expect(button.getAttribute('aria-haspopup')).toBe('dialog');
+          expect(button.disabled).toBe(false);
+        });
+
+        it('reports expanded while the panel is open and collapsed after', async () => {
+          expect(infoButton()?.getAttribute('aria-expanded')).toBe('false');
+
+          await openInfoFor('asset-1');
+          expect(infoButton()?.getAttribute('aria-expanded')).toBe('true');
+
+          overlay().closeInfo();
+          fixture.detectChanges();
+          expect(infoButton()?.getAttribute('aria-expanded')).toBe('false');
+        });
+
+        it('returns focus to the button when the panel closes', async () => {
+          await openInfoFor('asset-1');
+          await fixture.whenStable();
+
+          overlay().closeInfo();
+          fixture.detectChanges();
+          await fixture.whenStable();
+
+          expect(document.activeElement).toBe(infoButton());
+        });
+      });
+    });
+
     describe('AC-12: nothing changes while info is closed', () => {
       it('still toggles pause with Space', () => {
         const space = press(' ');
