@@ -203,7 +203,7 @@ export class AssetInfoPanel {
 
   startEditDate(): void {
     const asset = this.asset();
-    this.dateDraft = toLocalInputValue(this.savedCapturedAt() ?? this.capturedAt() ?? asset.capturedAt);
+    this.dateDraft = toLocalInputValue(this.displayCapturedAt(asset.capturedAt));
     this.editingDate.set(true);
   }
 

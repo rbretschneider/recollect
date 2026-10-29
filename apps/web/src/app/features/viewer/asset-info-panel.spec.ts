@@ -222,6 +222,20 @@ describe('AssetInfoPanel', () => {
       expect(fixture.componentInstance.editingDate()).toBe(false);
     });
 
+    it('starts the editor from the loaded detail date when the asset has none', () => {
+      createPanel('write');
+      fixture.componentRef.setInput('asset', { ...FIXTURE_ASSET, capturedAt: '' });
+      fixture.detectChanges();
+
+      fixture.componentInstance.startEditDate();
+
+      const expected = new Date(FIXTURE_DETAIL.capturedAt);
+      const pad = (value: number): string => String(value).padStart(2, '0');
+      expect(fixture.componentInstance.dateDraft).toBe(
+        `${expected.getFullYear()}-${pad(expected.getMonth() + 1)}-${pad(expected.getDate())}T${pad(expected.getHours())}:${pad(expected.getMinutes())}`,
+      );
+    });
+
     it('refuses an unparseable date without calling the server', async () => {
       createPanel('write');
       fixture.componentInstance.startEditDate();
