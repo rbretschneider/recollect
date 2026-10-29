@@ -32,3 +32,23 @@ export function formatBytes(bytes: number): string {
   }
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
+
+/** Shown when an item has no usable capture date. */
+const UNKNOWN_DATE_LABEL = 'Date unknown';
+
+/**
+ * Long, locale-aware capture date for headings and alt text.
+ *
+ * Intl THROWS on an invalid date, and lists built by toViewerAsset() carry an
+ * empty capturedAt - which took the whole date heading down with it.
+ */
+export function formatCapturedDate(iso: string): string {
+  const date = new Date(iso);
+  if (!iso || Number.isNaN(date.getTime())) {
+    return UNKNOWN_DATE_LABEL;
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'full',
+    timeStyle: 'short',
+  }).format(date);
+}
