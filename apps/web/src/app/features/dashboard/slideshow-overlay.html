@@ -1,5 +1,7 @@
 <div class="slideshow" role="dialog" aria-label="Slideshow">
-  <header class="bar">
+  <!-- While the details panel is open the rest of the show is inert: not
+       focusable, not clickable, not in the reading order. -->
+  <header class="bar" [attr.inert]="infoOpen() ? '' : null">
     <span class="title">{{ title() }}</span>
     <span class="counter">{{ index() + 1 }} / {{ slides().length }}</span>
     <button
@@ -99,6 +101,7 @@
     [class.zoomed]="gesture.isZoomed()"
     [class.manual]="hasZoomed()"
     [class.dragging]="gesture.isActive()"
+    [attr.inert]="infoOpen() ? '' : null"
     (click)="onStageClick($event)"
     (pointerdown)="onPointerDown($event)"
     (pointermove)="onPointerMove($event)"
@@ -160,6 +163,7 @@
     <button
       type="button"
       class="nav prev"
+      [attr.inert]="infoOpen() ? '' : null"
       aria-label="Previous photo"
       (click)="previous(); $event.stopPropagation()"
     >
@@ -170,6 +174,7 @@
     <button
       type="button"
       class="nav next"
+      [attr.inert]="infoOpen() ? '' : null"
       aria-label="Next photo"
       (click)="next(); $event.stopPropagation()"
     >
@@ -187,12 +192,30 @@
       class="playpause"
       [class.resumable]="isPaused()"
       [attr.aria-pressed]="isPaused()"
+      [attr.inert]="infoOpen() ? '' : null"
       [attr.aria-label]="isPaused() ? 'Resume slideshow' : 'Pause slideshow'"
       (click)="togglePause(); $event.stopPropagation()"
     >
       <app-icon [name]="isPaused() ? 'play' : 'pause'" [size]="17" aria-hidden="true" />
       <span class="playpause-label">{{ isPaused() ? 'Play' : 'Pause' }}</span>
     </button>
+  }
+
+  <!-- Modal: the scrim catches every tap that is not on the panel, and a tap
+       on it closes the panel rather than steering the show underneath. -->
+  @if (infoOpen()) {
+    <div class="info-scrim" (click)="closeInfo()"></div>
+    @if (infoAsset(); as asset) {
+      <app-asset-info-panel
+        [asset]="asset"
+        [detail]="infoDetail()"
+        [detailLoading]="infoDetailLoading()"
+        [title]="infoDetail()?.title ?? null"
+        [isClosable]="true"
+        (reprocessed)="infoDetail.set($event)"
+        (closed)="closeInfo()"
+      />
+    }
   }
 
   <div class="progress" aria-hidden="true">
