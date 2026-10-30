@@ -1,6 +1,8 @@
-import { Component, computed, DestroyRef, effect, ElementRef, HostListener, inject, input, OnDestroy, output, signal, viewChild } from '@angular/core';
+import { afterNextRender, Component, computed, DestroyRef, effect, ElementRef, HostListener, inject, Injector, input, OnDestroy, output, signal, viewChild } from '@angular/core';
 import { describeError } from '../../core/describe-error';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
+import { AssetDetail, TimelineAsset, toViewerAsset } from '../../core/api/api-models';
+import { AssetDetailApiService } from '../../core/api/asset-detail-api.service';
 import { TrashApiService } from '../../core/api/trash-api.service';
 import { AuthStateService } from '../../core/auth/auth-state.service';
 import { Icon } from '../../shared/icon';
@@ -11,6 +13,7 @@ import { ToastService } from '../../shared/toast.service';
 import { closeOnBrowserBack } from '../../shared/close-on-back';
 import { ZoomGesture } from '../../shared/zoom-gesture';
 import { holdScreenAwake } from '../../shared/wake-lock';
+import { AssetInfoPanel } from '../viewer/asset-info-panel';
 
 /** One slide. */
 export interface SlideItem {
@@ -80,7 +83,7 @@ const MUSIC_VOLUME = 0.35;
  */
 @Component({
   selector: 'app-slideshow-overlay',
-  imports: [Icon, Sheet, ShareButton],
+  imports: [AssetInfoPanel, Icon, Sheet, ShareButton],
   templateUrl: './slideshow-overlay.html',
   styleUrl: './slideshow-overlay.scss',
 })
@@ -101,6 +104,12 @@ export class SlideshowOverlay implements OnDestroy {
    * rendering there even for a moment. Private pages pass it explicitly.
    */
   readonly allowActions = input(false);
+  /**
+   * Opt in to the per-photo info button. Same reasoning as `allowActions`:
+   * signing in is not enough, because a signed-in member can open a share link
+   * and the detail endpoint is a library route, not a share-scoped one.
+   */
+  readonly allowInfo = input(false);
   readonly closed = output<void>();
   /** A photo left the library; parents drop it from their own lists. */
   readonly deleted = output<string>();
@@ -110,6 +119,8 @@ export class SlideshowOverlay implements OnDestroy {
   private readonly auth = inject(AuthStateService);
   private readonly confirms = inject(ConfirmService);
   private readonly toasts = inject(ToastService);
+  private readonly assetDetailApi = inject(AssetDetailApiService);
+  private readonly injector = inject(Injector);
   private readonly photoShare = viewChild<ShareButton>('photoShare');
   private readonly collectionShare = viewChild<ShareButton>('collectionShare');
   /**
@@ -118,6 +129,9 @@ export class SlideshowOverlay implements OnDestroy {
    * than holding a reference to a video that has already been thrown away.
    */
   private readonly videoEl = viewChild<ElementRef<HTMLVideoElement>>('slideVideo');
+
+  private readonly infoButton = viewChild<ElementRef<HTMLButtonElement>>('infoButton');
+  private readonly infoPanel = viewChild(AssetInfoPanel);
 
   readonly shareChoiceOpen = signal(false);
   /** "Open the collection's share panel as soon as that button exists." */
@@ -265,6 +279,77 @@ export class SlideshowOverlay implements OnDestroy {
     this.pendingCollectionShare.set(true);
   }
 
+  // --- Photo info -------------------------------------------------------------
+
+  readonly infoOpen = signal(false);
+  /** Metadata for the photo the panel is open on; hydrates after the panel shows. */
+  readonly infoDetail = signal<AssetDetail | null>(null);
+  readonly infoDetailLoading = signal(false);
+  /**
+   * Whether closing the panel should restart the show. Kept apart from
+   * `isPaused`, which cannot tell "paused by the panel" from "paused by you".
+   */
+  private resumeOnInfoClose = false;
+
+  /** The panel's view of the slide on screen (the slideshow holds no dates). */
+  readonly infoAsset = computed<TimelineAsset | null>(() => {
+    const item = this.current();
+    return item ? toViewerAsset(item.id, item.mediaType) : null;
+  });
+
+  /** Signed in AND the page opted in AND a still is on screen. */
+  readonly canShowInfo = computed<boolean>(
+    () => this.allowInfo() && this.auth.user() !== null && this.current()?.mediaType === 'image',
+  );
+
+  /**
+   * Pauses the show and opens the details for the photo on screen. The timer is
+   * cleared right here rather than left to the pause effect, so a slide that
+   * was due this very tick cannot change under the panel.
+   */
+  openInfo(): void {
+    const item = this.current();
+    if (!item || !this.canShowInfo() || this.infoOpen()) {
+      return;
+    }
+    this.resumeOnInfoClose = this.isPlaying();
+    this.clearTimer();
+    this.isPaused.set(true);
+    this.infoDetail.set(null);
+    this.infoOpen.set(true);
+    afterNextRender(() => this.infoPanel()?.focus(), { injector: this.injector });
+    void this.loadInfoDetail(item.id);
+  }
+
+  /** Resumes only a show that was playing when the panel opened. */
+  closeInfo(): void {
+    if (!this.infoOpen()) {
+      return;
+    }
+    this.infoOpen.set(false);
+    if (this.resumeOnInfoClose && !this.isFinished()) {
+      this.isPaused.set(false);
+    }
+    this.resumeOnInfoClose = false;
+    afterNextRender(() => this.infoButton()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  private async loadInfoDetail(assetId: string): Promise<void> {
+    this.infoDetailLoading.set(true);
+    try {
+      const detail = await this.assetDetailApi.get(assetId);
+      if (this.infoOpen() && this.currentAssetId() === assetId) {
+        this.infoDetail.set(detail);
+      }
+    } catch {
+      // An enhancement: the panel stays up with what it already has.
+    } finally {
+      if (this.currentAssetId() === assetId) {
+        this.infoDetailLoading.set(false);
+      }
+    }
+  }
+
   readonly index = signal(0);
   readonly isPaused = signal(false);
   /** True after the last slide: the show stops and offers a replay. */
@@ -374,6 +459,16 @@ export class SlideshowOverlay implements OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
+    if (this.isActivatingInfoButton(event)) {
+      return; // The native click opens the panel; don't also toggle pause.
+    }
+    if (this.infoOpen()) {
+      // Modal: only Escape means anything, and it closes the panel, not the show.
+      if (event.key === 'Escape') {
+        this.closeInfo();
+      }
+      return;
+    }
     switch (event.key) {
       case 'Escape':
         this.close();
@@ -389,6 +484,11 @@ export class SlideshowOverlay implements OnDestroy {
         this.togglePause();
         break;
     }
+  }
+
+  private isActivatingInfoButton(event: KeyboardEvent): boolean {
+    const isActivationKey = event.key === ' ' || event.key === 'Enter';
+    return isActivationKey && event.target === this.infoButton()?.nativeElement;
   }
 
   ngOnDestroy(): void {
@@ -439,6 +539,9 @@ export class SlideshowOverlay implements OnDestroy {
   }
 
   next(): void {
+    if (this.infoOpen()) {
+      return;
+    }
     // The end is the end: stop and offer a replay instead of looping.
     if (this.index() >= this.slides().length - 1) {
       this.isFinished.set(true);
@@ -448,6 +551,9 @@ export class SlideshowOverlay implements OnDestroy {
   }
 
   previous(): void {
+    if (this.infoOpen()) {
+      return;
+    }
     if (this.isFinished()) {
       this.isFinished.set(false);
       return;
@@ -462,6 +568,9 @@ export class SlideshowOverlay implements OnDestroy {
   }
 
   togglePause(): void {
+    if (this.infoOpen()) {
+      return;
+    }
     this.isPaused.update((value) => !value);
   }
 
@@ -541,6 +650,9 @@ export class SlideshowOverlay implements OnDestroy {
   }
 
   onStageClick(event: MouseEvent): void {
+    if (this.infoOpen()) {
+      return;
+    }
     // The click after a swipe, pan or pinch is the same gesture — don't also
     // steer by zones. Zoomed in, the sides are picture, not buttons.
     if (this.didSwipe || this.gesture.consumedClick || this.gesture.isZoomed()) {
@@ -559,13 +671,16 @@ export class SlideshowOverlay implements OnDestroy {
   }
 
   onVideoEnded(): void {
-    if (!this.isPaused()) {
+    if (!this.isPaused() && !this.infoOpen()) {
       this.next();
     }
   }
 
   /** A video still transcoding (202) or broken must not stall the show. */
   onVideoError(): void {
+    if (this.infoOpen()) {
+      return;
+    }
     this.timer = setTimeout(() => this.next(), 1500);
   }
 

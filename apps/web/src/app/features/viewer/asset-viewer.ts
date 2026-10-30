@@ -10,16 +10,15 @@ import {
   signal,
 } from '@angular/core';
 import { describeError } from '../../core/describe-error';
+import { formatCapturedDate } from '../../core/format-date';
 import { AssetDetail, TimelineAsset } from '../../core/api/api-models';
-import { toLocalInputValue } from '../../core/local-input';
 import { inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { ShareButton } from '../../shared/share-button';
 import { AlbumPicker } from '../../shared/album-picker';
 import { MemoryPick, MemoryPicker } from '../../shared/memory-picker';
+import { AssetDetailApiService } from '../../core/api/asset-detail-api.service';
 import { PhotosApiService } from '../../core/api/photos-api.service';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
 import { MemoriesApiService } from '../../core/api/memories-api.service';
@@ -30,6 +29,7 @@ import { ToastService } from '../../shared/toast.service';
 import { Icon } from '../../shared/icon';
 import { Sheet } from '../../shared/sheet';
 import { ZoomGesture } from '../../shared/zoom-gesture';
+import { AssetInfoPanel } from './asset-info-panel';
 
 /** Minimum horizontal swipe distance (px) that counts as navigation. */
 const SWIPE_THRESHOLD_PX = 60;
@@ -46,7 +46,7 @@ const ROTATE_SETTLE_MS = 900;
  */
 @Component({
   selector: 'app-asset-viewer',
-  imports: [AlbumPicker, Icon, MemoryPicker, RouterLink, ShareButton, FormsModule, Sheet],
+  imports: [AlbumPicker, AssetInfoPanel, Icon, MemoryPicker, ShareButton, Sheet],
   templateUrl: './asset-viewer.html',
   styleUrl: './asset-viewer.scss',
 })
@@ -54,6 +54,7 @@ export class AssetViewer implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthStateService);
   private readonly photosApi = inject(PhotosApiService);
+  private readonly assetDetailApi = inject(AssetDetailApiService);
   private readonly albumsApi = inject(AlbumsApiService);
   private readonly memoriesApi = inject(MemoriesApiService);
   private readonly trashApi = inject(TrashApiService);
@@ -90,8 +91,6 @@ export class AssetViewer implements OnInit, OnDestroy {
   readonly detailLoading = signal(false);
   /** True while the server is transcoding this video for playback. */
   readonly isPreparingVideo = signal(false);
-  /** Reprocess retry state for the current item. */
-  readonly reprocessState = signal<'idle' | 'running' | 'done'>('idle');
   /** True until the current image's full-size file has arrived. */
   readonly isImageLoading = signal(true);
   /** True when the current image failed to render at all. */
@@ -230,9 +229,7 @@ export class AssetViewer implements OnInit, OnDestroy {
       this.imageFailed.set(false);
       this.motionPlaying.set(false);
       this.flushPendingRotation();
-      this.editingDate.set(false);
       this.editedCapturedAt.set(null);
-      this.editingTitle.set(false);
       this.editedTitle.set(undefined);
       this.resetZoom();
     });
@@ -782,205 +779,27 @@ export class AssetViewer implements OnInit, OnDestroy {
     this.deleted.emit(asset.id);
   }
 
-  /** Human summary of what failed for this item, or empty when healthy. */
-  processingProblem(info: AssetDetail): string {
-    if (info.stageErrors) {
-      return Object.entries(info.stageErrors)
-        .map(([stage, message]) => `${stage}: ${message}`)
-        .join('; ');
-    }
-    if (!info.hasThumbnail) {
-      return 'Thumbnail was never generated.';
-    }
-    return '';
-  }
-
-  /** Queues a re-run of processing for this item and polls until it lands. */
-  async reprocess(): Promise<void> {
-    const asset = this.current();
-    if (!asset || this.reprocessState() === 'running') {
-      return;
-    }
-    this.reprocessState.set('running');
-    await firstValueFrom(this.http.post(`/api/v1/assets/${asset.id}/reprocess`, {}));
-    const startedAt = Date.now();
-    const poll = setInterval(() => {
-      void (async () => {
-        if (this.current()?.id !== asset.id || Date.now() - startedAt > 60_000) {
-          clearInterval(poll);
-          this.reprocessState.set('idle');
-          return;
-        }
-        await this.loadDetail(asset.id);
-        const info = this.detail();
-        if (info && info.hasThumbnail && !info.stageErrors) {
-          clearInterval(poll);
-          this.reprocessState.set('done');
-        }
-      })();
-    }, 3000);
-  }
-
   formatDate(iso: string): string {
-    // Intl THROWS on an invalid date, and lists built by toViewerAsset() carry
-    // an empty capturedAt — which took the whole date heading down with it.
-    const date = new Date(iso);
-    if (!iso || Number.isNaN(date.getTime())) {
-      return 'Date unknown';
-    }
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: 'full',
-      timeStyle: 'short',
-    }).format(date);
+    return formatCapturedDate(iso);
   }
 
-  /** Plain-language provenance for the capture date. */
-  capturedSourceLabel(source: string | undefined): string {
-    switch (source) {
-      case 'exif':
-        return 'from the camera';
-      case 'filename':
-        return 'read from the file name';
-      case 'file_mtime':
-        return 'from the file date — may not be when it was taken';
-      case 'user':
-        return 'set by you';
-      default:
-        return '';
-    }
-  }
+  // --- Edits made in the info panel, mirrored here for the caption band -----
 
-  // --- Capture-date correction (write grant) ---------------------------------
-
-  /** True while the info panel's date is being edited. */
-  readonly editingDate = signal(false);
-  readonly savingDate = signal(false);
   /** A locally-applied corrected date, so the panel updates without a reload. */
   readonly editedCapturedAt = signal<string | null>(null);
-  /** Bound to the datetime-local input, "YYYY-MM-DDTHH:MM". */
-  dateDraft = '';
-
-  /** The date to show — a just-saved correction wins over the loaded value. */
-  displayCapturedAt(iso: string): string {
-    // The detail payload is authoritative; the timeline copy is a stub when the
-    // viewer was opened from a synthetic list (dashboard, album, person page).
-    return this.editedCapturedAt() ?? this.detail()?.capturedAt ?? iso;
-  }
-
-  startEditDate(): void {
-    const asset = this.current();
-    if (!asset) {
-      return;
-    }
-    this.dateDraft = toLocalInputValue(this.editedCapturedAt() ?? asset.capturedAt);
-    this.editingDate.set(true);
-  }
-
-  cancelEditDate(): void {
-    this.editingDate.set(false);
-  }
-
-  async saveDate(): Promise<void> {
-    const asset = this.current();
-    if (!asset || this.savingDate() || !this.dateDraft) {
-      return;
-    }
-    const local = new Date(this.dateDraft);
-    if (Number.isNaN(local.getTime())) {
-      this.toasts.error('That date is not valid.');
-      return;
-    }
-    this.savingDate.set(true);
-    try {
-      await firstValueFrom(
-        this.http.patch(`/api/v1/assets/${asset.id}/captured-at`, {
-          capturedAt: local.toISOString(),
-          tzOffsetMin: -local.getTimezoneOffset(),
-        }),
-      );
-      this.editedCapturedAt.set(local.toISOString());
-      this.editingDate.set(false);
-      this.toasts.success('Date updated — saved to the file too.');
-    } catch (error) {
-      this.toasts.error(describeError(error, "Couldn't update the date."));
-    } finally {
-      this.savingDate.set(false);
-    }
-  }
-
-  // --- Title ---------------------------------------------------------------
-
-  readonly editingTitle = signal(false);
-  readonly savingTitle = signal(false);
-  /** A locally-applied title, so the panel updates without a reload. */
+  /** A locally-applied title, so the caption updates without a reload. */
   readonly editedTitle = signal<string | null | undefined>(undefined);
-  titleDraft = '';
 
-  /** The title to show — a just-saved edit wins over the loaded value. */
+  /** The title to show - a just-saved edit wins over the loaded value. */
   readonly displayTitle = computed<string | null>(() => {
     const edited = this.editedTitle();
     return edited !== undefined ? edited : (this.detail()?.title ?? null);
   });
 
-  startEditTitle(): void {
-    this.titleDraft = this.displayTitle() ?? '';
-    this.editingTitle.set(true);
-  }
-
-  cancelEditTitle(): void {
-    this.editingTitle.set(false);
-  }
-
-  async saveTitle(): Promise<void> {
-    const asset = this.current();
-    if (!asset || this.savingTitle()) {
-      return;
-    }
-    const title = this.titleDraft.trim();
-    this.savingTitle.set(true);
-    try {
-      await firstValueFrom(this.http.patch(`/api/v1/assets/${asset.id}/title`, { title }));
-      this.editedTitle.set(title || null);
-      this.editingTitle.set(false);
-      this.toasts.success(title ? 'Title saved.' : 'Title removed.');
-    } catch (error) {
-      this.toasts.error(describeError(error, "Couldn't save the title."));
-    } finally {
-      this.savingTitle.set(false);
-    }
-  }
-
-  formatSize(bytes: number | null): string {
-    if (bytes === null) {
-      return '';
-    }
-    if (bytes < 1024 * 1024) {
-      return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-    }
-    const megabytes = bytes / (1024 * 1024);
-    return `${megabytes.toFixed(1)} MB`;
-  }
-
-  /** A file this small is almost never a real photo — likely a cloud-only stub. */
-  isSuspiciouslySmall(info: AssetDetail): boolean {
-    return info.mediaType === 'image' && info.sizeBytes !== null && info.sizeBytes < 16 * 1024;
-  }
-
-  googleMapsUrl(info: AssetDetail): string {
-    return `https://www.google.com/maps?q=${info.gpsLat},${info.gpsLon}`;
-  }
-
-  /** The folder holding this file, for linking into the folders view. */
-  folderOf(info: AssetDetail): string {
-    return (info.relPath ?? '').split('/').slice(0, -1).join('/');
-  }
-
   private async loadDetail(assetId: string): Promise<void> {
     this.detailLoading.set(true);
     try {
-      const detail = await firstValueFrom(
-        this.http.get<AssetDetail>(`/api/v1/assets/${assetId}/detail`),
-      );
+      const detail = await this.assetDetailApi.get(assetId);
       if (this.current()?.id === assetId) {
         this.detail.set(detail);
       }

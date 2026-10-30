@@ -196,6 +196,45 @@
   }
 }
 
+// Bottom-right, clear of the centred pause pill, the side arrows and the dots.
+// A dark disc with a white glyph reads on both light and dark photos; the
+// hairline ring keeps its edge visible against a near-black picture.
+.info-btn {
+  position: absolute;
+  right: 1rem;
+  bottom: 2rem;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 50%;
+  background: rgb(0 0 0 / 55%);
+  color: white;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+
+  &:hover {
+    background: rgb(0 0 0 / 75%);
+  }
+
+  // Visible on any photo: a white ring with a dark halo behind it.
+  &:focus-visible {
+    outline: 3px solid white;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 6px rgb(0 0 0 / 70%);
+  }
+}
+
+.info-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 4; // Over the chrome (2-3), under the details panel (5).
+  background: rgb(0 0 0 / 35%);
+}
+
 .progress {
   position: absolute;
   inset: auto 0 0.8rem;

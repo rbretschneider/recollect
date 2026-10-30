@@ -41,6 +41,23 @@ export class PhotosApiService {
     return firstValueFrom(on ? this.http.put<void>(url, {}) : this.http.delete<void>(url));
   }
 
+  /** Sets (or, with an empty string, clears) an item's own name. */
+  setTitle(assetId: string, title: string): Promise<unknown> {
+    return firstValueFrom(this.http.patch(`/api/v1/assets/${assetId}/title`, { title }));
+  }
+
+  /** Corrects the capture date; the offset keeps the local wall-clock reading. */
+  setCapturedAt(assetId: string, capturedAt: string, tzOffsetMin: number): Promise<unknown> {
+    return firstValueFrom(
+      this.http.patch(`/api/v1/assets/${assetId}/captured-at`, { capturedAt, tzOffsetMin }),
+    );
+  }
+
+  /** Queues a re-run of processing (thumbnail, metadata) for one item. */
+  reprocess(assetId: string): Promise<unknown> {
+    return firstValueFrom(this.http.post(`/api/v1/assets/${assetId}/reprocess`, {}));
+  }
+
   /** Hydrates full asset records for a list of ids, preserving order — used by
    *  detail pages that hold only ids (memories, albums) to feed the viewer. */
   items(assetIds: string[]): Promise<TimelineAsset[]> {

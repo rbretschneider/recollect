@@ -378,6 +378,7 @@
   <app-slideshow-overlay
     [items]="slides"
     [title]="detail()?.title ?? ''"
+    [allowInfo]="true"
     (closed)="slideshowItems.set(null)"
   />
 }
