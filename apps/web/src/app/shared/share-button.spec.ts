@@ -11,11 +11,11 @@ import { ShareButton } from './share-button';
  * server round trip, mints no token and leaves nothing to revoke, and it must
  * never create anything.
  *
- * THE RULE, and the regression these guard: nothing in this panel touches the
- * clipboard unless someone taps Copy. Opening the sheet and creating a link
- * both used to copy on your behalf, and Android answers every clipboard write
- * with a system toast pinned to the bottom of the screen — which sat right on
- * top of "Create public link" and the text explaining what it would do.
+ * THE RULE: opening the sheet never touches the clipboard, and the household
+ * link is copied only by its own Copy tap (Android answers every clipboard
+ * write with a system toast pinned to the bottom of the screen). Creating a
+ * public link, or updating its expiration, copies that link's URL — taken from
+ * the server's response — and a refused clipboard never undoes the change.
  */
 describe('ShareButton', () => {
   let fixture: ComponentFixture<ShareButton>;
@@ -39,9 +39,26 @@ describe('ShareButton', () => {
   });
 
   afterEach(() => {
+    delete (globalThis as unknown as { ClipboardItem?: unknown }).ClipboardItem;
     fixture?.destroy();
     http?.verify({ ignoreCancelled: true });
   });
+
+  interface FakeItem {
+    data: Record<string, Promise<Blob>>;
+  }
+
+  /** Installs a ClipboardItem-capable clipboard whose write is `write`. */
+  function installClipboardItem(
+    write: (items: ClipboardItem[]) => Promise<void>,
+    writeText: (text: string) => Promise<void> = (text) => (written.push(text), Promise.resolve()),
+  ) {
+    class Item {
+      constructor(public data: Record<string, Promise<Blob>>) {}
+    }
+    (globalThis as unknown as { ClipboardItem: unknown }).ClipboardItem = Item;
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { write, writeText } });
+  }
 
   /** Lets the create chain (which may resolve a target first) reach the wire. */
   const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -158,22 +175,241 @@ describe('ShareButton', () => {
       expect(resolved).toBe(1);
     });
 
-    // THE REGRESSION: this copied the new link for you, so Android's toast
-    // landed on the row that had just appeared with the link in it.
-    it('shows a newly created link without copying it', async () => {
+    const link = (id: string, token: string, expiresAt: string | null = null) => ({
+      id,
+      token,
+      expiresAt,
+      viewCount: 0,
+    });
+
+    async function openMemory(links: unknown[] = []) {
       const opened = open({ targetType: 'memory', targetId: 'memory-1' });
-      http.expectOne('/api/v1/sharing/memory/memory-1').flush({ links: [] });
+      http.expectOne('/api/v1/sharing/memory/memory-1').flush({ links });
       await opened;
+    }
+
+    it('copies the created link, using the token from the response', async () => {
+      await openMemory([link('other', 'listed')]);
 
       const creating = fixture.componentInstance.createLink();
       await flush();
-      http
-        .expectOne('/api/v1/sharing')
-        .flush({ link: { id: 'link-1', token: 'tok', expiresAt: null, viewCount: 0 } });
+      http.expectOne('/api/v1/sharing').flush({ link: link('link-1', 'fresh') });
       await creating;
+      await flush();
+
+      expect(written).toEqual([`${location.origin}/s/fresh`]);
+      expect(fixture.componentInstance.links().map((l) => l.id)).toEqual(['link-1', 'other']);
+      expect(fixture.componentInstance.copiedLinkId()).toBe('link-1');
+    });
+
+    it('starts the clipboard write inside the tap, before the response arrives', async () => {
+      let resolveBlob: Promise<Blob> | undefined;
+      const writes: number[] = [];
+      installClipboardItem((items) => {
+        writes.push(1);
+        resolveBlob = (items[0] as unknown as FakeItem).data['text/plain'];
+        return Promise.resolve();
+      });
+      await openMemory();
+
+      const creating = fixture.componentInstance.createLink();
+      expect(writes.length).toBe(1);
+      await flush();
+      http.expectOne('/api/v1/sharing').flush({ link: link('link-1', 'fresh') });
+      await creating;
+      await flush();
+
+      expect(await (await resolveBlob!).text()).toBe(`${location.origin}/s/fresh`);
+      expect(writes.length).toBe(1);
+      expect(written).toEqual([]);
+    });
+
+    it('does not claim success until the browser confirms the write', async () => {
+      let confirm!: () => void;
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: () => new Promise<void>((resolve) => (confirm = resolve)) },
+      });
+      await openMemory();
+
+      const creating = fixture.componentInstance.createLink();
+      await flush();
+      http.expectOne('/api/v1/sharing').flush({ link: link('link-1', 'fresh') });
+      await creating;
+      await flush();
+      expect(fixture.componentInstance.copyState()).toBeNull();
+      expect(fixture.componentInstance.isBusy()).toBe(false);
+
+      confirm();
+      await flush();
+      expect(fixture.componentInstance.copiedLinkId()).toBe('link-1');
+    });
+
+    it('copies the updated link, including no expiration, without creating another', async () => {
+      await openMemory([link('link-1', 'tok', '2030-01-01T00:00:00Z'), link('link-2', 'other')]);
+      fixture.componentInstance.selectedExpiryHours = null;
+
+      const extending = fixture.componentInstance.extend(fixture.componentInstance.links()[0]);
+      const update = http.expectOne('/api/v1/sharing/link-1');
+      expect(update.request.method).toBe('PATCH');
+      expect(update.request.body).toEqual({ neverExpires: true });
+      update.flush({ link: link('link-1', 'tok-updated') });
+      await extending;
+      await flush();
+
+      http.expectNone('/api/v1/sharing');
+      expect(written).toEqual([`${location.origin}/s/tok-updated`]);
+      expect(fixture.componentInstance.links().length).toBe(2);
+    });
+
+    it('copies after materialising a lazy target, once', async () => {
+      let finish!: (id: string) => void;
+      const opened = open({
+        targetType: 'album',
+        targetId: '',
+        internalPath: '/lookback?day=09-25&year=2021',
+        resolveTarget: () => new Promise<string>((resolve) => (finish = resolve)),
+      });
+      await opened;
+      expect(written).toEqual([]);
+
+      const creating = fixture.componentInstance.createLink();
+      finish('album-9');
+      await flush();
+      http.expectOne('/api/v1/sharing').flush({ link: link('link-1', 'fresh') });
+      await creating;
+      await flush();
+
+      expect(written).toEqual([`${location.origin}/s/fresh`]);
+    });
+
+    it('writes nothing when creating fails', async () => {
+      await openMemory();
+
+      const creating = fixture.componentInstance.createLink();
+      await flush();
+      http.expectOne('/api/v1/sharing').flush('no', { status: 500, statusText: 'Server Error' });
+      await expect(creating).rejects.toBeDefined();
+      await flush();
 
       expect(written).toEqual([]);
-      expect(fixture.componentInstance.links().map((link) => link.id)).toEqual(['link-1']);
+      expect(fixture.componentInstance.copyState()).toBeNull();
+      expect(fixture.componentInstance.isBusy()).toBe(false);
+    });
+
+    it('writes nothing when updating fails', async () => {
+      await openMemory([link('link-1', 'tok')]);
+
+      const extending = fixture.componentInstance.extend(fixture.componentInstance.links()[0]);
+      http.expectOne('/api/v1/sharing/link-1').flush('no', { status: 500, statusText: 'Server Error' });
+      await expect(extending).rejects.toBeDefined();
+      await flush();
+
+      expect(written).toEqual([]);
+      expect(fixture.componentInstance.copyState()).toBeNull();
+      expect(fixture.componentInstance.isBusy()).toBe(false);
+    });
+
+    it('writes nothing when the target cannot be materialised', async () => {
+      const opened = open({
+        targetType: 'album',
+        targetId: '',
+        internalPath: '/lookback',
+        resolveTarget: () => Promise.reject(new Error('nope')),
+      });
+      await opened;
+
+      await expect(fixture.componentInstance.createLink()).rejects.toBeDefined();
+      await flush();
+
+      expect(written).toEqual([]);
+      expect(fixture.componentInstance.isBusy()).toBe(false);
+      http.expectNone('/api/v1/sharing');
+    });
+
+    it('writes nothing when a promise-backed write is used and the request fails', async () => {
+      const writeText = vi.fn(() => Promise.resolve());
+      installClipboardItem(() => Promise.reject(new Error('aborted')), writeText);
+      await openMemory();
+
+      const creating = fixture.componentInstance.createLink();
+      await flush();
+      http.expectOne('/api/v1/sharing').flush('no', { status: 500, statusText: 'Server Error' });
+      await expect(creating).rejects.toBeDefined();
+      await flush();
+
+      expect(writeText).not.toHaveBeenCalled();
+    });
+
+    it('falls back to plain text when the promise-backed write is refused', async () => {
+      installClipboardItem(() => Promise.reject(new Error('denied')));
+      await openMemory();
+
+      const creating = fixture.componentInstance.createLink();
+      await flush();
+      http.expectOne('/api/v1/sharing').flush({ link: link('link-1', 'fresh') });
+      await creating;
+      await flush();
+
+      expect(written).toEqual([`${location.origin}/s/fresh`]);
+      expect(fixture.componentInstance.copiedLinkId()).toBe('link-1');
+    });
+
+    for (const [name, clipboard] of [
+      ['rejects', { writeText: () => Promise.reject(new Error('denied')) }],
+      ['is missing', undefined],
+    ] as const) {
+      it(`keeps the created link when the clipboard ${name}, and Copy works later without another request`, async () => {
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: clipboard });
+        await openMemory();
+        let changed = 0;
+        fixture.componentInstance.changed.subscribe(() => changed++);
+
+        const creating = fixture.componentInstance.createLink();
+        await flush();
+        http.expectOne('/api/v1/sharing').flush({ link: link('link-1', 'fresh') });
+        await creating;
+        await flush();
+        fixture.detectChanges();
+
+        const state = fixture.componentInstance.copyState();
+        expect(state).toEqual({ linkId: 'link-1', status: 'failed' });
+        expect(fixture.componentInstance.copiedLinkId()).toBeNull();
+        expect(fixture.componentInstance.links().map((l) => l.id)).toEqual(['link-1']);
+        expect(changed).toBe(1);
+        expect(fixture.componentInstance.isBusy()).toBe(false);
+        expect(document.body.textContent).toContain('Couldn’t copy automatically');
+
+        Object.defineProperty(navigator, 'clipboard', {
+          configurable: true,
+          value: { writeText: (text: string) => (written.push(text), Promise.resolve()) },
+        });
+        await fixture.componentInstance.copy(fixture.componentInstance.links()[0]);
+        expect(written).toEqual([`${location.origin}/s/fresh`]);
+        expect(fixture.componentInstance.copiedLinkId()).toBe('link-1');
+        http.expectNone('/api/v1/sharing');
+      });
+    }
+
+    it('does not leave an earlier Copied! standing after a failed new attempt', async () => {
+      await openMemory([link('link-1', 'tok')]);
+      await fixture.componentInstance.copy(fixture.componentInstance.links()[0]);
+      expect(fixture.componentInstance.copiedLinkId()).toBe('link-1');
+
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: () => Promise.reject(new Error('denied')) },
+      });
+      await fixture.componentInstance.copy(fixture.componentInstance.links()[0]);
+
+      expect(fixture.componentInstance.copiedLinkId()).toBeNull();
+      expect(fixture.componentInstance.copyState()?.status).toBe('failed');
+    });
+
+    it('does not copy when opening, closing, listing, or revoking', async () => {
+      await openMemory([link('link-1', 'tok')]);
+      fixture.componentInstance.close();
+      expect(written).toEqual([]);
     });
 
     it('copies a public link when its Copy button is tapped', async () => {
@@ -188,19 +424,5 @@ describe('ShareButton', () => {
       expect(written).toEqual([`${location.origin}/s/tok`]);
     });
 
-    it('does not copy when the expiry is changed', async () => {
-      const opened = open({ targetType: 'memory', targetId: 'memory-1' });
-      http
-        .expectOne('/api/v1/sharing/memory/memory-1')
-        .flush({ links: [{ id: 'link-1', token: 'tok', expiresAt: null, viewCount: 0 }] });
-      await opened;
-
-      const extending = fixture.componentInstance.extend(fixture.componentInstance.links()[0]);
-      const update = http.expectOne('/api/v1/sharing/link-1');
-      update.flush({ link: { id: 'link-1', token: 'tok', expiresAt: null, viewCount: 0 } });
-      await extending;
-
-      expect(written).toEqual([]);
-    });
   });
 });

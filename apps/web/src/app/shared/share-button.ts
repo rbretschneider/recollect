@@ -64,7 +64,14 @@ export class ShareButton {
   readonly isOpen = signal(false);
   readonly links = signal<ShareLinkView[]>([]);
   readonly isBusy = signal(false);
-  readonly copiedLinkId = signal<string | null>(null);
+  /** How the latest copy of a public link fared; null until one is attempted. */
+  readonly copyState = signal<{ linkId: string; status: 'copied' | 'failed' } | null>(null);
+  readonly copiedLinkId = computed(() => {
+    const state = this.copyState();
+    return state?.status === 'copied' ? state.linkId : null;
+  });
+  private copyAttempt = 0;
+  private copyTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** A target materialised by `resolveTarget`; empty until one is needed. */
   private readonly resolvedId = signal('');
@@ -107,12 +114,14 @@ export class ShareButton {
    * This used to put the household link straight on the clipboard to save a
    * tap, and it backfired: Android answers every clipboard write with a system
    * toast pinned to the bottom of the screen, which landed squarely on top of
-   * "Create public link" and the labels explaining it. The one rule in this
-   * panel now is that nothing reaches the clipboard until someone taps Copy.
+   * "Create public link" and the labels explaining it. So opening never
+   * copies; only an explicit Copy tap, or creating / updating a public link,
+   * reaches the clipboard.
    */
   async open(): Promise<void> {
     this.isOpen.set(true);
     this.internalCopied.set(null);
+    this.resetCopyState();
     const id = this.effectiveId();
     // Nothing is shared yet for a target that does not exist; don't ask.
     if (id) {
@@ -153,6 +162,7 @@ export class ShareButton {
 
   close(): void {
     this.isOpen.set(false);
+    this.resetCopyState();
   }
 
   urlFor(link: ShareLinkView): string {
@@ -172,30 +182,110 @@ export class ShareButton {
   }
 
   /**
-   * The single, deliberate action that makes this content public.
-   *
-   * It no longer copies the new link for you. Saving that one tap cost a whole
-   * Android system clipboard toast parked over this very row, hiding the link
-   * it had just made and the controls around it. The link appears in the panel
-   * with Copy beside it, and copying is the user's tap to make.
+   * The single, deliberate action that makes this content public. The new
+   * link is also put on the clipboard; see `mutateAndCopy`.
    */
   async createLink(): Promise<void> {
+    await this.mutateAndCopy(
+      async () => {
+        // Materialising happens here and only here: choosing to expose something
+        // is what creates the album a look-back needs, not merely opening this.
+        const id = await this.ensureTarget();
+        return this.api.createLink(this.targetType(), id, this.includeJournal(), this.selectedExpiryHours);
+      },
+      (link) => {
+        this.links.update((existing) => [link, ...existing]);
+        this.changed.emit();
+        this.toasts.success('Public link created.');
+      },
+    );
+  }
+
+  /**
+   * Runs a link mutation and copies the resulting public URL.
+   *
+   * The clipboard write starts synchronously, inside the tap, with its text
+   * supplied by a promise that settles only once the server has answered:
+   * lazy targets await before the request, and Safari would otherwise treat a
+   * later write as outside the user's gesture. Busy state follows the mutation
+   * alone, so a pending clipboard prompt never holds the panel.
+   */
+  private async mutateAndCopy(
+    mutate: () => Promise<{ link: ShareLinkView }>,
+    onSuccess: (link: ShareLinkView) => void,
+  ): Promise<void> {
     this.isBusy.set(true);
+    this.resetCopyState();
+    const attempt = this.copyAttempt;
     try {
-      // Materialising happens here and only here: choosing to expose something
-      // is what creates the album a look-back needs, not merely opening this.
-      const id = await this.ensureTarget();
-      const { link } = await this.api.createLink(
-        this.targetType(),
-        id,
-        this.includeJournal(),
-        this.selectedExpiryHours,
-      );
-      this.links.update((existing) => [link, ...existing]);
-      this.changed.emit();
-      this.toasts.success('Public link created.');
+      const pending = mutate();
+      const outcome = this.beginCopy(pending.then(({ link }) => this.urlFor(link)));
+      const { link } = await pending;
+      onSuccess(link);
+      void outcome.then((result) => {
+        if (result !== 'skipped' && attempt === this.copyAttempt) {
+          this.recordCopy(link.id, result);
+        }
+      });
     } finally {
       this.isBusy.set(false);
+    }
+  }
+
+  /**
+   * Starts writing to the clipboard now; the text arrives when `url` resolves.
+   * Never rejects. 'skipped' means the mutation failed and nothing was written.
+   */
+  private async beginCopy(url: Promise<string>): Promise<'copied' | 'failed' | 'skipped'> {
+    const settled = url.then(
+      (text) => ({ text }),
+      () => null,
+    );
+    const clipboard: Clipboard | undefined = navigator.clipboard;
+    if (typeof ClipboardItem !== 'undefined' && typeof clipboard?.write === 'function') {
+      try {
+        const blob = url.then((text) => new Blob([text], { type: 'text/plain' }));
+        blob.catch(() => undefined);
+        await clipboard.write([new ClipboardItem({ 'text/plain': blob })]);
+        return 'copied';
+      } catch {
+        // Fall through: retry as plain text, but only if the mutation worked.
+      }
+    }
+    const result = await settled;
+    if (!result) {
+      return 'skipped';
+    }
+    try {
+      await clipboard.writeText(result.text);
+      return 'copied';
+    } catch {
+      return 'failed';
+    }
+  }
+
+  private resetCopyState(): void {
+    this.copyAttempt++;
+    if (this.copyTimer) {
+      clearTimeout(this.copyTimer);
+      this.copyTimer = null;
+    }
+    this.copyState.set(null);
+  }
+
+  private recordCopy(linkId: string, status: 'copied' | 'failed'): void {
+    this.copyState.set({ linkId, status });
+    if (this.copyTimer) {
+      clearTimeout(this.copyTimer);
+      this.copyTimer = null;
+    }
+    if (status === 'copied') {
+      const attempt = this.copyAttempt;
+      this.copyTimer = setTimeout(() => {
+        if (attempt === this.copyAttempt) {
+          this.copyState.set(null);
+        }
+      }, 2000);
     }
   }
 
@@ -215,19 +305,18 @@ export class ShareButton {
   }
 
   /**
-   * Extend / change an existing link's expiration — no new link is made, and
-   * nothing is copied: same rule as everywhere else in this panel.
+   * Extend / change an existing link's expiration — no new link is made. The
+   * updated link's URL is copied, as on creation.
    */
   async extend(link: ShareLinkView): Promise<void> {
-    this.isBusy.set(true);
-    try {
-      const { link: updated } = await this.api.updateExpiry(link.id, this.selectedExpiryHours);
-      this.links.update((existing) => existing.map((item) => (item.id === updated.id ? updated : item)));
-      this.changed.emit();
-      this.toasts.success('Expiration updated.');
-    } finally {
-      this.isBusy.set(false);
-    }
+    await this.mutateAndCopy(
+      () => this.api.updateExpiry(link.id, this.selectedExpiryHours),
+      (updated) => {
+        this.links.update((existing) => existing.map((item) => (item.id === updated.id ? updated : item)));
+        this.changed.emit();
+        this.toasts.success('Expiration updated.');
+      },
+    );
   }
 
   async turnOff(link: ShareLinkView): Promise<void> {
@@ -245,13 +334,18 @@ export class ShareButton {
   }
 
   async copy(link: ShareLinkView): Promise<void> {
+    this.resetCopyState();
+    const attempt = this.copyAttempt;
+    let status: 'copied' | 'failed' = 'copied';
     try {
       await navigator.clipboard.writeText(this.urlFor(link));
-      this.copiedLinkId.set(link.id);
-      setTimeout(() => this.copiedLinkId.set(null), 2000);
     } catch {
       // No clipboard access. The URL is on screen and selectable, and a
       // failed copy must not take down whatever asked for it.
+      status = 'failed';
+    }
+    if (attempt === this.copyAttempt) {
+      this.recordCopy(link.id, status);
     }
   }
 }
