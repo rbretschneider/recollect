@@ -77,6 +77,17 @@
           </button>
           <button type="button" class="small danger" (click)="turnOff(link)">Revoke</button>
         </div>
+        <p class="hint copy-status" role="status">
+          @if (copyState(); as state) {
+            @if (state.linkId === link.id) {
+              @if (state.status === 'copied') {
+                Link copied.
+              } @else {
+                Couldn’t copy automatically. Your link is ready — tap Copy or select the URL above.
+              }
+            }
+          }
+        </p>
       }
 
       <div class="create-row">
