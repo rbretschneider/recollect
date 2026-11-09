@@ -35,6 +35,11 @@ export class PeopleController {
     return { people: await this.people.list() };
   }
 
+  @Get('attribution-options')
+  async attributionOptions(): Promise<{ people: PersonSummary[] }> {
+    return { people: await this.people.attributionOptions() };
+  }
+
   @Get(':id/assets')
   async assets(@Param('id', ParseUUIDPipe) id: string): Promise<{ assetIds: string[] }> {
     return { assetIds: await this.people.getAssets(id) };

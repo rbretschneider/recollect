@@ -147,3 +147,13 @@ pg_restore --list recollect-<timestamp>.dump | head
 
 A healthy archive lists the tables. It's worth doing once after you set the
 schedule up, so you find out now rather than on the day you need it.
+
+The readable JSON export also contains `photoCaptions`, including annotated photos
+outside every album and memory, and missing or trashed photos. Each item identifies
+one logical asset by `assetId` and `contentHash`, with its available library-relative
+locations (root ID/name, relative path, file state and original relative path).
+Entries retain their IDs, text, creation/update timestamps, stored speaker reference,
+saved speaker label and resolved current label, in creation order. Absolute library
+root paths are excluded. Existing memory, album and people sections retain their
+format. Use the database dump for full restoration; this JSON export is readable
+portable data and does not provide an import/restore operation.

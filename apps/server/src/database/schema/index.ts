@@ -11,3 +11,4 @@ export * from './library';
 export * from './memories';
 export * from './people';
 export * from './sharing';
+export * from './asset-captions';
