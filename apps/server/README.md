@@ -96,3 +96,14 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## PostgreSQL integration checks
+
+Run `npm run test:integration -- --runInBand` with `TEST_DATABASE_URL` pointing
+to a disposable PostgreSQL 16 server with pgvector available. The configured
+account needs permission to create and drop databases. Each suite creates its
+own database and replays the real migrations; it never uses the supplied
+database for application data. Missing database configuration fails the suite.
+Put PostgreSQL 16 `pg_dump` and `pg_restore` on `PATH` for the backup round-trip
+check. The CI test job provisions these dependencies and runs this suite alongside
+the server and web unit tests.
