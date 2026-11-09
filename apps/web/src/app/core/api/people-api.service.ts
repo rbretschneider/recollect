@@ -28,6 +28,10 @@ export class PeopleApiService {
     return firstValueFrom(this.http.get<{ people: PersonSummary[] }>('/api/v1/people'));
   }
 
+  attributionOptions(): Promise<{ people: PersonSummary[] }> {
+    return firstValueFrom(this.http.get<{ people: PersonSummary[] }>('/api/v1/people/attribution-options'));
+  }
+
   getAssets(personId: string): Promise<{ assetIds: string[] }> {
     return firstValueFrom(
       this.http.get<{ assetIds: string[] }>(`/api/v1/people/${personId}/assets`),

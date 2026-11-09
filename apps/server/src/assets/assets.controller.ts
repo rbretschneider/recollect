@@ -1,3 +1,6 @@
+import { AssetCaptionsService } from './asset-captions.service';
+import { CreateAssetCaptionRequestDto } from './dto/create-asset-caption-request.dto';
+import { UpdateAssetCaptionRequestDto } from './dto/update-asset-caption-request.dto';
 import {
   BadRequestException,
   Controller,
@@ -39,6 +42,7 @@ export class AssetsController {
     private readonly media: AssetMediaStreamer,
     private readonly queue: JobQueueService,
     private readonly rotateService: RotateService,
+    private readonly captions: AssetCaptionsService,
   ) {}
 
   @Get()
@@ -77,6 +81,31 @@ export class AssetsController {
     @CurrentUser() user: UserProfile,
   ): Promise<{ items: TimelineAsset[] }> {
     return { items: await this.assets.getTimelineItems(body.assetIds, user.id) };
+  }
+
+  @Get(':id/captions')
+  async listCaptions(@Param('id', ParseUUIDPipe) id: string) {
+    return { captions: await this.captions.list(id) };
+  }
+
+  @RequireGrant('write')
+  @Post(':id/captions')
+  async createCaption(@Param('id', ParseUUIDPipe) id: string, @Body() body: CreateAssetCaptionRequestDto) {
+    return { caption: await this.captions.create(id, body) };
+  }
+
+  @RequireGrant('write')
+  @Patch(':id/captions/:captionId')
+  async updateCaption(@Param('id', ParseUUIDPipe) id: string, @Param('captionId', ParseUUIDPipe) captionId: string,
+    @Body() body: UpdateAssetCaptionRequestDto) {
+    return { caption: await this.captions.update(id, captionId, body) };
+  }
+
+  @RequireGrant('write')
+  @Delete(':id/captions/:captionId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteCaption(@Param('id', ParseUUIDPipe) id: string, @Param('captionId', ParseUUIDPipe) captionId: string) {
+    await this.captions.delete(id, captionId);
   }
 
   @Get(':id/detail')

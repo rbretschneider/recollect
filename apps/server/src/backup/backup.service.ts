@@ -271,6 +271,22 @@ export class BackupService {
       where p.name is not null and p.merged_into_id is null
       group by p.id, p.name order by p.name
     `);
+    const photoCaptions = await this.db.execute(sql`
+      select a.id as "assetId", a.content_hash as "contentHash",
+        coalesce((select json_agg(json_build_object(
+          'rootId', r.id, 'rootName', r.name, 'relPath', f.rel_path,
+          'state', f.state, 'originalRelPath', f.original_rel_path
+        ) order by r.id, f.rel_path, f.id)
+        from asset_file f join library_root r on r.id = f.root_id where f.asset_id = a.id), '[]'::json) as locations,
+        (select json_agg(json_build_object(
+          'id', c.id, 'text', c.text, 'createdAt', c.created_at, 'updatedAt', c.updated_at,
+          'saidByPersonId', c.said_by_person_id, 'saidByLabel', c.said_by_label,
+          'resolvedSaidByLabel', coalesce(nullif(btrim(p.name), ''), c.said_by_label)
+        ) order by c.created_at, c.id)
+        from asset_caption c left join person p on p.id = c.said_by_person_id where c.asset_id = a.id) as captions
+      from asset a where exists (select 1 from asset_caption c where c.asset_id = a.id)
+      order by a.content_hash, a.id
+    `);
     return {
       exportedAt: new Date().toISOString(),
       note:
@@ -279,6 +295,7 @@ export class BackupService {
       memories: memories.rows,
       albums: albums.rows,
       people: people.rows,
+      photoCaptions: photoCaptions.rows,
     };
   }
 

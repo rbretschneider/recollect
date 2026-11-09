@@ -246,6 +246,13 @@
       "when": 1789480000000,
       "tag": "0034_notification_last_pushed",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794230000000,
+      "tag": "0035_asset_captions",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,128 @@
+<section aria-label="Photo captions">
+  <div class="heading">
+    <h3>Captions</h3>
+    <span>{{ entries().length }} / 10</span>
+  </div>
+  @if (!entries().length) {
+    <p>No captions yet.</p>
+  }
+  <div class="entries">
+    @for (entry of entries(); track entry.id) {
+      <article [class.quote]="entry.saidByLabel !== null">
+        <p class="caption-text">{{ entry.text }}</p>
+        @if (entry.saidByLabel) {
+          <p class="speaker">
+            Said by
+            @if (entry.saidByPersonId) {
+              <a [routerLink]="['/people', entry.saidByPersonId]">{{ entry.saidByLabel }}</a>
+            } @else {
+              <span>{{ entry.saidByLabel }}</span>
+            }
+          </p>
+        }
+        @if (canWrite()) {
+          <div class="actions">
+            <button
+              type="button"
+              [disabled]="busy()"
+              (click)="start(entry)"
+              aria-label="Edit caption"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              [disabled]="busy()"
+              (click)="remove(entry)"
+              aria-label="Delete caption"
+            >
+              Delete
+            </button>
+          </div>
+        }
+      </article>
+    }
+  </div>
+  @if (canWrite()) {
+    <button type="button" data-add [disabled]="entries().length >= 10 || busy()" (click)="start()">
+      Add caption
+    </button>
+    @if (entries().length >= 10) {
+      <p>Ten captions saved. Edit or delete one to make room.</p>
+    }
+  }
+  @if (editing() && canWrite()) {
+    <form (ngSubmit)="save()" aria-label="Caption editor">
+      <label
+        >Caption<textarea
+          name="captionText"
+          [(ngModel)]="text"
+          [disabled]="busy()"
+          rows="4"
+        ></textarea>
+      </label>
+      <span [class.invalid]="length() > 500">{{ length() }} / 500 characters</span>
+      <label class="toggle"
+        ><input
+          type="checkbox"
+          name="saidBy"
+          [ngModel]="attributed"
+          (ngModelChange)="setAttribution($event)"
+          [disabled]="busy()"
+        />
+        Said by</label
+      >
+      @if (attributed) {
+        <label
+          >Person<input
+            type="search"
+            name="personQuery"
+            [ngModel]="query"
+            (ngModelChange)="queryChanged($event)"
+            [disabled]="busy()"
+            autocomplete="off"
+        /></label>
+        @if (selected; as person) {
+          <p class="person">
+            @if (person.coverFaceId) {
+              <img [src]="people.faceCropUrl(person.coverFaceId)" alt="" />
+            }
+            Selected: {{ person.name }}
+          </p>
+        } @else {
+          <div class="choices">
+            @for (person of choices(); track person.id) {
+              <button type="button" [disabled]="busy()" (click)="choose(person)">
+                @if (person.coverFaceId) {
+                  <img [src]="people.faceCropUrl(person.coverFaceId)" alt="" />
+                }
+                {{ person.name }}
+              </button>
+            }
+          </div>
+        }
+        @if (peopleLoading()) {
+          <p role="status">Loading people…</p>
+        }
+        @if (peopleError()) {
+          <p role="alert">{{ peopleError() }}</p>
+          <button type="button" [disabled]="peopleLoading() || busy()" (click)="loadPeople()">
+            Retry people
+          </button>
+        } @else if (!peopleLoading() && !options().length) {
+          <p>No named people available. Turn off Said by to save a plain caption.</p>
+        }
+      }
+      <div class="actions editor-actions">
+        <button type="button" [disabled]="busy()" (click)="cancel()">Cancel</button>
+        <button type="submit" [disabled]="busy() || length() < 1 || length() > 500">
+          {{ busy() ? 'Saving…' : 'Save caption' }}
+        </button>
+      </div>
+    </form>
+  }
+  <p role="status" aria-live="polite">{{ busy() ? 'Working…' : status() }}</p>
+  @if (error()) {
+    <p class="invalid" role="alert">{{ error() }}</p>
+  }
+</section>

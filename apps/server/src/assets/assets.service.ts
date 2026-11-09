@@ -1,3 +1,4 @@
+import { AssetCaptionsService, type AssetCaption } from './asset-captions.service';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
 import { access, stat } from 'fs/promises';
@@ -81,6 +82,7 @@ export interface TimelinePage {
 
 /** Full detail for a single asset (viewer info sheet). */
 export interface AssetDetail {
+  captions: AssetCaption[];
   id: string;
   /** Bumped on every edit; busts the immutable thumbnail cache. */
   updatedAt: string;
@@ -133,6 +135,7 @@ export class AssetsService {
     private readonly extractor: MetadataExtractorService,
     private readonly queue: JobQueueService,
     private readonly motion: MotionPhotoService,
+    private readonly captions: AssetCaptionsService,
   ) {}
 
   async listTimeline(
@@ -348,6 +351,7 @@ export class AssetsService {
             .limit(1)
         : [];
     return {
+      captions: row.mediaType === 'image' ? await this.captions.list(assetId) : [],
       id: row.id,
       mediaType: row.mediaType as 'image' | 'video',
       mime: row.mime,

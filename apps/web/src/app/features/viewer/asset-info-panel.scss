@@ -13,11 +13,8 @@
   // Above whatever the host layers over the picture (nav, captions, scrims).
   z-index: 5;
   outline: none;
+  overscroll-behavior: contain;
 
-  // Keep the title clear of the Close button.
-  &.closable {
-    padding-right: 3.5rem;
-  }
   transition: translate 0.22s ease;
 
   .date-header {
@@ -112,7 +109,7 @@
     translate: 0 100%;
   }
   padding: 1.25rem 1.5rem calc(1.25rem + env(safe-area-inset-bottom));
-  max-height: 45dvh;
+  max-height: 80dvh;
   overflow-y: auto;
 
   h3 {
@@ -237,17 +234,23 @@
   color: var(--text-muted);
 }
 
+.dismiss-bar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  justify-content: flex-end;
+  background: var(--surface);
+  z-index: 3;
+}
+
 .close-btn {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
   display: grid;
   place-items: center;
   min-width: 44px;
   min-height: 44px;
   border: none;
   border-radius: 50%;
-  background: transparent;
+  background: var(--surface);
   color: var(--text);
   cursor: pointer;
 

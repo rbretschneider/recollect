@@ -1,3 +1,4 @@
+import { AssetCaptions, CaptionChange } from './asset-captions';
 import { Component, computed, DestroyRef, effect, ElementRef, inject, input, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -33,7 +34,7 @@ type ReprocessState = 'idle' | 'running' | 'done';
  */
 @Component({
   selector: 'app-asset-info-panel',
-  imports: [FormsModule, Icon, RouterLink],
+  imports: [FormsModule, Icon, RouterLink, AssetCaptions],
   templateUrl: './asset-info-panel.html',
   styleUrl: './asset-info-panel.scss',
 })
@@ -43,6 +44,8 @@ export class AssetInfoPanel {
   /** The loaded metadata, or null while it loads or if it could not load. */
   readonly detail = input<AssetDetail | null>(null);
   readonly detailLoading = input<boolean>(false);
+  readonly detailError = input(false);
+  readonly retryDetail = output<void>();
   /** The name to show, or null for none. A just-saved edit wins over this. */
   readonly title = input<string | null>(null);
   /** A corrected capture date the host already knows about, if any. */
@@ -57,6 +60,7 @@ export class AssetInfoPanel {
   /** Fresh metadata arrived while a reprocess was being watched. */
   readonly reprocessed = output<AssetDetail>();
   readonly closed = output<void>();
+  readonly captionsChanged = output<CaptionChange>();
 
   readonly editingTitle = signal(false);
   readonly savingTitle = signal(false);
@@ -71,6 +75,8 @@ export class AssetInfoPanel {
   /** A title saved from this panel; undefined until then. */
   private readonly savedTitle = signal<string | null | undefined>(undefined);
   private readonly savedCapturedAt = signal<string | null>(null);
+  private generation = 0;
+  private captionRevision = 0;
   private reprocessPoll: ReturnType<typeof setInterval> | null = null;
 
   private readonly auth = inject(AuthStateService);
@@ -96,7 +102,7 @@ export class AssetInfoPanel {
       this.asset().id;
       untracked(() => this.resetForNewAsset());
     });
-    inject(DestroyRef).onDestroy(() => this.stopReprocessPoll());
+    inject(DestroyRef).onDestroy(() => { this.generation++; this.stopReprocessPoll(); });
   }
 
   /** Moves keyboard focus into the panel, e.g. when a host opens it. */
@@ -240,16 +246,17 @@ export class AssetInfoPanel {
     if (this.reprocessState() === 'running') {
       return;
     }
-    const assetId = this.asset().id;
+    const assetId = this.asset().id, generation = this.generation;
     this.reprocessState.set('running');
     try {
       await this.photosApi.reprocess(assetId);
     } catch (error) {
+      if (generation !== this.generation) return;
       this.reprocessState.set('idle');
       this.toasts.error(describeError(error, "Couldn't start reprocessing."));
       return;
     }
-    this.watchReprocess(assetId);
+    if (generation === this.generation) this.watchReprocess(assetId);
   }
 
   private watchReprocess(assetId: string): void {
@@ -266,12 +273,13 @@ export class AssetInfoPanel {
   }
 
   private async refreshWhileReprocessing(assetId: string): Promise<void> {
+    const generation = this.generation, revision = this.captionRevision;
     try {
       const info = await this.assetDetailApi.get(assetId);
-      if (this.asset().id !== assetId || this.reprocessPoll === null) {
+      if (generation !== this.generation || this.asset().id !== assetId || this.reprocessPoll === null) {
         return;
       }
-      this.reprocessed.emit(info);
+      this.reprocessed.emit(revision === this.captionRevision ? info : { ...info, captions: this.detail()?.captions ?? info.captions });
       if (info.hasThumbnail && !info.stageErrors) {
         this.stopReprocessPoll();
         this.reprocessState.set('done');
@@ -308,7 +316,13 @@ export class AssetInfoPanel {
     this.capturedAtChanged.emit(iso);
   }
 
+  captionChanged(change: CaptionChange): void {
+    this.captionRevision++;
+    this.captionsChanged.emit(change);
+  }
+
   private resetForNewAsset(): void {
+    this.generation++;
     this.stopReprocessPoll();
     this.reprocessState.set('idle');
     this.editingTitle.set(false);

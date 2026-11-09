@@ -3,7 +3,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import { v7 as uuidv7 } from 'uuid';
 import { DATABASE } from '../database/database.module';
 import type { Database } from '../database/database.module';
-import { face, person } from '../database/schema';
+import { assetCaption, face, person } from '../database/schema';
 import { MlProcessingService } from './ml-processing.service';
 
 /** A person row in the People view. */
@@ -60,6 +60,21 @@ export class PeopleService {
     }));
   }
 
+  async attributionOptions(): Promise<PersonSummary[]> {
+    const result = await this.db.execute(sql`
+      select p.id, p.name, p.favorite,
+        (select count(*)::int from face f where f.person_id = p.id and f.ignored = false) as face_count,
+        coalesce(
+          (select f.id from face f where f.id = p.cover_face_id and f.person_id = p.id and f.ignored = false),
+          (select f.id from face f where f.person_id = p.id and f.ignored = false order by f.quality desc, f.id limit 1)
+        ) as cover_face_id
+      from person p where p.hidden = false and p.merged_into_id is null and length(btrim(p.name)) > 0
+      order by lower(p.name), p.id
+    `);
+    return result.rows.map((r) => ({ id: r.id as string, name: r.name as string,
+      favorite: Boolean(r.favorite), faceCount: Number(r.face_count), coverFaceId: r.cover_face_id as string | null }));
+  }
+
   /** Mark (or unmark) a person as close family — drives home-page ranking. */
   async setFavorite(personId: string, favorite: boolean): Promise<void> {
     await this.requirePerson(personId);
@@ -89,15 +104,27 @@ export class PeopleService {
     if (sourceId === targetId) {
       throw new BadRequestException('A person cannot be merged into themselves.');
     }
-    const source = await this.requirePerson(sourceId);
-    const target = await this.requirePerson(targetId);
     await this.db.transaction(async (tx) => {
+      const locked = await tx.select().from(person).where(inArray(person.id, [sourceId, targetId])).orderBy(person.id).for('update');
+      const source = locked.find((p) => p.id === sourceId);
+      const target = locked.find((p) => p.id === targetId);
+      if (!source || !target || source.mergedIntoId || target.mergedIntoId) {
+        throw new NotFoundException('That person does not exist.');
+      }
+      const effectiveName = target.name?.trim() || source.name?.trim() || null;
+      await tx.update(assetCaption).set({
+        saidByPersonId: targetId,
+        ...(effectiveName ? { saidByLabel: effectiveName } : {}),
+      }).where(eq(assetCaption.saidByPersonId, sourceId));
+      if (effectiveName) {
+        await tx.update(assetCaption).set({ saidByLabel: effectiveName }).where(eq(assetCaption.saidByPersonId, targetId));
+      }
       await tx.update(face).set({ personId: targetId }).where(eq(face.personId, sourceId));
       await tx
         .update(person)
         .set({ mergedIntoId: targetId, updatedAt: new Date() })
         .where(eq(person.id, sourceId));
-      if (target.name === null && source.name !== null) {
+      if (!target.name?.trim() && source.name?.trim()) {
         await tx
           .update(person)
           .set({ name: source.name, updatedAt: new Date() })
@@ -253,11 +280,13 @@ export class PeopleService {
 
   /** Naming a cluster turns it into a known person (data-model.md §1.3). */
   async rename(personId: string, name: string): Promise<void> {
-    await this.requirePerson(personId);
-    await this.db
-      .update(person)
-      .set({ name: name.trim() || null, updatedAt: new Date() })
-      .where(eq(person.id, personId));
+    await this.db.transaction(async (tx) => {
+      const [row] = await tx.select().from(person).where(eq(person.id, personId)).for('update');
+      if (!row || row.mergedIntoId) throw new NotFoundException('That person does not exist.');
+      const label = name.trim() || null;
+      await tx.update(person).set({ name: label, updatedAt: new Date() }).where(eq(person.id, personId));
+      if (label) await tx.update(assetCaption).set({ saidByLabel: label }).where(eq(assetCaption.saidByPersonId, personId));
+    });
   }
 
   private async requirePerson(personId: string): Promise<typeof person.$inferSelect> {

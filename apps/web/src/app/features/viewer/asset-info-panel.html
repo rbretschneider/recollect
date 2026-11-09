@@ -1,8 +1,10 @@
 <aside class="info" [class.closable]="isClosable()" aria-label="Photo details" tabindex="-1">
   @if (isClosable()) {
-    <button type="button" class="close-btn" aria-label="Close photo details" (click)="closed.emit()">
-      <app-icon name="close" [size]="18" aria-hidden="true" />
-    </button>
+    <div class="dismiss-bar">
+      <button type="button" class="close-btn" aria-label="Close photo details" (click)="closed.emit()">
+        <app-icon name="close" [size]="18" aria-hidden="true" />
+      </button>
+    </div>
   }
   <!-- The item's name, above the date. Anyone with write access can set
        one; most photos won't have one and the row simply says so. -->
@@ -51,6 +53,9 @@
     </div>
   }
   @if (detail(); as info) {
+    @if (info.mediaType === 'image') {
+      <app-asset-captions [assetId]="asset().id" [captions]="info.captions ?? []" [canWrite]="canWrite()" (changed)="captionChanged($event)" />
+    }
     @if (processingProblem(info); as problem) {
       <div class="problem" role="alert">
         <p>⚠ {{ problem }}</p>
@@ -163,6 +168,9 @@
         </div>
       }
     </dl>
+  } @else if (detailError()) {
+    <p role="alert">Could not load photo details.</p>
+    <button type="button" (click)="retryDetail.emit()">Retry details</button>
   } @else if (detailLoading()) {
     <div class="info-loading" role="status" aria-live="polite">
       <span class="spinner" aria-hidden="true"></span>
