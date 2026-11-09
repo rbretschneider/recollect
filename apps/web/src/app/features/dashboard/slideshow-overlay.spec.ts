@@ -665,11 +665,49 @@ describe('SlideshowOverlay', () => {
         overlay().togglePause();
         fixture.detectChanges();
 
-        await openInfoFor('asset-1');
+        overlay().openInfo();
+        fixture.detectChanges();
+        http.expectNone('/api/v1/assets/asset-1/detail');
         overlay().closeInfo();
         fixture.detectChanges();
 
         expect(overlay().isPaused()).toBe(true);
+      });
+    });
+
+    describe('saved photo entries', () => {
+      const caption = { id: 'entry', text: 'Saved words', saidByLabel: null, saidByPersonId: null,
+        createdAt: '2026-01-01', updatedAt: '2026-01-01' };
+      it('keeps saved entries when the panel closes and reopens without another request', async () => {
+        await openInfoFor('asset-1');
+        panelOf()!.captionsChanged.emit({ assetId: 'asset-1', caption });
+        overlay().closeInfo(); fixture.detectChanges(); overlay().openInfo(); fixture.detectChanges();
+        http.expectNone('/api/v1/assets/asset-1/detail');
+        expect(overlay().infoDetail()?.captions).toEqual([caption]);
+      });
+      it('preserves a mutation against a metadata request that started earlier', async () => {
+        await openInfoFor('asset-1'); overlay().retryInfoDetail();
+        const old = http.expectOne('/api/v1/assets/asset-1/detail');
+        panelOf()!.captionsChanged.emit({ assetId: 'asset-1', caption });
+        old.flush(FIXTURE_DETAIL); await vi.advanceTimersByTimeAsync(0);
+        expect(overlay().infoDetail()?.captions).toEqual([caption]);
+      });
+      it('shows detail failures with retry rather than an empty caption collection', async () => {
+        overlay().openInfo(); fixture.detectChanges();
+        http.expectOne('/api/v1/assets/asset-1/detail').flush(null, { status: 500, statusText: 'Failed' });
+        await vi.advanceTimersByTimeAsync(0); fixture.detectChanges();
+        expect(fixture.nativeElement.textContent).toContain('Could not load photo details.');
+        overlay().retryInfoDetail();
+        http.expectOne('/api/v1/assets/asset-1/detail').flush(FIXTURE_DETAIL);
+        await vi.advanceTimersByTimeAsync(0); expect(overlay().infoDetailError()).toBe(false);
+      });
+      it('discards old responses when a panel closes and reopens on the same photo', async () => {
+        overlay().openInfo(); fixture.detectChanges();
+        const old = http.expectOne('/api/v1/assets/asset-1/detail');
+        overlay().closeInfo(); fixture.detectChanges(); overlay().openInfo(); fixture.detectChanges();
+        http.expectOne('/api/v1/assets/asset-1/detail').flush({ ...FIXTURE_DETAIL, captions: [caption] });
+        await vi.advanceTimersByTimeAsync(0); old.flush(FIXTURE_DETAIL); await vi.advanceTimersByTimeAsync(0);
+        expect(overlay().infoDetail()?.captions).toEqual([caption]);
       });
     });
 

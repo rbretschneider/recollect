@@ -1,3 +1,5 @@
+import { CaptionChange } from '../viewer/asset-captions';
+import { CaptionDetailState } from '../viewer/caption-detail-state';
 import { afterNextRender, Component, computed, DestroyRef, effect, ElementRef, HostListener, inject, Injector, input, OnDestroy, output, signal, viewChild } from '@angular/core';
 import { describeError } from '../../core/describe-error';
 import { AlbumsApiService } from '../../core/api/albums-api.service';
@@ -285,6 +287,9 @@ export class SlideshowOverlay implements OnDestroy {
   /** Metadata for the photo the panel is open on; hydrates after the panel shows. */
   readonly infoDetail = signal<AssetDetail | null>(null);
   readonly infoDetailLoading = signal(false);
+  readonly infoDetailError = signal(false);
+  private infoRequest = 0;
+  private readonly captionState = new CaptionDetailState();
   /**
    * Whether closing the panel should restart the show. Kept apart from
    * `isPaused`, which cannot tell "paused by the panel" from "paused by you".
@@ -315,10 +320,11 @@ export class SlideshowOverlay implements OnDestroy {
     this.resumeOnInfoClose = this.isPlaying();
     this.clearTimer();
     this.isPaused.set(true);
-    this.infoDetail.set(null);
+    const needsDetail = this.infoDetail()?.id !== item.id || this.infoDetailError();
+    if (needsDetail) this.infoDetail.set(null);
     this.infoOpen.set(true);
     afterNextRender(() => this.infoPanel()?.focus(), { injector: this.injector });
-    void this.loadInfoDetail(item.id);
+    if (needsDetail) void this.loadInfoDetail(item.id);
   }
 
   /** Resumes only a show that was playing when the panel opened. */
@@ -327,6 +333,7 @@ export class SlideshowOverlay implements OnDestroy {
       return;
     }
     this.infoOpen.set(false);
+    this.infoRequest++;
     if (this.resumeOnInfoClose && !this.isFinished()) {
       this.isPaused.set(false);
     }
@@ -334,17 +341,27 @@ export class SlideshowOverlay implements OnDestroy {
     afterNextRender(() => this.infoButton()?.nativeElement.focus(), { injector: this.injector });
   }
 
+  captionsChanged(change: CaptionChange): void {
+    const detail = this.infoDetail();
+    if (this.currentAssetId() === change.assetId && detail?.id === change.assetId) {
+      this.infoDetail.set(this.captionState.change(detail, change));
+    }
+  }
+
+  retryInfoDetail(): void { const id = this.currentAssetId(); if (id) void this.loadInfoDetail(id); }
+
   private async loadInfoDetail(assetId: string): Promise<void> {
-    this.infoDetailLoading.set(true);
+    const request = ++this.infoRequest, revision = this.captionState.revision(assetId);
+    this.infoDetailLoading.set(true); this.infoDetailError.set(false);
     try {
       const detail = await this.assetDetailApi.get(assetId);
-      if (this.infoOpen() && this.currentAssetId() === assetId) {
-        this.infoDetail.set(detail);
+      if (request === this.infoRequest && this.infoOpen() && this.currentAssetId() === assetId) {
+        this.infoDetail.set(this.captionState.resolve(detail, revision));
       }
     } catch {
-      // An enhancement: the panel stays up with what it already has.
+      if (request === this.infoRequest && this.infoOpen() && this.currentAssetId() === assetId) this.infoDetailError.set(true);
     } finally {
-      if (this.currentAssetId() === assetId) {
+      if (request === this.infoRequest && this.currentAssetId() === assetId) {
         this.infoDetailLoading.set(false);
       }
     }
@@ -459,6 +476,7 @@ export class SlideshowOverlay implements OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
+    if (event.defaultPrevented || this.confirms.pending()) return;
     if (this.isActivatingInfoButton(event)) {
       return; // The native click opens the panel; don't also toggle pause.
     }
@@ -492,6 +510,7 @@ export class SlideshowOverlay implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.infoRequest++;
     this.clearTimer();
     this.audio?.pause();
     this.audio = null;

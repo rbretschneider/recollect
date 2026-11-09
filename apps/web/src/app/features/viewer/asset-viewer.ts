@@ -1,5 +1,11 @@
+import { CaptionChange } from './asset-captions';
+import { CaptionDetailState } from './caption-detail-state';
 import {
+  afterNextRender,
   Component,
+  ElementRef,
+  Injector,
+  viewChild,
   computed,
   effect,
   HostListener,
@@ -52,6 +58,9 @@ const ROTATE_SETTLE_MS = 900;
 })
 export class AssetViewer implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
+  private readonly infoPanel = viewChild(AssetInfoPanel);
   private readonly auth = inject(AuthStateService);
   private readonly photosApi = inject(PhotosApiService);
   private readonly assetDetailApi = inject(AssetDetailApiService);
@@ -89,6 +98,9 @@ export class AssetViewer implements OnInit, OnDestroy {
   readonly detail = signal<AssetDetail | null>(null);
   /** True while the info panel's metadata is being fetched (show a spinner). */
   readonly detailLoading = signal(false);
+  readonly detailError = signal(false);
+  private detailRequest = 0;
+  private readonly captionState = new CaptionDetailState();
   /** True while the server is transcoding this video for playback. */
   readonly isPreparingVideo = signal(false);
   /** True until the current image's full-size file has arrived. */
@@ -243,6 +255,7 @@ export class AssetViewer implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.detailRequest++;
     this.flushPendingRotation();
     this.stopPreparePolling();
     window.removeEventListener('popstate', this.onPopState);
@@ -363,11 +376,16 @@ export class AssetViewer implements OnInit, OnDestroy {
   }
 
   toggleInfo(): void {
-    this.showInfo.update((value) => !value);
+    if (this.showInfo()) { this.closeInfo(); return; }
+    this.showInfo.set(true);
+    afterNextRender(() => this.infoPanel()?.focus(), { injector: this.injector });
     const asset = this.current();
-    if (this.showInfo() && asset) {
-      void this.loadDetail(asset.id);
-    }
+    if (asset && (!this.detail() || this.detailError())) void this.loadDetail(asset.id);
+  }
+
+  closeInfo(): void {
+    this.showInfo.set(false);
+    afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('button[aria-label="Photo details"]')?.focus(), { injector: this.injector });
   }
 
   // --- Gestures: pinch/wheel zoom, pan while zoomed, swipe-nav at 1x -------
@@ -443,8 +461,14 @@ export class AssetViewer implements OnInit, OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
+    if (event.defaultPrevented || this.confirms.pending()) return;
+    const target = event.target as HTMLElement | null;
+    const editing = target instanceof Element && target.closest('input, textarea, select, [contenteditable="true"]');
     if (event.key === 'Escape') {
+      if (this.showInfo()) { this.closeInfo(); event.preventDefault(); return; }
       this.close();
+    } else if (editing || this.showInfo()) {
+      return;
     } else if (event.key === 'ArrowRight') {
       this.next();
     } else if (event.key === 'ArrowLeft') {
@@ -796,17 +820,27 @@ export class AssetViewer implements OnInit, OnDestroy {
     return edited !== undefined ? edited : (this.detail()?.title ?? null);
   });
 
+  captionsChanged(change: CaptionChange): void {
+    const detail = this.detail();
+    if (this.current()?.id === change.assetId && detail?.id === change.assetId) {
+      this.detail.set(this.captionState.change(detail, change));
+    }
+  }
+
+  retryDetail(): void { const id = this.current()?.id; if (id) void this.loadDetail(id); }
+
   private async loadDetail(assetId: string): Promise<void> {
-    this.detailLoading.set(true);
+    const request = ++this.detailRequest, revision = this.captionState.revision(assetId);
+    this.detailLoading.set(true); this.detailError.set(false);
     try {
       const detail = await this.assetDetailApi.get(assetId);
-      if (this.current()?.id === assetId) {
-        this.detail.set(detail);
+      if (request === this.detailRequest && this.current()?.id === assetId) {
+        this.detail.set(this.captionState.resolve(detail, revision));
       }
     } catch {
-      // The info sheet simply stays empty when detail cannot load.
+      if (request === this.detailRequest && this.current()?.id === assetId) this.detailError.set(true);
     } finally {
-      if (this.current()?.id === assetId) {
+      if (request === this.detailRequest && this.current()?.id === assetId) {
         this.detailLoading.set(false);
       }
     }

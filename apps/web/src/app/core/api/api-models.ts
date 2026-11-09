@@ -87,7 +87,17 @@ export interface LibraryRootView {
 }
 
 /** Mirrors the server's AssetDetail. */
+export interface AssetCaption {
+  id: string;
+  text: string;
+  saidByPersonId: string | null;
+  saidByLabel: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AssetDetail {
+  captions: AssetCaption[];
   /** Where the capture date came from: exif | filename | file_mtime | user. */
   capturedAtSource?: string;
   /** A person's name for this item, if any. */

@@ -7,6 +7,7 @@ export const FIXTURE_ASSET: TimelineAsset = toViewerAsset('asset-1', 'image', '2
 /** A fully-populated record, so every row of the panel renders. */
 export const FIXTURE_DETAIL: AssetDetail = {
   id: 'asset-1',
+  captions: [],
   mediaType: 'image',
   mime: 'image/jpeg',
   title: 'Summit at dawn',

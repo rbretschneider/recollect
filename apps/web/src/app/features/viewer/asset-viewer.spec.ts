@@ -84,11 +84,13 @@ describe('AssetViewer', () => {
       expect(inViewer).toEqual(factRows(standalone.nativeElement));
     });
 
-    it('does not offer a Close button inside the viewer, which has its own', async () => {
+    it('offers a labeled Close button that dismisses only the details panel', async () => {
       openViewer('read');
       await openPanel();
 
-      expect(fixture.nativeElement.querySelector('[aria-label="Close photo details"]')).toBeNull();
+      const close = fixture.nativeElement.querySelector('[aria-label="Close photo details"]') as HTMLButtonElement;
+      expect(close).not.toBeNull(); close.click(); await settle();
+      expect(fixture.componentInstance.showInfo()).toBe(false);
     });
 
     it('opens and closes the panel with the info toggle', async () => {
@@ -128,4 +130,44 @@ describe('AssetViewer', () => {
       expect(fixture.componentInstance.detail()).toEqual(refreshed);
     });
   });
+  describe('photo entry state', () => {
+    const caption = { id: 'entry', text: 'Saved words', saidByLabel: null, saidByPersonId: null,
+      createdAt: '2026-01-01', updatedAt: '2026-01-01' };
+    it('retains changes when closing and reopening the panel', async () => {
+      openViewer('write'); const panel = await openPanel();
+      panel.captionsChanged.emit({ assetId: 'asset-1', caption });
+      infoButton().click(); await settle(); infoButton().click(); await settle();
+      http.expectNone('/api/v1/assets/asset-1/detail');
+      expect(fixture.componentInstance.detail()?.captions).toEqual([caption]);
+      expect(fixture.nativeElement.textContent).toContain('Saved words');
+    });
+    it('preserves saved entries when an older metadata response arrives', async () => {
+      openViewer('write'); const panel = await openPanel();
+      fixture.componentInstance.retryDetail(); const old = http.expectOne('/api/v1/assets/asset-1/detail');
+      panel.captionsChanged.emit({ assetId: 'asset-1', caption }); old.flush(FIXTURE_DETAIL); await settle();
+      expect(fixture.componentInstance.detail()?.captions).toEqual([caption]);
+    });
+    it('ignores old A responses across A-to-B-to-A navigation', async () => {
+      openViewer('write'); await settle();
+      fixture.componentRef.setInput('assets', [FIXTURE_ASSET, { ...FIXTURE_ASSET, id: 'asset-2' }]); fixture.detectChanges();
+      const old = http.match('/api/v1/assets/asset-1/detail');
+      fixture.componentInstance.next(); fixture.detectChanges();
+      const other = http.expectOne('/api/v1/assets/asset-2/detail');
+      fixture.componentInstance.previous(); fixture.detectChanges();
+      http.expectOne('/api/v1/assets/asset-1/detail').flush({ ...FIXTURE_DETAIL, captions: [caption] });
+      other.flush({ ...FIXTURE_DETAIL, id: 'asset-2' }); old.forEach((r) => r.flush(FIXTURE_DETAIL)); await settle();
+      expect(fixture.componentInstance.detail()?.captions).toEqual([caption]);
+    });
+    it('keeps caret arrows in the editor and closes the details before the viewer', async () => {
+      openViewer('write'); await openPanel();
+      const closed: unknown[] = []; fixture.componentInstance.closed.subscribe(() => closed.push(true));
+      const textarea = document.createElement('textarea'); fixture.nativeElement.append(textarea);
+      textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      expect(fixture.componentInstance.index()).toBe(0);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })); await settle();
+      expect(fixture.componentInstance.showInfo()).toBe(false); expect(closed).toEqual([]);
+      expect(document.activeElement).toBe(infoButton());
+    });
+  });
+
 });
