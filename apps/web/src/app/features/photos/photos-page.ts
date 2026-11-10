@@ -26,6 +26,7 @@ import { ActivitySpinner } from '../../shared/activity-spinner';
 import { AccountBadge } from '../../shared/account-badge';
 import { Brand } from '../../shared/brand';
 import { ConfirmService } from '../../shared/confirm.service';
+import { downloadAssets, MAX_BULK_DOWNLOAD } from '../../core/download';
 import { ToastService } from '../../shared/toast.service';
 import { Icon } from '../../shared/icon';
 import { LongPressDirective } from '../../shared/long-press.directive';
@@ -108,6 +109,7 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
    * so back, refresh and a shared link all land on the same view.
    */
   readonly mediaFilter = signal<MediaFilter>(null);
+  readonly maxDownload = MAX_BULK_DOWNLOAD;
   readonly selectedIds = signal<ReadonlySet<string>>(new Set());
   readonly isPickingAlbum = signal(false);
   readonly undoIds = signal<string[]>([]);
@@ -482,6 +484,20 @@ export class PhotosPage implements AfterViewInit, OnDestroy {
 
   get isAdmin(): boolean {
     return this.auth.user()?.isAdmin ?? false;
+  }
+
+  /** Downloads the selected originals (one file, or a ZIP) and leaves select mode. */
+  downloadSelected(): void {
+    const ids = [...this.selectedIds()];
+    if (ids.length === 0) {
+      return;
+    }
+    if (ids.length > this.maxDownload) {
+      this.toasts.error(`Select ${this.maxDownload} photos or fewer to download at once.`);
+      return;
+    }
+    downloadAssets(ids);
+    this.cancelSelecting();
   }
 
   cancelSelecting(): void {

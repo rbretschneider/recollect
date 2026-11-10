@@ -11,9 +11,8 @@ import {
   Post,
   Res,
 } from '@nestjs/common';
-import archiver from 'archiver';
 import type { Response } from 'express';
-import { AssetsService } from '../assets/assets.service';
+import { AssetArchiveService } from '../assets/asset-archive.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequireGrant } from '../auth/decorators/require-grant.decorator';
 import type { UserProfile } from '../users/user.types';
@@ -27,7 +26,7 @@ import { RenameAlbumRequestDto } from './dto/rename-album-request.dto';
 export class AlbumsController {
   constructor(
     private readonly albums: AlbumsService,
-    private readonly assets: AssetsService,
+    private readonly archive: AssetArchiveService,
   ) {}
 
   @Get()
@@ -48,20 +47,7 @@ export class AlbumsController {
   async downloadZip(@Param('id', ParseUUIDPipe) id: string, @Res() res: Response): Promise<void> {
     const detail = await this.albums.getDetail(id);
     const zipName = detail.title.replace(/[^\p{L}\p{N} _-]+/gu, '').trim() || 'album';
-    res.type('application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="${zipName}.zip"`);
-    const archive = archiver('zip', { store: true });
-    archive.pipe(res);
-    for (const assetId of detail.assetIds) {
-      try {
-        const file = await this.assets.getOriginalFile(assetId);
-        const name = await this.assets.getDownloadName(assetId);
-        archive.file(file.path, { name });
-      } catch {
-        // A missing original is skipped rather than failing the whole ZIP.
-      }
-    }
-    await archive.finalize();
+    await this.archive.streamZip(res, zipName, detail.assetIds);
   }
 
   @RequireGrant('write')
