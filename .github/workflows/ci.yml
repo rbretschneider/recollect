@@ -34,7 +34,11 @@ jobs:
       - run: npm ci
       - run: npm run build --workspace @recollect/server
       - run: npm run build --workspace @recollect/web
-      - run: sudo apt-get update && sudo apt-get install -y postgresql-client-16
+      - name: Install PostgreSQL 16 client tools
+        run: |
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-16
       - run: echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
       - run: npm run test --workspace @recollect/web -- --watch=false
       - run: npm run test:integration --workspace @recollect/server -- --runInBand

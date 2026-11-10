@@ -1,6 +1,7 @@
 import { AssetCaptionsService } from './asset-captions.service';
 import { Module } from '@nestjs/common';
 import { MediaModule } from '../media/media.module';
+import { AssetArchiveService } from './asset-archive.service';
 import { AssetMediaStreamer } from './asset-media-streamer';
 import { AssetsController } from './assets.controller';
 import { AssetsService } from './assets.service';
@@ -14,6 +15,7 @@ import { TranscodePlaybackHandler } from './handlers/transcode-playback.handler'
   controllers: [AssetsController],
   providers: [
     AssetsService,
+    AssetArchiveService,
     AssetCaptionsService,
     AssetMediaStreamer,
     RotateService,
@@ -21,6 +23,6 @@ import { TranscodePlaybackHandler } from './handlers/transcode-playback.handler'
     TranscodeBackfillHandler,
     TranscodePlaybackHandler,
   ],
-  exports: [AssetsService, AssetMediaStreamer],
+  exports: [AssetsService, AssetArchiveService, AssetMediaStreamer],
 })
 export class AssetsModule {}

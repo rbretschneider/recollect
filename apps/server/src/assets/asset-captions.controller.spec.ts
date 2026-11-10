@@ -7,6 +7,7 @@ import { AuthGuard } from '../auth/guards/auth.guard';
 import { GrantsGuard } from '../auth/guards/grants.guard';
 import { TokenService } from '../auth/token.service';
 import { UsersService } from '../users/users.service';
+import { AssetArchiveService } from './asset-archive.service';
 import { AssetMediaStreamer } from './asset-media-streamer';
 import { AssetCaptionsService } from './asset-captions.service';
 import { AssetsController } from './assets.controller';
@@ -35,6 +36,7 @@ describe('authenticated caption routes', () => {
           AssetMediaStreamer,
           JobQueueService,
           RotateService,
+          AssetArchiveService,
         ].map((provide) => ({ provide, useValue: {} })),
         {
           provide: TokenService,

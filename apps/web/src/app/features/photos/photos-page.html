@@ -2,7 +2,11 @@
   @if (isSelecting()) {
     <span class="select-title" aria-live="polite">
       @if (selectedIds().size === 0) {
-        Select photos to add to an album{{ canDelete ? ' or delete' : '' }}
+        @if (canWrite) {
+          Select photos to add to an album, download{{ canDelete ? ' or delete' : '' }}
+        } @else {
+          Select photos to download
+        }
       } @else {
         {{ selectedIds().size }} selected
       }
@@ -20,9 +24,7 @@
       <span>Search</span>
     </a>
     <div class="topbar-side end">
-      @if (canWrite) {
-        <button type="button" class="topbar-action" (click)="startSelecting()">Select</button>
-      }
+      <button type="button" class="topbar-action" (click)="startSelecting()">Select</button>
       <app-account-badge />
     </div>
   }
@@ -302,8 +304,20 @@
        Both pickers create on demand, so naming a new album or memory happens
        inside them rather than through a sheet of its own. -->
   <app-selection-bar>
-    <button type="button" (click)="startAlbumPick()">Add to album</button>
-    <button type="button" (click)="startMemoryPick()">Add to memory</button>
+    <button
+      type="button"
+      (click)="downloadSelected()"
+      [disabled]="selectedIds().size === 0 || selectedIds().size > maxDownload"
+      [attr.title]="
+        selectedIds().size > maxDownload ? 'Download up to ' + maxDownload + ' at a time' : null
+      "
+    >
+      Download
+    </button>
+    @if (canWrite) {
+      <button type="button" (click)="startAlbumPick()">Add to album</button>
+      <button type="button" (click)="startMemoryPick()">Add to memory</button>
+    }
     @if (canDelete) {
       <button type="button" class="danger" (click)="deleteSelected()">Move to Trash</button>
     }

@@ -24,6 +24,8 @@ import { RequireGrant } from '../auth/decorators/require-grant.decorator';
 import type { UserProfile } from '../users/user.types';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { REPROCESS_ASSET_JOB } from '../library/handlers/reprocess-asset.handler';
+import { AssetArchiveService } from './asset-archive.service';
+import { DownloadAssetsRequestDto } from './dto/download-assets-request.dto';
 import { AssetMediaStreamer } from './asset-media-streamer';
 import { AssetsService, TimelinePage } from './assets.service';
 import type { AssetDetail, TimelineAsset } from './assets.service';
@@ -43,6 +45,7 @@ export class AssetsController {
     private readonly queue: JobQueueService,
     private readonly rotateService: RotateService,
     private readonly captions: AssetCaptionsService,
+    private readonly archive: AssetArchiveService,
   ) {}
 
   @Get()
@@ -81,6 +84,14 @@ export class AssetsController {
     @CurrentUser() user: UserProfile,
   ): Promise<{ items: TimelineAsset[] }> {
     return { items: await this.assets.getTimelineItems(body.assetIds, user.id) };
+  }
+
+  /** Streams the chosen originals as one ZIP. Read-level access, like the single download. */
+  @Post('download.zip')
+  @HttpCode(HttpStatus.OK)
+  async downloadZip(@Body() body: DownloadAssetsRequestDto, @Res() res: Response): Promise<void> {
+    const day = new Date().toISOString().slice(0, 10);
+    await this.archive.streamZip(res, `recollect-photos-${day}`, body.assetIds);
   }
 
   @Get(':id/captions')
